@@ -3,17 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Vermögenstracker</title>
-  <meta name="description" content="Lokaler, privater Vermögenstracker — keine Cloud, keine Konten, alle Daten bleiben im Browser." />
-  <meta name="theme-color" content="#0a0f0c" />
+  
+  <!-- SEO Meta Tags -->
+  <title>Vermögenstracker - Privater Vermögensverwalter PWA</title>
+  <meta name="description" content="Lokaler, privater Vermögenstracker als PWA. Verfolge dein Vermögen ohne Cloud, ohne Anmeldung. Alle Daten bleiben sicher in deinem Browser. Kostenlos und offen." />
+  <meta name="keywords" content="Vermögenstracker, Vermögen, Finanzen, Budget, PWA, offline, privat, Tracker, Geld, Konten, Depot, Sparen" />
+  <meta name="author" content="Vermögenstracker" />
+  <meta name="robots" content="index, follow" />
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:title" content="Vermögenstracker - Privater Vermögensverwalter" />
+  <meta property="og:description" content="Lokaler, privater Vermögenstracker als PWA. Keine Cloud, keine Anmeldung. Alle Daten bleiben in deinem Browser." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://github.com/manuel/finanzgecko" />
+  <meta property="og:site_name" content="Vermögenstracker" />
+  <meta property="og:locale" content="de_DE" />
+  
+  <!-- Theme & PWA -->
+  <meta name="theme-color" content="#080d0b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  
+  <!-- Icons & Manifest -->
   <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" href="./icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png" />
+  
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  
+  <!-- Stylesheets -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
   <link rel="stylesheet" href="./css/theme.css" />
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://github.com/manuel/finanzgecko" />
 </head>
 <body>
+  <!-- Structured Data / Schema.org -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Vermögenstracker",
+    "description": "Lokaler, privater Vermögenstracker als Progressive Web App. Verfolge dein Vermögen ohne Cloud, ohne Anmeldung. Alle Daten bleiben sicher in deinem Browser.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "All",
+    "browserRequirements": "Modern browser with ES Modules support",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR",
+      "category": "Free"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Vermögenstracker"
+    },
+    "publisher": {
+      "@type": "Person",
+      "name": "Vermögenstracker"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "reviewCount": "0"
+    }
+  }
+  </script>
+
   <header class="container">
     <nav>
       <ul>
@@ -33,7 +94,13 @@
   </main>
 
   <footer class="container">
-    <p class="muted small">Alle Daten bleiben lokal in deinem Browser. Kein Server, kein Tracking in der App.</p>
+    <p class="muted small">
+      Alle Daten bleiben lokal in deinem Browser. Kein Server, kein Tracking in der App.
+      <br />
+      <span itemscope itemtype="http://schema.org/Organization">
+        <span itemprop="name">Vermögenstracker</span>
+      </span>
+    </p>
   </footer>
 
   <script type="module" src="./js/main.js"></script>

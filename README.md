@@ -22,12 +22,13 @@ Python reicht (ist auf macOS/Linux i.d.R. vorinstalliert, für Windows von
 python.org):
 
 ```bash
-python3 -m http.server 8080
+python3 -m http.server 8080 & xdg-open http://localhost:8080
 ```
 
-Dann `http://localhost:8080` öffnen. Alternativ jede andere Methode, einen
-Ordner lokal per HTTP auszuliefern (z.B. die "Live Server"-Erweiterung in
-VS Code).
+Alternativ jede andere Methode, einen Ordner lokal per HTTP auszuliefern
+(z.B. die "Live Server"-Erweiterung in VS Code).
+
+*Hinweis für macOS:* `xdg-open` durch `open` ersetzen.
 
 **Wichtig bei GitHub Pages in einem Unterpfad** (z.B. `username.github.io/repo/`):
 Die relativen Pfade in `manifest.json`, `sw.js` und den `<script>`-Tags

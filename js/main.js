@@ -1,6 +1,8 @@
 import * as db from "./db.js";
 import { getExchangeRate } from "./currency.js";
 import { renderLineChart, renderDonut } from "./charts.js";
+import { GERMAN_BANKS } from "./banks.js";
+import { getBankIcon, getBankInitials, hasCustomIcon } from "./bank-icons.js";
 
 // ---------- Konstanten ----------
 
@@ -185,11 +187,14 @@ async function renderDashboard() {
       return { label: periodLabel(p), value: b ? b.amountBase : null };
     });
     const latestForAcc = [...state.balances].reverse().find((b) => b.accountId === acc.id);
+    const displayName = acc.bank || acc.name || "Unbekannt";
+    const color = acc.color || TAG_COLORS[acc.tag] || "#00c878";
+    const icon = getBankIcon(displayName);
     const card = el(`
       <article class="card account-card">
         <header>
-          <span class="dot" style="background:${acc.color}"></span>
-          <strong>${acc.name}</strong>
+          <div class="bank-icon" style="color:${color}">${icon}</div>
+          <strong>${displayName}</strong>
           <span class="tag-badge">${acc.tag}</span>
         </header>
         <p class="account-value">${latestForAcc ? fmtMoney(latestForAcc.amountBase, state.baseCurrency) : "—"}</p>
@@ -197,22 +202,33 @@ async function renderDashboard() {
       </article>
     `);
     grid.appendChild(card);
-    renderLineChart(card.querySelector(".mini-chart"), points, { color: acc.color, height: 80 });
+    renderLineChart(card.querySelector(".mini-chart"), points, { color: color, height: 80 });
   });
 }
 
 // ---------- Konten ----------
 
 async function renderAccounts() {
+  // Build bank options with icons
+  const bankOptions = GERMAN_BANKS.map((b) => {
+    const icon = getBankIcon(b);
+    const initials = getBankInitials(b);
+    const hasIcon = hasCustomIcon(b);
+    return `
+      <option value="${b}" data-icon="${hasIcon}">${b}</option>
+    `;
+  }).join("");
+
   appEl.innerHTML = `
     <section class="card">
       <h2>Neues Konto</h2>
       <form id="accountForm">
-        <label>Name
-          <input type="text" name="name" required placeholder="z.B. DKB Girokonto" />
-        </label>
-        <label>Bank
-          <input type="text" name="bank" placeholder="z.B. DKB" />
+        <label>Bank / Anbieter
+          <select name="bank" required id="bankSelect">
+            <option value="" disabled selected>Bank auswählen</option>
+            ${bankOptions}
+          </select>
+          <div id="bankPreview" class="bank-icon" style="margin-top: 0.5rem; visibility: hidden;"></div>
         </label>
         <div class="grid">
           <label>Typ
@@ -227,9 +243,6 @@ async function renderAccounts() {
             </datalist>
           </label>
         </div>
-        <label>Farbe
-          <input type="color" name="color" value="#00c878" />
-        </label>
         <button type="submit">Konto anlegen</button>
       </form>
     </section>
@@ -240,15 +253,28 @@ async function renderAccounts() {
     </section>
   `;
 
+  // Bank icon preview in form
+  const bankSelect = document.getElementById("bankSelect");
+  const bankPreview = document.getElementById("bankPreview");
+  bankSelect.addEventListener("change", () => {
+    const selectedBank = bankSelect.value;
+    if (selectedBank) {
+      const color = TAG_COLORS["Girokonto"] || "#00c878"; // Default color
+      bankPreview.innerHTML = getBankIcon(selectedBank);
+      bankPreview.style.visibility = "visible";
+      bankPreview.style.color = color;
+    } else {
+      bankPreview.style.visibility = "hidden";
+    }
+  });
+
   document.getElementById("accountForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     await db.addAccount({
-      name: fd.get("name"),
       bank: fd.get("bank"),
       tag: fd.get("tag"),
       currency: fd.get("currency").toUpperCase(),
-      color: fd.get("color"),
     });
     await loadState();
     renderAccountList();
@@ -265,18 +291,22 @@ async function renderAccounts() {
     }
     listEl.innerHTML = "";
     state.accounts.forEach((acc) => {
+      const displayName = acc.bank || acc.name || "Unbekannt";
+      const displayBank = acc.bank ? acc.bank : (acc.name ? acc.name : "");
+      const icon = getBankIcon(displayName);
+      const color = acc.color || "#00c878";
       const row = el(`
         <article class="card account-row">
-          <span class="dot" style="background:${acc.color}"></span>
+          <div class="bank-icon" style="color:${color}">${icon}</div>
           <div class="account-row-info">
-            <strong>${acc.name}</strong>
-            <span class="muted">${acc.bank ? acc.bank + " · " : ""}${acc.tag} · ${acc.currency}</span>
+            <strong>${displayName}</strong>
+            <span class="muted">${displayBank} · ${acc.tag} · ${acc.currency}</span>
           </div>
           <button class="secondary archive-btn" data-id="${acc.id}">Archivieren</button>
         </article>
       `);
       row.querySelector(".archive-btn").addEventListener("click", async () => {
-        if (!confirm(`"${acc.name}" wirklich archivieren? Es verschwindet danach komplett aus allen Charts.`)) return;
+        if (!confirm(`"${displayName}" wirklich archivieren? Es verschwindet danach komplett aus allen Charts.`)) return;
         await db.archiveAccount(acc.id);
         await loadState();
         renderAccountList();
@@ -302,11 +332,10 @@ async function renderEntry() {
   appEl.innerHTML = `
     <section class="card">
       <h2>Kontostand erfassen</h2>
-      <p class="muted">Auch rückwirkend möglich — einfach den passenden Monat wählen. Ein bestehender Eintrag für Konto + Monat wird überschrieben.</p>
       <form id="entryForm">
         <label>Konto
           <select name="accountId" required>
-            ${state.accounts.map((a) => `<option value="${a.id}">${a.name} (${a.currency})</option>`).join("")}
+            ${state.accounts.map((a) => `<option value="${a.id}">${a.bank || a.name || "Unbekannt"} (${a.currency})</option>`).join("")}
           </select>
         </label>
         <label>Monat

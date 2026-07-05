@@ -2,15 +2,55 @@
 
 :root {
   color-scheme: dark;
+  /* Primary - Green palette */
   --pico-primary: #00c878;
   --pico-primary-hover: #1fe094;
   --pico-primary-underline: rgba(0, 200, 120, 0.4);
   --pico-primary-focus: rgba(0, 200, 120, 0.35);
-  --pico-background-color: #0a0f0c;
+  
+  /* Background - Deep dark */
+  --pico-background-color: #080d0b;
+  --pico-background-color-dark: #050806;
+  
+  /* Text colors */
   --pico-color: #e6efe9;
-  --pico-card-background-color: #101713;
-  --pico-card-border-color: #1c2721;
-  --pico-muted-color: #7c8a83;
+  --pico-color-dark: #c8d8c6;
+  
+  /* Card styling */
+  --pico-card-background-color: #0f1914;
+  --pico-card-border-color: #1a2a22;
+  
+  /* Muted/secondary text */
+  --pico-muted-color: #6a7d6f;
+  
+  /* Links */
+  --pico-link-color: #2fd0a0;
+  --pico-link-hover-color: #1fe094;
+  
+  /* Form elements */
+  --pico-form-element-background-color: #0f1914;
+  --pico-form-element-border-color: #1a2a22;
+  --pico-form-element-color: #e6efe9;
+  --pico-form-element-focus-background-color: #101713;
+  --pico-form-element-focus-border-color: #00c878;
+  
+  /* Buttons */
+  --pico-button-background-color: #0f1914;
+  --pico-button-border-color: #1a2a22;
+  --pico-button-color: #e6efe9;
+  --pico-button-hover-background-color: #1a2a22;
+  
+  /* Secondary button */
+  --pico-secondary-background-color: transparent;
+  --pico-secondary-border-color: #1a2a22;
+  --pico-secondary-color: #6a7d6f;
+  --pico-secondary-hover-background-color: #0f1914;
+  
+  /* Success states */
+  --pico-success: #00c878;
+  
+  /* Error states */
+  --pico-error: #ff6b6b;
 }
 
 body {
@@ -94,6 +134,22 @@ nav a[aria-current="page"] {
   flex-shrink: 0;
 }
 
+/* Bank icon styling - replaces the colored dot */
+.bank-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.bank-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Keep tag-badge styling but adjust for icon layout */
 .tag-badge {
   font-size: 0.75rem;
   color: var(--pico-muted-color);

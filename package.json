@@ -1,0 +1,25 @@
+{
+  "name": "vermoegenstracker",
+  "version": "1.0.0",
+  "description": "Lokaler, privater Vermögenstracker als PWA",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/",
+    "test:watch": "node --watch --test tests/",
+    "test:coverage": "node --experimental-test-coverage tests/"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^5.0.1"
+  },
+  "keywords": [
+    "pwa",
+    "finance",
+    "tracking",
+    "wealth",
+    "german",
+    "private",
+    "offline"
+  ],
+  "author": "",
+  "license": "MIT"
+}

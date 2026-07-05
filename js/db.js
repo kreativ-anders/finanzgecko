@@ -1,6 +1,6 @@
 // db.js — kompletter IndexedDB-Zugriff der App.
 // Schema:
-//   accounts:  { id, name, bank, tag, currency, color, archived, createdAt }
+//   accounts:  { id, bank, tag, currency, color, archived, createdAt }
 //   balances:  { id, accountId, period ("YYYY-MM"), amountOriginal, currencyOriginal,
 //                rate, amountBase, note, enteredAt }
 //              -> unique index "byAccountPeriod" auf [accountId, period]
@@ -66,11 +66,10 @@ export async function addAccount(account) {
   const t = await tx("accounts", "readwrite");
   const store = t.objectStore("accounts");
   const record = {
-    name: account.name,
-    bank: account.bank || "",
+    bank: account.bank || account.name || "",
     tag: account.tag,
     currency: account.currency || "EUR",
-    color: account.color || "#00c878",
+    color: account.color || null,
     archived: false,
     createdAt: new Date().toISOString(),
   };
@@ -83,7 +82,9 @@ export async function updateAccount(id, changes) {
   const store = t.objectStore("accounts");
   const existing = await reqToPromise(store.get(id));
   if (!existing) throw new Error("Konto nicht gefunden");
-  const updated = { ...existing, ...changes, id };
+  // Migration: if name field exists but not bank, use name as bank
+  const migrated = existing.name && !existing.bank ? { ...existing, bank: existing.name } : existing;
+  const updated = { ...migrated, ...changes, id };
   await reqToPromise(store.put(updated));
   return updated;
 }
@@ -216,7 +217,9 @@ export async function importAllData(data) {
   await reqToPromise(balStore.clear());
 
   for (const acc of data.accounts || []) {
-    await reqToPromise(accStore.put(acc));
+    // Migration: if old schema with name field, convert to bank
+    const migratedAcc = acc.name && !acc.bank ? { ...acc, bank: acc.name, name: undefined } : acc;
+    await reqToPromise(accStore.put(migratedAcc));
   }
   for (const bal of data.balances || []) {
     await reqToPromise(balStore.put(bal));
