@@ -1,0 +1,183 @@
+/* Grün-Schwarz-Theme obendrauf auf Pico.css (Dark-Basis) */
+
+:root {
+  color-scheme: dark;
+  --pico-primary: #00c878;
+  --pico-primary-hover: #1fe094;
+  --pico-primary-underline: rgba(0, 200, 120, 0.4);
+  --pico-primary-focus: rgba(0, 200, 120, 0.35);
+  --pico-background-color: #0a0f0c;
+  --pico-color: #e6efe9;
+  --pico-card-background-color: #101713;
+  --pico-card-border-color: #1c2721;
+  --pico-muted-color: #7c8a83;
+}
+
+body {
+  background: var(--pico-background-color);
+}
+
+nav strong {
+  color: var(--pico-primary);
+  letter-spacing: 0.02em;
+}
+
+nav a[aria-current="page"] {
+  color: var(--pico-primary);
+  font-weight: 600;
+}
+
+.muted,
+.hint {
+  color: var(--pico-muted-color);
+  font-size: 0.9rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  color: var(--pico-muted-color);
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-hero {
+  padding: 1.5rem 0 1rem;
+}
+
+.dashboard-hero h1 {
+  font-size: clamp(2.2rem, 6vw, 3.2rem);
+  margin: 0.1rem 0;
+  color: var(--pico-primary);
+}
+
+.delta {
+  font-weight: 600;
+  margin: 0;
+}
+.delta.positive { color: var(--pico-primary); }
+.delta.negative { color: #ff6b6b; }
+.delta.muted { color: var(--pico-muted-color); font-weight: 400; }
+
+.card {
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-card-border-color);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.account-card header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.account-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0.25rem 0;
+}
+
+.dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tag-badge {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+  border: 1px solid var(--pico-card-border-color);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  margin-left: auto;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.account-row-info {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.empty-hint {
+  color: var(--pico-muted-color);
+  font-style: italic;
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+/* Charts */
+
+.line-chart {
+  display: block;
+  width: 100%;
+}
+
+.chart-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+  margin-top: 0.25rem;
+}
+
+.mini-chart {
+  margin-top: 0.5rem;
+}
+
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.donut {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.donut-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.donut-legend .dot {
+  width: 0.7rem;
+  height: 0.7rem;
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Vermögenstracker</title>
+  <meta name="description" content="Lokaler, privater Vermögenstracker — keine Cloud, keine Konten, alle Daten bleiben im Browser." />
+  <meta name="theme-color" content="#0a0f0c" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <link rel="stylesheet" href="./css/theme.css" />
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <ul>
+        <li><strong>Vermögenstracker</strong></li>
+      </ul>
+      <ul>
+        <li><a href="#/dashboard" data-route>Dashboard</a></li>
+        <li><a href="#/entry" data-route>Erfassen</a></li>
+        <li><a href="#/accounts" data-route>Konten</a></li>
+        <li><a href="#/settings" data-route>Einstellungen</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container" id="app">
+    <!-- Views werden hier von main.js gerendert -->
+  </main>
+
+  <footer class="container">
+    <p class="muted small">Alle Daten bleiben lokal in deinem Browser. Kein Server, kein Tracking in der App.</p>
+  </footer>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
