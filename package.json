@@ -1,7 +1,7 @@
 {
-  "name": "vermoegenstracker",
+  "name": "finanzgecko",
   "version": "1.0.0",
-  "description": "Lokaler, privater Vermögenstracker als PWA",
+  "description": "Lokaler, privater Vermögensverwalter als PWA",
   "type": "module",
   "scripts": {
     "test": "node --test tests/",

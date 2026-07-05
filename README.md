@@ -1,6 +1,6 @@
-# Vermögenstracker
+# Finanzgecko
 
-Lokaler, privater Vermögenstracker als PWA. Kein Server, kein Account, keine Cloud —
+Lokaler, privater Vermögensverwalter als PWA. Kein Server, kein Account, keine Cloud —
 alle Daten liegen in IndexedDB im Browser.
 
 ## Deployment (kein npm, kein Build-Step)
@@ -29,6 +29,10 @@ Alternativ jede andere Methode, einen Ordner lokal per HTTP auszuliefern
 (z.B. die "Live Server"-Erweiterung in VS Code).
 
 *Hinweis für macOS:* `xdg-open` durch `open` ersetzen.
+
+**Entwicklungstipp:** Der Service Worker ist auf `localhost` und `127.0.0.1` deaktiviert,
+um Cache-Probleme während der Entwicklung zu vermeiden. Änderungen an CSS/JS werden
+sofort sichtbar, ohne manuell den Cache leeren zu müssen.
 
 **Wichtig bei GitHub Pages in einem Unterpfad** (z.B. `username.github.io/repo/`):
 Die relativen Pfade in `manifest.json`, `sw.js` und den `<script>`-Tags

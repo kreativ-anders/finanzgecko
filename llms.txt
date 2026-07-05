@@ -1,7 +1,7 @@
-# Vermögenstracker - LLM Instructions
+# Finanzgecko - LLM Instructions
 
 ## Project Overview
-Vermögenstracker is a **local, private, offline-first** Progressive Web App (PWA) for tracking personal wealth/finances. 
+Finanzgecko is a **local, private, offline-first** Progressive Web App (PWA) for tracking personal wealth/finances. 
 
 ### Core Principles
 - **NO CLOUD**: All data stays in the user's browser (IndexedDB)
@@ -13,10 +13,11 @@ Vermögenstracker is a **local, private, offline-first** Progressive Web App (PW
 ## Technical Stack
 - **Frontend**: Vanilla HTML5, CSS3, ES Modules (no framework)
 - **UI Framework**: Pico CSS (minimal, classless)
-- **Data Storage**: IndexedDB (via native API)
+- **Data Storage**: IndexedDB (via native API) - database name: `finanzgecko`
 - **Exchange Rates**: Frankfurter.app API (ECB reference rates) with local cache
 - **Charts**: Custom SVG-based line charts and CSS donut charts (no external library)
 - **Styling**: Custom theme.css overriding Pico CSS for dark green aesthetic
+- **Service Worker**: Caching disabled on localhost for development
 
 ## Project Structure
 ```

@@ -1,7 +1,7 @@
 {
-  "name": "Vermögenstracker",
-  "short_name": "Vermögen",
-  "description": "Privater, lokaler Vermögenstracker ohne Cloud und ohne Account. Verfolge dein Vermögen sicher und offline.",
+  "name": "Finanzgecko",
+  "short_name": "Finanzgecko",
+  "description": "Privater, lokaler Vermögensverwalter ohne Cloud und ohne Account. Verfolge dein Vermögen sicher und offline.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -17,14 +17,14 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Vermögenstracker Dashboard"
+      "label": "Finanzgecko Dashboard"
     },
     {
       "src": "./screenshots/screenshot-2.png",
       "sizes": "720x1280",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Vermögenstracker Mobile"
+      "label": "Finanzgecko Mobile"
     }
   ],
   "icons": [

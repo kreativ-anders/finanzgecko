@@ -7,7 +7,7 @@
 //   settings:  { key, value }
 //   rates:     { key ("FROM_TO_YYYY-MM-DD"), rate, fetchedAt }
 
-const DB_NAME = "vermoegenstracker";
+const DB_NAME = "finanzgecko";
 const DB_VERSION = 1;
 
 let dbInstance = null;
