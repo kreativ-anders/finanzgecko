@@ -1,8 +1,8 @@
 // db.js — kompletter IndexedDB-Zugriff der App.
 // Schema:
-//   accounts:  { id, bank, tag, currency, color, archived, createdAt }
+//   accounts:  { id, bank, tag, currency, color, note, archived, createdAt }
 //   balances:  { id, accountId, period ("YYYY-MM"), amountOriginal, currencyOriginal,
-//                rate, amountBase, note, enteredAt }
+//                rate, amountBase, enteredAt }
 //              -> unique index "byAccountPeriod" auf [accountId, period]
 //   settings:  { key, value }
 //   rates:     { key ("FROM_TO_YYYY-MM-DD"), rate, fetchedAt }
@@ -70,6 +70,7 @@ export async function addAccount(account) {
     tag: account.tag,
     currency: account.currency || "EUR",
     color: account.color || null,
+    note: account.note || "",
     archived: false,
     createdAt: new Date().toISOString(),
   };
@@ -84,7 +85,9 @@ export async function updateAccount(id, changes) {
   if (!existing) throw new Error("Konto nicht gefunden");
   // Migration: if name field exists but not bank, use name as bank
   const migrated = existing.name && !existing.bank ? { ...existing, bank: existing.name } : existing;
-  const updated = { ...migrated, ...changes, id };
+  // Migration: ensure note field exists
+  const withNote = migrated.note !== undefined ? migrated : { ...migrated, note: "" };
+  const updated = { ...withNote, ...changes, id };
   await reqToPromise(store.put(updated));
   return updated;
 }

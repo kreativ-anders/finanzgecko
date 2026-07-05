@@ -2,55 +2,75 @@
 
 :root {
   color-scheme: dark;
-  /* Primary - Green palette */
+  
+  /* === PRIMARY COLORS - Green palette === */
   --pico-primary: #00c878;
   --pico-primary-hover: #1fe094;
   --pico-primary-underline: rgba(0, 200, 120, 0.4);
   --pico-primary-focus: rgba(0, 200, 120, 0.35);
+  --pico-primary-border: #00c878;
+  --pico-primary-border-hover: #1fe094;
   
-  /* Background - Deep dark */
+  /* === BACKGROUND COLORS - Deep dark === */
   --pico-background-color: #080d0b;
   --pico-background-color-dark: #050806;
   
-  /* Text colors */
+  /* === TEXT COLORS - Light for dark theme === */
   --pico-color: #e6efe9;
   --pico-color-dark: #c8d8c6;
   
-  /* Card styling */
+  /* === CARD & CONTAINER COLORS === */
   --pico-card-background-color: #0f1914;
   --pico-card-border-color: #1a2a22;
+  --pico-border-color: #1a2a22;
+  --pico-border-width: 1px;
   
-  /* Muted/secondary text */
+  /* === MUTED/SECONDARY TEXT - Greenish === */
   --pico-muted-color: #6a7d6f;
   
-  /* Links */
+  /* === LINK COLORS - Green === */
   --pico-link-color: #2fd0a0;
   --pico-link-hover-color: #1fe094;
+  --pico-link-underline: rgba(47, 208, 160, 0.4);
   
-  /* Form elements */
+  /* === FORM ELEMENTS - Dark with green accents === */
   --pico-form-element-background-color: #0f1914;
   --pico-form-element-border-color: #1a2a22;
   --pico-form-element-color: #e6efe9;
   --pico-form-element-focus-background-color: #101713;
   --pico-form-element-focus-border-color: #00c878;
+  --pico-form-element-placeholder-color: #6a7d6f;
   
-  /* Buttons */
+  /* === BUTTONS - Dark with green text === */
   --pico-button-background-color: #0f1914;
   --pico-button-border-color: #1a2a22;
   --pico-button-color: #e6efe9;
   --pico-button-hover-background-color: #1a2a22;
+  --pico-button-hover-border-color: #00c878;
   
-  /* Secondary button */
+  /* === SECONDARY BUTTONS === */
   --pico-secondary-background-color: transparent;
   --pico-secondary-border-color: #1a2a22;
   --pico-secondary-color: #6a7d6f;
   --pico-secondary-hover-background-color: #0f1914;
+  --pico-secondary-hover-border-color: #00c878;
   
-  /* Success states */
+  /* === GROUP & NAVIGATION === */
+  --pico-group-background-color: #0f1914;
+  --pico-group-border-color: #1a2a22;
+  --pico-nav-element-spacing-horizontal: 0.5rem;
+  --pico-nav-element-spacing-vertical: 0.5rem;
+  
+  /* === SUCCESS & ERROR === */
   --pico-success: #00c878;
-  
-  /* Error states */
   --pico-error: #ff6b6b;
+  
+  /* === MODAL & OVERLAY === */
+  --pico-modal-overlay-background-color: rgba(8, 13, 11, 0.85);
+  
+  /* === TOOLTIP === */
+  --pico-tooltip-background-color: #0f1914;
+  --pico-tooltip-color: #e6efe9;
 }
 
 body {
@@ -116,8 +136,9 @@ nav a[aria-current="page"] {
 .account-card header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .account-value {
@@ -134,19 +155,38 @@ nav a[aria-current="page"] {
   flex-shrink: 0;
 }
 
-/* Bank icon styling - replaces the colored dot */
+/* Bank icon styling - circle with initials */
 .bank-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
 }
 
 .bank-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
+  fill: currentColor;
+}
+
+/* Ensure icons are visible on dark backgrounds */
+.account-card header .bank-icon,
+.account-row .bank-icon {
+  color: #00c878;
+}
+
+/* Style for initial circle icons */
+.bank-icon svg circle {
+  opacity: 0.25;
+}
+
+.bank-icon svg text {
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Keep tag-badge styling but adjust for icon layout */

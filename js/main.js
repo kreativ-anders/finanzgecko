@@ -243,6 +243,9 @@ async function renderAccounts() {
             </datalist>
           </label>
         </div>
+        <label>Notiz (optional)
+          <input type="text" name="note" placeholder="z.B. Kontonummer, Verwendungszweck" />
+        </label>
         <button type="submit">Konto anlegen</button>
       </form>
     </section>
@@ -275,6 +278,7 @@ async function renderAccounts() {
       bank: fd.get("bank"),
       tag: fd.get("tag"),
       currency: fd.get("currency").toUpperCase(),
+      note: fd.get("note") || "",
     });
     await loadState();
     renderAccountList();
@@ -294,13 +298,15 @@ async function renderAccounts() {
       const displayName = acc.bank || acc.name || "Unbekannt";
       const displayBank = acc.bank ? acc.bank : (acc.name ? acc.name : "");
       const icon = getBankIcon(displayName);
-      const color = acc.color || "#00c878";
+      const color = acc.color || TAG_COLORS[acc.tag] || "#00c878";
+      const noteDisplay = acc.note ? `<div class="muted small">${acc.note}</div>` : "";
       const row = el(`
         <article class="card account-row">
           <div class="bank-icon" style="color:${color}">${icon}</div>
           <div class="account-row-info">
             <strong>${displayName}</strong>
             <span class="muted">${displayBank} · ${acc.tag} · ${acc.currency}</span>
+            ${noteDisplay}
           </div>
           <button class="secondary archive-btn" data-id="${acc.id}">Archivieren</button>
         </article>
@@ -343,9 +349,6 @@ async function renderEntry() {
         </label>
         <label>Betrag (in Kontowährung)
           <input type="number" step="0.01" name="amount" required placeholder="z.B. 4230.50" />
-        </label>
-        <label>Notiz (optional)
-          <input type="text" name="note" placeholder="optional" />
         </label>
         <div id="rateNotice" class="hint"></div>
         <button type="submit">Speichern</button>
