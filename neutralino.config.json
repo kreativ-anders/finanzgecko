@@ -1,7 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
   "applicationId": "de.finanzgecko.app",
+  "applicationName": "FinanzGecko",
   "version": "1.0.0",
+  "author": "kreativanders",
+  "description": "Nativer Vermögenstracker – lokal, ohne Cloud",
+  "copyright": "Copyright © 2026 kreativanders",
   "defaultMode": "window",
   "port": 0,
   "documentRoot": "/resources",

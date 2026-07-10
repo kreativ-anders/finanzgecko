@@ -127,6 +127,41 @@ nav a[aria-current="page"] {
   margin: 0;
 }
 
+/* Vermögenswerte */
+
+.asset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.asset-row-info {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.asset-value-input {
+  width: 9rem;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.asset-delete-btn {
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.overdue-badge {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+  flex-shrink: 0;
+  margin-left: 0;
+}
+
 /* Einträge-Tabelle */
 
 .table-scroll {

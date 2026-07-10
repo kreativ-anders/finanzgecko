@@ -1,0 +1,69 @@
+name: Release
+
+# Baut alle Plattform-Binaries (Linux/macOS/Windows sind bei Neutralino
+# vorgefertigte Downloads, kein Cross-Compiling nötig -- ein einzelner
+# Runner reicht) und hängt sie als Assets an ein GitHub-Release, das zum
+# gepushten Tag passt. Läuft auf macos-latest, damit zusätzlich das echte
+# macOS-App-Bundle (packaging/macos/build-app.sh, braucht sips/iconutil)
+# gebaut werden kann.
+#
+# Ablauf für ein Release:
+#   1. Version in neutralino.config.json hochzählen
+#   2. update-manifest.json aktualisieren (version + resourcesURL auf den
+#      neuen Tag) und committen
+#   3. Tag pushen, z. B.: git tag v1.1.0 && git push origin v1.1.0
+#   4. Dieser Workflow lädt resources.neu + alle Binaries + das macOS-
+#      App-Bundle automatisch als Release-Assets hoch.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: neu CLI installieren
+        # Version gepinnt: v11.7.2 zieht uuid@14 (ESM-only), das der CLI-Code
+        # per CommonJS require() lädt -- jeder neu-Befehl bricht sofort mit
+        # ERR_REQUIRE_ESM ab (siehe README, "Bekannter CLI-Bug").
+        run: npm i -g @neutralinojs/neu@11.7.1
+
+      - name: Binaries + Client-Library laden
+        run: neu update
+
+      - name: Release bauen
+        run: neu build --release
+
+      - name: macOS-App-Bundle bauen
+        run: ./packaging/macos/build-app.sh universal
+
+      - name: macOS-App-Bundle zippen
+        working-directory: dist/finanzgecko
+        run: ditto -c -k --sequesterRsrc --keepParent FinanzGecko.app FinanzGecko-mac.app.zip
+
+      - name: Release-Assets hochladen
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/finanzgecko/resources.neu
+            dist/finanzgecko/finanzgecko-linux_x64
+            dist/finanzgecko/finanzgecko-linux_arm64
+            dist/finanzgecko/finanzgecko-linux_armhf
+            dist/finanzgecko/finanzgecko-win_x64.exe
+            dist/finanzgecko/finanzgecko-mac_x64
+            dist/finanzgecko/finanzgecko-mac_arm64
+            dist/finanzgecko/finanzgecko-mac_universal
+            dist/finanzgecko/FinanzGecko-mac.app.zip
+            dist/finanzgecko-release.zip

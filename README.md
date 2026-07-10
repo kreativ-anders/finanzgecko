@@ -61,16 +61,49 @@ neu build --release
 ```
 
 Ergebnis liegt in `dist/finanzgecko/` — darunter eine `resources.neu`
-(gebündelte Web-Ressourcen) und die eigentliche Mac-Binary.
+(gebündelte Web-Ressourcen) und je eine Binary pro Plattform/Architektur
+(`finanzgecko-linux_x64`, `finanzgecko-mac_arm64`, `finanzgecko-win_x64.exe`, …).
 
-**Erster Start auf einem "fremden" Mac:** Ohne Apple-Signierung zeigt
-macOS Gatekeeper eine Warnung ("nicht verifizierter Entwickler"). Einmalig
-per Rechtsklick auf die App → *Öffnen* bestätigen — danach startet sie
-normal. Das betrifft nur den allerersten Start.
+Windows-Metadaten (Firmenname, Beschreibung, Copyright, Produktname im
+Explorer-Eigenschaften-Dialog) sowie das `.exe`-Icon werden von `neu build`
+automatisch aus `author`/`description`/`copyright`/`applicationName` in
+`neutralino.config.json` bzw. aus `modes.window.icon` erzeugt — keine
+manuelle Nachbearbeitung nötig.
+
+**Erster Start auf einem "fremden" Mac/Windows-Rechner:** Ohne Code-Signierung
+zeigen macOS Gatekeeper ("nicht verifizierter Entwickler") und Windows
+SmartScreen ("unbekannter Herausgeber") eine Warnung. Auf dem Mac einmalig
+per Rechtsklick auf die App → *Öffnen* bestätigen, unter Windows über
+"Weitere Informationen" → "Trotzdem ausführen". Betrifft nur den
+allerersten Start und erfordert ein kostenpflichtiges Signierzertifikat,
+um vollständig zu verschwinden.
 
 `neu build --release` ruft `zip-lib` auf, das Node.js >= 20 voraussetzt
 (`npm WARN EBADENGINE`, falls die installierte Node-Version älter ist).
 Auf reinen `neu run`-Workflows ohne Release-Build fällt das nicht auf.
+
+### macOS: als richtiges App-Bundle bauen (Dock-Icon, Finder)
+
+`neu build` (auch mit `--macos-bundle`) liefert nur eine rohe Unix-Binary.
+Die CLI-eigene `--macos-bundle`-Option hängt dabei lediglich die Endung
+`.app` an die Datei an (siehe `neutralinojs-cli/src/modules/bundler.js`) —
+ohne `Contents/Info.plist` und `Contents/Resources/icon.icns` erkennt der
+Finder das aber nicht als echtes Bundle und zeigt kein eigenes Dock-Icon.
+
+Einmalig/pro Release:
+
+```bash
+neu build --release   # falls noch nicht geschehen
+./packaging/macos/build-app.sh          # universal (Standard)
+./packaging/macos/build-app.sh arm64    # oder gezielt x64 / arm64
+```
+
+Baut `dist/finanzgecko/FinanzGecko.app` mit Info.plist, `.icns`
+(generiert aus `icons/icon-512.png` per `sips`/`iconutil`) und einer
+Ad-hoc-Signatur (`codesign --sign -`, kein Apple-Zertifikat nötig — auf
+Apple Silicon startet eine gänzlich unsignierte App sonst nicht). Muss auf
+einem Mac ausgeführt werden. Die `.app` danach normal in den
+Programme-Ordner ziehen oder direkt aus `dist/finanzgecko/` starten.
 
 ### Linux: als Desktop-Anwendung installieren (Taskleisten-Icon)
 
@@ -107,6 +140,9 @@ nicht mehr direkt über das Binary.
 | `resources/js/charts.js` | Unverändert: eigener SVG-Linienchart + CSS-Donut |
 | `resources/js/main.js` | Views, Routing, native Menüleiste (`Neutralino.window.setMainMenu`), Auto-Updater-Check |
 | `update-manifest.json` | Manifest für den Auto-Updater (siehe unten) |
+| `packaging/linux/` | `.desktop`-Datei + `install.sh` für Taskleisten-Icon unter Wayland/X11 |
+| `packaging/macos/build-app.sh` | Baut ein echtes `.app`-Bundle (Info.plist, `.icns`, Ad-hoc-Signatur) aus der rohen Mac-Binary |
+| `.github/workflows/release.yml` | CI: baut bei jedem Tag-Push alle Plattform-Binaries + macOS-Bundle und hängt sie ans GitHub-Release |
 
 ## Warum keine IndexedDB mehr
 
@@ -126,22 +162,32 @@ Browser-Downloads.
 
 ## Auto-Updater einrichten
 
-1. GitHub-Platzhalter ersetzen: `<dein-github-name>` in `update-manifest.json`
-   und in `resources/js/main.js` (`UPDATE_MANIFEST_URL`) durch deinen
-   tatsächlichen GitHub-Nutzernamen/Repo ersetzen.
-2. Bei jedem neuen Release:
+Zeigt bereits auf `github.com/kreativanders/finanzgecko` (in
+`update-manifest.json` und `resources/js/main.js`, `UPDATE_MANIFEST_URL`).
+Bei einem Fork: beide Stellen auf den eigenen GitHub-Nutzernamen/Repo
+anpassen.
+
+1. Bei jedem neuen Release:
    - Version in `neutralino.config.json` (`"version"`) hochzählen
    - `neu build --release`
    - Die entstandene `resources.neu` (in `dist/finanzgecko/`) als Asset an
      ein neues GitHub-Release anhängen (Tag z.B. `v1.1.0`)
    - `update-manifest.json` aktualisieren: `version` und `resourcesURL`
      auf das neue Release-Asset zeigen lassen, committen und pushen
-3. Die App prüft beim Start automatisch im Hintergrund (unauffällig, ohne
+2. Die App prüft beim Start automatisch im Hintergrund (unauffällig, ohne
    Fehlermeldung bei fehlender Verbindung) und zusätzlich manuell über
    *Datei → Nach Updates suchen…*
 
 Kein eigener Server nötig — GitHub Releases + ein rohes JSON-Manifest im
 Repo reichen als Update-Infrastruktur.
+
+**CI-Unterstützung:** `.github/workflows/release.yml` baut bei jedem
+gepushten Tag (`vX.Y.Z`) automatisch alle Plattform-Binaries plus das
+macOS-App-Bundle und hängt sie als Assets ans passende GitHub-Release.
+Nimmt aus obiger Liste die manuellen `neu build --release`-/Upload-Schritte
+ab — `version` in `neutralino.config.json` und `update-manifest.json`
+müssen weiterhin von Hand aktualisiert und committet werden, bevor der Tag
+gepusht wird.
 
 ## Native Menüleiste
 
