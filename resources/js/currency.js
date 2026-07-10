@@ -2,7 +2,7 @@
 // Keine Library nötig, nur fetch(). Kurse werden lokal in IndexedDB gecacht,
 // damit die App auch offline mit dem letzten bekannten Kurs weiterrechnen kann.
 
-import { getCachedRate, setCachedRate } from "./db.js";
+import { getCachedRate, setCachedRate } from "./store.js";
 
 const API_BASE = "https://api.frankfurter.app";
 

@@ -1,0 +1,9 @@
+# Downloaded by `neu update` — regenerated per machine, not source
+/bin/
+/resources/neutralino.js
+/resources/neutralino.d.ts
+/resources/neutralinojs.log
+
+# Build/run output
+/dist/
+/.tmp/

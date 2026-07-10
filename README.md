@@ -1,79 +1,168 @@
-# Finanzgecko
+# FinanzGecko 🦎
 
-Lokaler, privater Vermögensverwalter als PWA. Kein Server, kein Account, keine Cloud —
-alle Daten liegen in IndexedDB im Browser.
+Nativer macOS-Vermögenstracker. Kein Server, keine Cloud, kein Account —
+alle Daten liegen in einer einzigen JSON-Datei im eigenen Datenverzeichnis
+der App. Basiert auf [Neutralinojs](https://neutralino.js.org/).
 
-## Deployment (kein npm, kein Build-Step)
+## Einmalig einrichten
 
-Das ist eine reine Standalone-HTML/CSS/JS-App. Für GitHub Pages, Netlify,
-einen eigenen Nginx/Apache-Server oder jedes andere statische Hosting reicht:
-Ordnerinhalt hochladen, fertig. Kein `npm install`, kein Build, keine
-Server-Runtime nötig — sobald die Dateien über `https://` (oder `http://`)
-ausgeliefert werden, funktionieren ES-Module, Service Worker und Manifest
-ohne weiteres Zutun.
+**Voraussetzung:** Node.js >= 20 (z. B. über [nvm](https://github.com/nvm-sh/nvm))
 
-## Lokal testen (vor dem Hosten)
-
-Ein Doppelklick auf `index.html` reicht **nicht**: Browser blockieren
-ES-Module (`import`/`export`) beim `file://`-Protokoll aus Sicherheitsgründen,
-und Service Worker lassen sich auf `file://` grundsätzlich nicht registrieren.
-Du brauchst also kurz einen lokalen HTTP-Server — dafür ist kein npm nötig,
-Python reicht (ist auf macOS/Linux i.d.R. vorinstalliert, für Windows von
-python.org):
-
+**Linux (Ubuntu/Debian):**
 ```bash
-python3 -m http.server 8080 & xdg-open http://localhost:8080
+# WebKitGTK für Neutralino (Ubuntu 22.04+ / Debian 12+)
+sudo apt-get update
+sudo apt-get install libwebkit2gtk-4.1-0
+
+# Falls auf älteren Distributionen:
+# Ubuntu 20.04: libwebkit2gtk-4.0-37
+# Debian 11: libwebkit2gtk-4.0-37
 ```
 
-Alternativ jede andere Methode, einen Ordner lokal per HTTP auszuliefern
-(z.B. die "Live Server"-Erweiterung in VS Code).
+**macOS:** Keine zusätzlichen Abhängigkeiten nötig.
 
-*Hinweis für macOS:* `xdg-open` durch `open` ersetzen.
+**Windows:** Keine zusätzlichen Abhängigkeiten nötig.
 
-**Entwicklungstipp:** Der Service Worker ist auf `localhost` und `127.0.0.1` deaktiviert,
-um Cache-Probleme während der Entwicklung zu vermeiden. Änderungen an CSS/JS werden
-sofort sichtbar, ohne manuell den Cache leeren zu müssen.
+```bash
+# Neutralino-CLI installieren (global, einmalig)
+npm i -g @neutralinojs/neu
 
-**Wichtig bei GitHub Pages in einem Unterpfad** (z.B. `username.github.io/repo/`):
-Die relativen Pfade in `manifest.json`, `sw.js` und den `<script>`-Tags
-funktionieren bereits mit `./`-Präfix und sollten ohne Anpassung laufen.
+# Im Projektordner: Client-Library + Binaries herunterladen
+neu update
+```
+
+> **Bekannter CLI-Bug (Stand v11.7.2):** Diese Version zieht `uuid@14` (ESM-only),
+> obwohl der CLI-Code es per CommonJS `require()` lädt — jeder `neu`-Befehl
+> bricht sofort mit `ERR_REQUIRE_ESM` ab. Betrifft alle Plattformen, nicht nur
+> Linux. Falls das auftritt: `sudo npm install -g @neutralinojs/neu@11.7.1`
+> (letzte Version vor dem kaputten `uuid`-Update).
+
+`neu update` lädt `neutralino.js` sowie die plattformspezifischen Binaries
+in `resources/` bzw. `bin/` — diese Dateien sind bewusst in `.gitignore`,
+weil sie bei jedem `neu update` neu generiert werden.
+
+**Datenverzeichnis:**
+- **Linux:** `~/.local/share/de.finanzgecko.app/`
+- **macOS:** `~/Library/Application Support/de.finanzgecko.app/`
+- **Windows:** `%APPDATA%\de.finanzgecko.app\`
+
+## Entwickeln
+
+```bash
+neu run
+```
+
+Startet die App im Entwicklungsmodus mit Live-Reload bei Dateiänderungen.
+
+## Bauen (Release)
+
+```bash
+neu build --release
+```
+
+Ergebnis liegt in `dist/finanzgecko/` — darunter eine `resources.neu`
+(gebündelte Web-Ressourcen) und die eigentliche Mac-Binary.
+
+**Erster Start auf einem "fremden" Mac:** Ohne Apple-Signierung zeigt
+macOS Gatekeeper eine Warnung ("nicht verifizierter Entwickler"). Einmalig
+per Rechtsklick auf die App → *Öffnen* bestätigen — danach startet sie
+normal. Das betrifft nur den allerersten Start.
+
+`neu build --release` ruft `zip-lib` auf, das Node.js >= 20 voraussetzt
+(`npm WARN EBADENGINE`, falls die installierte Node-Version älter ist).
+Auf reinen `neu run`-Workflows ohne Release-Build fällt das nicht auf.
 
 ## Architektur
 
 | Datei | Zweck |
 |---|---|
-| `index.html` | App-Shell, Navigation, Pico.css-Einbindung |
-| `css/theme.css` | Grün-Schwarz-Theme über Pico-CSS-Variablen |
-| `js/db.js` | Kompletter IndexedDB-Zugriff (Accounts, Balances, Settings, Rate-Cache, Export/Import) |
-| `js/currency.js` | Wechselkurs-Abfrage über die kostenlose [Frankfurter.app](https://frankfurter.app)-API, mit lokalem Cache |
-| `js/charts.js` | Eigener minimaler SVG-Linienchart + CSS-Donut — bewusst ohne externe Chart-Library, damit Charts auch offline zuverlässig funktionieren |
-| `js/main.js` | Routing (Hash-basiert) + alle Views (Dashboard, Konten, Erfassung, Einstellungen) |
-| `sw.js` | Service Worker, cached die App-Shell für Offline-Start |
-| `manifest.json` | PWA-Manifest (installierbar, Icons, Theme-Farbe) |
+| `neutralino.config.json` | Fenstergröße, `nativeAllowList`, Datenverzeichnis-Konfiguration |
+| `resources/index.html` | App-Shell, native Menüleiste kommt separat aus `main.js` |
+| `resources/css/theme.css` | Grün-Schwarz-Theme, System-Font-Stack für OS-natives Aussehen |
+| `resources/js/store.js` | **Ersetzt IndexedDB.** Eine JSON-Datei im System-Datenverzeichnis (`NL_DATAPATH`), atomar geschrieben (temp-Datei + `move`) |
+| `resources/js/currency.js` | Unverändert: Frankfurter.app-Anbindung mit Cache |
+| `resources/js/charts.js` | Unverändert: eigener SVG-Linienchart + CSS-Donut |
+| `resources/js/main.js` | Views, Routing, native Menüleiste (`Neutralino.window.setMainMenu`), Auto-Updater-Check |
+| `update-manifest.json` | Manifest für den Auto-Updater (siehe unten) |
 
-## Fachliche Entscheidungen (aus der Konzeptphase)
+## Warum keine IndexedDB mehr
 
-- **Wechselkurse**: pro Kontostand-Eintrag wird der historische Kurs zum
-  Monatsende gespeichert (nicht der aktuelle) — damit bleibt die Historie
-  korrekt, auch wenn sich der Kurs später ändert.
-- **Lücken**: fehlt für ein Konto ein Eintrag in einem Monat, wird dieser
-  Monat für die Gesamtsumme einfach ausgeklammert (kein Forward-Fill). Das
-  Dashboard zeigt deshalb transparent an, auf wie vielen von wie vielen
-  Konten die aktuelle Summe basiert.
-- **Kredit-Konten**: negative Salden fließen netto in die Gesamtsumme ein.
-- **Archivierte Konten**: verschwinden komplett aus allen Charts (Annahme:
-  Konto wurde vorher auf 0 gebracht).
-- **Export/Import**: MVP-bewusst **unverschlüsselt**. Verschlüsselung
-  (WebCrypto AES-GCM + Passwort) ist als spätere Erweiterung vorgesehen,
-  ohne dass sich am Datenmodell etwas ändern muss.
-- **Duplikate**: pro Konto und Monat existiert genau ein Eintrag (unique
-  Index in IndexedDB). Ein erneutes Speichern für denselben Monat
-  überschreibt den bestehenden Wert.
+Die App schreibt jetzt direkt in eine JSON-Datei im OS-eigenen Datenverzeichnis
+(dank `"dataLocation": "system"` in der Config). Das eliminiert das
+gesamte Thema Safari-Speicher-Eviction, das für die PWA-Version relevant
+war — eine normale Datei auf der Festplatte unterliegt keiner Verfallsregel.
 
-## Offene Punkte für später (bewusst nicht im MVP)
+**Dateipfad:**
+- **Linux:** `~/.local/share/de.finanzgecko.app/app-data.json`
+- **macOS:** `~/Library/Application Support/de.finanzgecko.app/app-data.json`
+- **Windows:** `%APPDATA%\de.finanzgecko.app\app-data.json`
 
-- Verschlüsselter Export/Import (Passwort + WebCrypto AES-GCM)
-- Undo nach Import (Snapshot wird technisch schon gezogen, aber nur
-  in-memory für die laufende Sitzung — noch keine UI dafür)
-- Erinnerung an monatliche Erfassung / Backup-Reminder
-- Unterscheidung Einzahlung vs. Rendite bei Depot-Konten
+Export/Import laufen über native Save/Open-Dialoge
+(`Neutralino.os.showSaveDialog` / `showOpenDialog`), nicht mehr über
+Browser-Downloads.
+
+## Auto-Updater einrichten
+
+1. GitHub-Platzhalter ersetzen: `<dein-github-name>` in `update-manifest.json`
+   und in `resources/js/main.js` (`UPDATE_MANIFEST_URL`) durch deinen
+   tatsächlichen GitHub-Nutzernamen/Repo ersetzen.
+2. Bei jedem neuen Release:
+   - Version in `neutralino.config.json` (`"version"`) hochzählen
+   - `neu build --release`
+   - Die entstandene `resources.neu` (in `dist/finanzgecko/`) als Asset an
+     ein neues GitHub-Release anhängen (Tag z.B. `v1.1.0`)
+   - `update-manifest.json` aktualisieren: `version` und `resourcesURL`
+     auf das neue Release-Asset zeigen lassen, committen und pushen
+3. Die App prüft beim Start automatisch im Hintergrund (unauffällig, ohne
+   Fehlermeldung bei fehlender Verbindung) und zusätzlich manuell über
+   *Datei → Nach Updates suchen…*
+
+Kein eigener Server nötig — GitHub Releases + ein rohes JSON-Manifest im
+Repo reichen als Update-Infrastruktur.
+
+## Native Menüleiste
+
+*Datei* → Backup exportieren (⌘E), Backup importieren, Nach Updates
+suchen, Beenden (⌘Q) — vollständig nativ über
+`Neutralino.window.setMainMenu()`, nicht Teil des HTML/CSS.
+
+## Fenstergröße
+
+Startet maximiert (`"maximize": true`), bleibt aber frei skalierbar
+(`"resizable": true`, Mindestgröße 960×640). `"useSavedState": true`
+merkt sich Größe/Position zwischen den Starts. Charts rendern sich bei
+Fenstergrößenänderung automatisch neu (siehe Resize-Listener in `main.js`).
+
+## Migration von der bisherigen PWA-Version
+
+Falls vorher die PWA-Version genutzt wurde: einmal über deren
+Export-Funktion ein Backup ziehen, hier über *Backup importieren…*
+einlesen — das Datenformat ist identisch, keine Konvertierung nötig.
+
+## Troubleshooting
+
+**Weißer Bereich / "The URL can't be shown" beim Start (Linux):** Trat mit
+`"enableServer": false` (load-dir-res-Modus) auf WebKitGTK auf — die
+Custom-URI-Auflösung ohne lokalen HTTP-Server ist auf dieser Kombination
+instabil. Die Config steht deshalb auf `"enableServer": true` (lokaler
+Server auf `127.0.0.1`, zufälliger Port via `"port": 0`).
+
+**App startet, aber Navigation/Views reagieren nicht:** `main.js` registriert
+`Neutralino.events.on("ready", init)`, aber das `ready`-Event feuert nur,
+nachdem `Neutralino.init()` explizit aufgerufen wurde (öffnet die
+WebSocket-Verbindung zum nativen Prozess). Ohne diesen Aufruf bleibt die App
+optisch da, aber komplett unreaktiv — kein Klick-Handler wird je registriert.
+Fix steht in `startApp()` in `resources/js/main.js`.
+
+**Nur eine Quelle für App-Dateien:** `index.html`, `css/`, `js/` und `icons/`
+liegen ausschließlich unter `resources/` (Ausnahme: `icons/` bleibt zusätzlich
+im Projekt-Root, weil `neu build` das native Fenster-Icon relativ zum
+Projekt-Root auflöst, nicht relativ zu `resources/`). Es gab früher eine
+zweite, identische Kopie von `index.html`/`css`/`js` im Projekt-Root — die
+wurde nie ausgeliefert (`documentRoot` zeigt auf `/resources`), Änderungen
+daran hatten also nie einen sichtbaren Effekt. Immer nur in `resources/`
+editieren.
+
+**`neu version` zeigt "Project: undefined":** `cli.binaryName` hat in
+`neutralino.config.json` gefehlt (Build-Output landete dann in
+`dist/undefined/` statt `dist/finanzgecko/`).

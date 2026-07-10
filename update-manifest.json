@@ -1,0 +1,5 @@
+{
+  "applicationId": "de.finanzgecko.app",
+  "version": "1.0.0",
+  "resourcesURL": "https://github.com/<dein-github-name>/finanzgecko/releases/download/v1.0.0/resources.neu"
+}
