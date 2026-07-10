@@ -72,6 +72,29 @@ normal. Das betrifft nur den allerersten Start.
 (`npm WARN EBADENGINE`, falls die installierte Node-Version älter ist).
 Auf reinen `neu run`-Workflows ohne Release-Build fällt das nicht auf.
 
+### Linux: als Desktop-Anwendung installieren (Taskleisten-Icon)
+
+Direkt gestartete Binaries (`neu run` oder das Release-Binary per Doppelklick)
+zeigen in der Taskleiste unter Wayland/X11 ein generisches Icon statt des
+App-Icons. Grund: Neutralino setzt keine GTK-Application-ID, wodurch die
+Fenster-Identität (`WM_CLASS`/Wayland-`app_id`) vom Binary-Dateinamen abhängt
+(z. B. `finanzgecko-linux_x64`) — ohne passende `.desktop`-Datei kann die
+Shell (GNOME, KDE, …) kein Icon zuordnen. Die Config-Option
+`modes.window.icon` setzt nur das Icon im Fenster selbst, nicht das
+Taskleisten-Icon.
+
+Einmalig beheben:
+
+```bash
+neu build --release   # falls noch nicht geschehen
+./packaging/linux/install.sh
+```
+
+Legt einen stabil benannten Symlink (`~/.local/bin/finanzgecko`), einen
+Startmenü-Eintrag (`~/.local/share/applications/de.finanzgecko.app.desktop`)
+und die Icons im hicolor-Theme an. App danach über das Startmenü starten,
+nicht mehr direkt über das Binary.
+
 ## Architektur
 
 | Datei | Zweck |

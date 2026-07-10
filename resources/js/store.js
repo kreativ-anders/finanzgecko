@@ -238,6 +238,18 @@ export async function upsertBalance(entry) {
   return record;
 }
 
+export async function updateBalance(id, changes) {
+  if (!isInitialized) {
+    throw new Error("Store not initialized. Call initStore() first.");
+  }
+
+  const bal = data.balances.find((b) => b.id === id);
+  if (!bal) throw new Error("Eintrag nicht gefunden");
+  Object.assign(bal, changes);
+  await persist();
+  return bal;
+}
+
 export async function deleteBalance(id) {
   if (!isInitialized) {
     throw new Error("Store not initialized. Call initStore() first.");

@@ -15,6 +15,7 @@ const TAG_COLORS = {
   Krypto: "#f5a623",
 };
 const CURRENCIES = ["EUR", "USD", "CHF", "GBP", "JPY", "SEK", "NOK", "DKK"];
+const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
 let state = {
   baseCurrency: "EUR",
@@ -34,8 +35,7 @@ function fmtMoney(value, currency) {
 
 function periodLabel(period) {
   const [y, m] = period.split("-");
-  const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
-  return `${months[parseInt(m, 10) - 1]} ${y}`;
+  return `${MONTH_LABELS[parseInt(m, 10) - 1]} ${y}`;
 }
 
 function lastDayOfMonthISO(period) {
@@ -49,12 +49,117 @@ function currentPeriod() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// ---------- Monatsauswahl ----------
+// Eigenes Widget statt <input type="month">: WebKitGTK (nativer Webview unter
+// Linux) implementiert dafür keine Picker-UI, das native Feld ist dort
+// unbedienbar. Das eigene Widget funktioniert plattformunabhängig identisch.
+
+function monthPickerField(name, value) {
+  const [year] = value.split("-");
+  return `
+    <div class="month-picker" data-value="${value}" data-view-year="${year}">
+      <button type="button" class="month-picker-toggle" aria-haspopup="true" aria-expanded="false">${periodLabel(value)}</button>
+      <input type="hidden" name="${name}" value="${value}" />
+      <div class="month-picker-pop" hidden>
+        <div class="month-picker-nav">
+          <button type="button" class="month-picker-nav-btn" data-dir="-1" aria-label="Vorheriges Jahr">‹</button>
+          <span class="month-picker-year"></span>
+          <button type="button" class="month-picker-nav-btn" data-dir="1" aria-label="Nächstes Jahr">›</button>
+        </div>
+        <div class="month-picker-grid"></div>
+      </div>
+    </div>`;
+}
+
+function renderMonthPickerGrid(container) {
+  const [selYear, selMonth] = container.dataset.value.split("-").map(Number);
+  const viewYear = Number(container.dataset.viewYear);
+  container.querySelector(".month-picker-year").textContent = viewYear;
+  container.querySelector(".month-picker-grid").innerHTML = MONTH_LABELS.map((label, i) => {
+    const m = i + 1;
+    const active = viewYear === selYear && m === selMonth;
+    return `<button type="button" class="month-picker-cell${active ? " active" : ""}" data-month="${m}">${label}</button>`;
+  }).join("");
+}
+
+function openMonthPicker(container) {
+  container.dataset.viewYear = container.dataset.value.split("-")[0];
+  renderMonthPickerGrid(container);
+  container.classList.add("open");
+  container.querySelector(".month-picker-pop").hidden = false;
+  container.querySelector(".month-picker-toggle").setAttribute("aria-expanded", "true");
+}
+
+function closeMonthPicker(container) {
+  container.classList.remove("open");
+  container.querySelector(".month-picker-pop").hidden = true;
+  container.querySelector(".month-picker-toggle").setAttribute("aria-expanded", "false");
+}
+
+function setMonthPickerValue(container, period) {
+  container.dataset.value = period;
+  container.dataset.viewYear = period.split("-")[0];
+  container.querySelector('input[type="hidden"]').value = period;
+  container.querySelector(".month-picker-toggle").textContent = periodLabel(period);
+  container.querySelector('input[type="hidden"]').dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+document.addEventListener("click", (e) => {
+  const clickedPicker = e.target.closest(".month-picker");
+  document.querySelectorAll(".month-picker.open").forEach((el) => {
+    if (el !== clickedPicker) closeMonthPicker(el);
+  });
+
+  const toggle = e.target.closest(".month-picker-toggle");
+  if (toggle) {
+    const container = toggle.closest(".month-picker");
+    container.classList.contains("open") ? closeMonthPicker(container) : openMonthPicker(container);
+    return;
+  }
+
+  const navBtn = e.target.closest(".month-picker-nav-btn");
+  if (navBtn) {
+    const container = navBtn.closest(".month-picker");
+    container.dataset.viewYear = String(Number(container.dataset.viewYear) + Number(navBtn.dataset.dir));
+    renderMonthPickerGrid(container);
+    return;
+  }
+
+  const cell = e.target.closest(".month-picker-cell");
+  if (cell) {
+    const container = cell.closest(".month-picker");
+    const period = `${container.dataset.viewYear}-${cell.dataset.month.padStart(2, "0")}`;
+    setMonthPickerValue(container, period);
+    closeMonthPicker(container);
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document.querySelectorAll(".month-picker.open").forEach(closeMonthPicker);
+  }
+});
+
 function allPeriodsSorted() {
   const set = new Set(state.balances.map((b) => b.period));
   return Array.from(set).sort();
 }
 
+function balancesInPeriod(period) {
+  return state.balances.filter((b) => b.period === period && state.accounts.some((a) => a.id === b.accountId));
+}
+
+// state.balances is kept sorted ascending by period (see store.js getAllBalances),
+// so the last matching entry is the most recent one for that account.
+function latestBalanceForAccount(accountId) {
+  return [...state.balances].reverse().find((b) => b.accountId === accountId);
+}
+
 const BACKUP_REMINDER_DAYS = 30;
+const BACKUP_FILE_FILTERS = [
+  { name: "JSON-Backup", extensions: ["json"] },
+  { name: "Alle Dateien", extensions: ["*"] },
+];
 
 async function getBackupReminder() {
   const lastExportAt = await db.getSetting("lastExportAt", null);
@@ -74,6 +179,10 @@ function el(html) {
   return t.content.firstElementChild;
 }
 
+function appRoot() {
+  return document.getElementById("app");
+}
+
 async function loadState() {
   try {
     const [accounts, balances, baseCurrency] = await Promise.all([
@@ -84,7 +193,6 @@ async function loadState() {
     state.accounts = accounts;
     state.balances = balances;
     state.baseCurrency = baseCurrency;
-    console.log("State loaded:", state.accounts.length, "accounts", state.balances.length, "balances");
   } catch (err) {
     console.error("Failed to load state:", err);
     // Set defaults to prevent errors
@@ -101,6 +209,7 @@ const routes = {
   "#/dashboard": renderDashboard,
   "#/accounts": renderAccounts,
   "#/entry": renderEntry,
+  "#/entries": renderEntries,
   "#/settings": renderSettings,
 };
 
@@ -109,7 +218,6 @@ async function router(hashOverride = null) {
     const hash = hashOverride || location.hash || "#/dashboard";
     const [base] = hash.split("?");
     const view = routes[base] || renderDashboard;
-    console.log("Routing to:", base, "view:", typeof view);
     await loadState();
     setActiveNav(base);
     await view();
@@ -140,7 +248,7 @@ async function renderDashboard() {
   const periods = allPeriodsSorted();
 
   if (periods.length === 0) {
-    document.getElementById("app").innerHTML = `
+    appRoot().innerHTML = `
       <section class="empty-state">
         <h2>Noch kein Vermögen erfasst</h2>
         <p>Leg zuerst ein Konto an und trag deinen ersten Kontostand ein.</p>
@@ -152,13 +260,9 @@ async function renderDashboard() {
   const latestPeriod = periods[periods.length - 1];
   const prevPeriod = periods.length > 1 ? periods[periods.length - 2] : null;
 
-  const totalForPeriod = (period) =>
-    state.balances
-      .filter((b) => b.period === period && state.accounts.some((a) => a.id === b.accountId))
-      .reduce((sum, b) => sum + b.amountBase, 0);
+  const totalForPeriod = (period) => balancesInPeriod(period).reduce((sum, b) => sum + b.amountBase, 0);
 
-  const accountsWithEntryInPeriod = (period) =>
-    state.balances.filter((b) => b.period === period && state.accounts.some((a) => a.id === b.accountId)).length;
+  const accountsWithEntryInPeriod = (period) => balancesInPeriod(period).length;
 
   const currentTotal = totalForPeriod(latestPeriod);
   const prevTotal = prevPeriod ? totalForPeriod(prevPeriod) : null;
@@ -183,7 +287,7 @@ async function renderDashboard() {
 
   const backupReminder = await getBackupReminder();
 
-  document.getElementById("app").innerHTML = `
+  appRoot().innerHTML = `
     ${
       backupReminder.overdue
         ? `<div class="backup-banner">
@@ -224,11 +328,12 @@ async function renderDashboard() {
 
   const grid = document.getElementById("accountCards");
   state.accounts.forEach((acc) => {
-    const points = periods.map((p) => {
+    const accPeriods = Array.from(new Set(state.balances.filter((b) => b.accountId === acc.id).map((b) => b.period))).sort();
+    const points = accPeriods.map((p) => {
       const b = state.balances.find((x) => x.accountId === acc.id && x.period === p);
-      return { label: periodLabel(p), value: b ? b.amountBase : null };
+      return { label: periodLabel(p), value: b.amountBase };
     });
-    const latestForAcc = [...state.balances].reverse().find((b) => b.accountId === acc.id);
+    const latestForAcc = latestBalanceForAccount(acc.id);
     const card = el(`
       <article class="card account-card">
         <header>
@@ -248,7 +353,12 @@ async function renderDashboard() {
 // ---------- Konten ----------
 
 async function renderAccounts() {
-  document.getElementById("app").innerHTML = `
+  appRoot().innerHTML = `
+    <section class="card">
+      <h2>Bestehende Konten</h2>
+      <div id="accountList"></div>
+    </section>
+
     <section class="card">
       <h2>Neues Konto</h2>
       <form id="accountForm">
@@ -277,11 +387,6 @@ async function renderAccounts() {
         <button type="submit">Konto anlegen</button>
       </form>
     </section>
-
-    <section>
-      <h2>Bestehende Konten</h2>
-      <div id="accountList"></div>
-    </section>
   `;
 
   const accountForm = document.getElementById("accountForm");
@@ -290,7 +395,6 @@ async function renderAccounts() {
       e.preventDefault();
       try {
         const fd = new FormData(e.target);
-        console.log("Adding account:", Object.fromEntries(fd));
         await db.addAccount({
           name: fd.get("name"),
           bank: fd.get("bank"),
@@ -298,7 +402,6 @@ async function renderAccounts() {
           currency: fd.get("currency").toUpperCase(),
           color: fd.get("color"),
         });
-        console.log("Account added successfully");
         await loadState();
         renderAccountList();
         e.target.reset();
@@ -322,15 +425,17 @@ async function renderAccounts() {
     listEl.innerHTML = "";
     state.accounts.forEach((acc) => {
       const row = el(`
-        <article class="card account-row">
+        <article class="card account-row" data-id="${acc.id}">
           <span class="dot" style="background:${acc.color}"></span>
           <div class="account-row-info">
             <strong>${acc.name}</strong>
             <span class="muted">${acc.bank ? acc.bank + " · " : ""}${acc.tag} · ${acc.currency}</span>
           </div>
+          <button class="secondary outline edit-btn" data-id="${acc.id}">Bearbeiten</button>
           <button class="secondary archive-btn" data-id="${acc.id}">Archivieren</button>
         </article>
       `);
+      row.querySelector(".edit-btn").addEventListener("click", () => renderAccountEditForm(row, acc));
       row.querySelector(".archive-btn").addEventListener("click", async () => {
         if (!confirm(`"${acc.name}" wirklich archivieren? Es verschwindet danach komplett aus allen Charts.`)) return;
         await db.archiveAccount(acc.id);
@@ -340,13 +445,70 @@ async function renderAccounts() {
       listEl.appendChild(row);
     });
   }
+
+  function renderAccountEditForm(row, acc) {
+    const form = el(`
+      <form class="card account-edit-form" data-id="${acc.id}">
+        <label>Name
+          <input type="text" name="name" required value="${acc.name.replace(/"/g, "&quot;")}" />
+        </label>
+        <label>Bank
+          <input type="text" name="bank" value="${(acc.bank || "").replace(/"/g, "&quot;")}" />
+        </label>
+        <div class="grid">
+          <label>Typ
+            <select name="tag" required>
+              ${TAGS.map((t) => `<option value="${t}" ${t === acc.tag ? "selected" : ""}>${t}</option>`).join("")}
+            </select>
+          </label>
+          <label>Währung
+            <input list="currencyListEdit" name="currency" value="${acc.currency}" required />
+            <datalist id="currencyListEdit">
+              ${CURRENCIES.map((c) => `<option value="${c}">`).join("")}
+            </datalist>
+          </label>
+        </div>
+        <label>Farbe
+          <input type="color" name="color" value="${acc.color}" />
+        </label>
+        <div class="grid">
+          <button type="submit">Speichern</button>
+          <button type="button" class="secondary cancel-edit-btn">Abbrechen</button>
+        </div>
+      </form>
+    `);
+    row.replaceWith(form);
+
+    form.querySelector(".cancel-edit-btn").addEventListener("click", () => {
+      form.replaceWith(row);
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        const fd = new FormData(form);
+        await db.updateAccount(acc.id, {
+          name: fd.get("name"),
+          bank: fd.get("bank"),
+          tag: fd.get("tag"),
+          currency: fd.get("currency").toUpperCase(),
+          color: fd.get("color"),
+        });
+        await loadState();
+        renderAccountList();
+      } catch (err) {
+        console.error("Failed to update account:", err);
+        alert("Fehler beim Speichern: " + (err.message || String(err)));
+      }
+    });
+  }
 }
 
 // ---------- Kontostand erfassen ----------
 
 async function renderEntry() {
   if (state.accounts.length === 0) {
-    document.getElementById("app").innerHTML = `
+    appRoot().innerHTML = `
       <section class="empty-state">
         <h2>Erst ein Konto anlegen</h2>
         <p>Bevor du einen Kontostand erfassen kannst, brauchst du mindestens ein Konto.</p>
@@ -355,7 +517,7 @@ async function renderEntry() {
     return;
   }
 
-  document.getElementById("app").innerHTML = `
+  appRoot().innerHTML = `
     <section class="card">
       <h2>Kontostand erfassen</h2>
       <p class="muted">Auch rückwirkend möglich — einfach den passenden Monat wählen. Ein bestehender Eintrag für Konto + Monat wird überschrieben.</p>
@@ -366,13 +528,10 @@ async function renderEntry() {
           </select>
         </label>
         <label>Monat
-          <input type="month" name="period" value="${currentPeriod()}" required />
+          ${monthPickerField("period", currentPeriod())}
         </label>
         <label>Betrag (in Kontowährung)
           <input type="number" step="0.01" name="amount" required placeholder="z.B. 4230.50" />
-        </label>
-        <label>Notiz (optional)
-          <input type="text" name="note" placeholder="optional" />
         </label>
         <div id="rateNotice" class="hint"></div>
         <button type="submit">Speichern</button>
@@ -390,7 +549,6 @@ async function renderEntry() {
     const account = state.accounts.find((a) => a.id === accountId);
     const period = fd.get("period"); // "YYYY-MM"
     const amount = parseFloat(fd.get("amount"));
-    const note = fd.get("note") || "";
     const dateISO = lastDayOfMonthISO(period);
 
     rateNotice.textContent = "Kurs wird ermittelt …";
@@ -422,7 +580,125 @@ async function renderEntry() {
 
     rateNotice.textContent = `Gespeichert: ${fmtMoney(amountBase, state.baseCurrency)} (Kurs ${rateResult.rate.toFixed(4)}, Quelle: ${rateResult.source}).`;
     form.reset();
-    document.querySelector('[name="period"]').value = currentPeriod();
+    setMonthPickerValue(form.querySelector(".month-picker"), currentPeriod());
+  });
+}
+
+// ---------- Einträge (bestehende Kontostände bearbeiten) ----------
+
+async function renderEntries() {
+  if (state.balances.length === 0) {
+    appRoot().innerHTML = `
+      <section class="empty-state">
+        <h2>Noch keine Einträge</h2>
+        <p>Unter "Erfassen" kannst du deinen ersten Kontostand eintragen.</p>
+        <a role="button" href="#/entry">Kontostand erfassen</a>
+      </section>`;
+    return;
+  }
+
+  const groups = new Map();
+  state.balances.forEach((bal) => {
+    const key = bal.accountId;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(bal);
+  });
+
+  const sections = [
+    ...state.accounts.filter((a) => groups.has(a.id)).map((a) => ({ acc: a, balances: groups.get(a.id) })),
+    ...[...groups.keys()]
+      .filter((accountId) => !state.accounts.some((a) => a.id === accountId))
+      .map((accountId) => ({ acc: null, balances: groups.get(accountId) })),
+  ];
+
+  appRoot().innerHTML = `
+    <p class="muted">Bestehende Kontostände korrigieren oder löschen.</p>
+    ${sections
+      .map(
+        ({ acc }, i) => `
+    <section class="card">
+      <h2>${acc ? acc.name : "(archiviertes/gelöschtes Konto)"}</h2>
+      <div class="table-scroll">
+        <table id="entriesTable-${i}">
+          <thead>
+            <tr>
+              <th>Monat</th>
+              <th>Betrag</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>`
+      )
+      .join("")}
+  `;
+
+  sections.forEach(({ acc, balances }, i) => {
+    const tbody = document.querySelector(`#entriesTable-${i} tbody`);
+    const sorted = [...balances].sort((a, b) => (a.period < b.period ? 1 : a.period > b.period ? -1 : 0));
+
+    sorted.forEach((bal) => {
+      const row = el(`
+        <tr data-id="${bal.id}">
+          <td>${periodLabel(bal.period)}</td>
+          <td>${fmtMoney(bal.amountOriginal, bal.currencyOriginal)}</td>
+          <td class="entry-actions">
+            <button class="secondary outline entry-edit-btn">Bearbeiten</button>
+            <button class="secondary entry-delete-btn">Löschen</button>
+          </td>
+        </tr>
+      `);
+
+      row.querySelector(".entry-edit-btn").addEventListener("click", () => renderEntryEditRow(row, bal, acc));
+      row.querySelector(".entry-delete-btn").addEventListener("click", async () => {
+        if (!confirm(`Eintrag für ${acc ? acc.name : "Konto"} · ${periodLabel(bal.period)} wirklich löschen?`)) return;
+        await db.deleteBalance(bal.id);
+        await loadState();
+        renderEntries();
+      });
+
+      tbody.appendChild(row);
+    });
+  });
+}
+
+function renderEntryEditRow(row, bal, acc) {
+  const editRow = el(`
+    <tr data-id="${bal.id}">
+      <td>${periodLabel(bal.period)}</td>
+      <td>
+        <input type="number" step="0.01" class="entry-amount-input" value="${bal.amountOriginal}" />
+        <span class="muted small">${bal.currencyOriginal}</span>
+      </td>
+      <td class="entry-actions">
+        <button class="entry-save-btn">Speichern</button>
+        <button type="button" class="secondary entry-cancel-btn">Abbrechen</button>
+      </td>
+    </tr>
+  `);
+  row.replaceWith(editRow);
+
+  editRow.querySelector(".entry-cancel-btn").addEventListener("click", () => {
+    editRow.replaceWith(row);
+  });
+
+  editRow.querySelector(".entry-save-btn").addEventListener("click", async () => {
+    const amount = parseFloat(editRow.querySelector(".entry-amount-input").value);
+    if (!Number.isFinite(amount)) {
+      alert("Bitte einen gültigen Betrag eingeben.");
+      return;
+    }
+    try {
+      const amountBase = amount * bal.rate;
+      await db.updateBalance(bal.id, { amountOriginal: amount, amountBase });
+      await loadState();
+      renderEntries();
+    } catch (err) {
+      console.error("Failed to update entry:", err);
+      alert("Fehler beim Speichern: " + (err.message || String(err)));
+    }
   });
 }
 
@@ -431,7 +707,7 @@ async function renderEntry() {
 async function renderSettings() {
   const lastExport = await db.getSetting("lastExportAt", null);
 
-  document.getElementById("app").innerHTML = `
+  appRoot().innerHTML = `
     <section class="card">
       <h2>Basiswährung</h2>
       <p class="muted">Alle Beträge werden für Dashboard-Ansichten in diese Währung umgerechnet.</p>
@@ -460,7 +736,6 @@ async function renderSettings() {
       try {
         await db.setSetting("baseCurrency", e.target.value);
         await loadState();
-        console.log("Base currency updated to:", e.target.value);
       } catch (err) {
         console.error("Failed to update base currency:", err);
       }
@@ -473,10 +748,7 @@ async function renderSettings() {
       const suggestedName = `finanzgecko-backup-${new Date().toISOString().slice(0, 10)}.json`;
       const targetPath = await Neutralino.os.showSaveDialog("Backup speichern unter…", {
         defaultPath: suggestedName,
-        filters: [
-          { name: "JSON-Backup", extensions: ["json"] },
-          { name: "Alle Dateien", extensions: ["*"] },
-        ],
+        filters: BACKUP_FILE_FILTERS,
       });
       if (!targetPath) return; // Dialog abgebrochen
       await Neutralino.filesystem.writeFile(targetPath, JSON.stringify(exportData, null, 2));
@@ -490,18 +762,14 @@ async function renderSettings() {
   document.getElementById("importBtn").addEventListener("click", async () => {
     try {
       const entries = await Neutralino.os.showOpenDialog("Backup-Datei auswählen", {
-        filters: [
-          { name: "JSON-Backup", extensions: ["json"] },
-          { name: "Alle Dateien", extensions: ["*"] },
-        ],
+        filters: BACKUP_FILE_FILTERS,
       });
       if (!entries || entries.length === 0) return; // Dialog abgebrochen
       if (!confirm("Import ersetzt ALLE aktuellen Daten. Fortfahren?")) return;
 
       const raw = await Neutralino.filesystem.readFile(entries[0]);
       const imported = JSON.parse(raw);
-      const snapshot = await db.importAllData(imported);
-      window._preImportSnapshot = snapshot; // einmaliges Undo für diese Sitzung
+      await db.importAllData(imported);
       await loadState();
       alert("Import abgeschlossen.");
       location.hash = "#/dashboard";
@@ -610,22 +878,23 @@ async function init() {
     // Ignore cleanup errors
   }
   
-  // Setup navigation click handlers - directly call router
+  // Setup navigation click handlers - update location.hash and let the
+  // existing "hashchange" listener trigger the router. This keeps
+  // location.hash in sync with the visible view, which the resize handler
+  // below relies on when it re-renders without an explicit hash override.
   const navLinks = document.querySelectorAll("nav a[data-route]");
-  console.log("Found nav links:", navLinks.length);
   if (navLinks.length === 0) {
     console.error("Navigation links not found!");
   } else {
     navLinks.forEach((a) => {
       a.addEventListener("click", async (e) => {
         e.preventDefault();
-        console.log("Nav click:", a.getAttribute("href"));
         const targetHash = a.getAttribute("href");
-        try {
+        if (location.hash === targetHash) {
+          // hashchange won't fire for a same-hash assignment, so re-render explicitly
           await router(targetHash);
-        } catch (err) {
-          console.error("Navigation error:", err);
-          alert(`Fehler beim Laden der Seite: ${err.message || String(err)}`);
+        } else {
+          location.hash = targetHash;
         }
       });
     });

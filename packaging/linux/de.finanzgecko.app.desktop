@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=FinanzGecko
+GenericName=Vermögenstracker
+Comment=Nativer Vermögenstracker – lokal, ohne Cloud
+Exec=finanzgecko
+Icon=de.finanzgecko.app
+Terminal=false
+Categories=Office;Finance;
+StartupWMClass=finanzgecko

@@ -123,6 +123,37 @@ nav a[aria-current="page"] {
   flex-grow: 1;
 }
 
+.account-edit-form .grid button {
+  margin: 0;
+}
+
+/* Einträge-Tabelle */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+#entriesTable {
+  margin: 0;
+}
+
+#entriesTable input {
+  width: auto;
+  min-width: 8rem;
+  margin: 0;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.entry-actions button {
+  width: auto;
+  margin: 0;
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
@@ -187,4 +218,98 @@ nav a[aria-current="page"] {
 .donut-legend .dot {
   width: 0.7rem;
   height: 0.7rem;
+}
+
+/* Monatsauswahl (Ersatz für <input type="month">) */
+
+.month-picker {
+  position: relative;
+  margin-top: calc(var(--pico-spacing) * 0.25);
+}
+
+.month-picker-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 0;
+  padding: var(--pico-form-element-spacing-vertical) var(--pico-form-element-spacing-horizontal);
+  border: var(--pico-border-width) solid var(--pico-card-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-background-color);
+  color: var(--pico-color);
+  font: inherit;
+  cursor: pointer;
+}
+
+.month-picker-toggle:focus,
+.month-picker.open .month-picker-toggle {
+  outline: none;
+  border-color: var(--pico-primary);
+  box-shadow: 0 0 0 var(--pico-outline-width, 0.125rem) var(--pico-primary-focus);
+}
+
+.month-picker-pop {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  min-width: 15rem;
+  padding: 0.75rem;
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-card-border-color);
+  border-radius: 0.75rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.4);
+}
+
+.month-picker-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.month-picker-nav-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--pico-color);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.month-picker-nav-btn:hover {
+  background: var(--pico-card-border-color);
+}
+
+.month-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.month-picker-cell {
+  padding: 0.5rem 0.25rem;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: var(--pico-background-color);
+  color: var(--pico-color);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.month-picker-cell:hover {
+  border-color: var(--pico-primary);
+}
+
+.month-picker-cell.active {
+  background: var(--pico-primary);
+  border-color: var(--pico-primary);
+  color: #04140d;
+  font-weight: 600;
 }
