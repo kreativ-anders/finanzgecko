@@ -1,6 +1,7 @@
 import * as db from "./store.js";
 import { getExchangeRate } from "./currency.js";
 import { renderLineChart, renderDonut } from "./charts.js";
+import { BANKS } from "./banks.js";
 
 // ---------- Konstanten ----------
 
@@ -36,6 +37,11 @@ function fmtMoney(value, currency) {
 function periodLabel(period) {
   const [y, m] = period.split("-");
   return `${MONTH_LABELS[parseInt(m, 10) - 1]} ${y}`;
+}
+
+function getBankColor(bankName) {
+  const match = BANKS.find((b) => b.name.toLowerCase() === (bankName || "").trim().toLowerCase());
+  return match ? match.color : null;
 }
 
 function lastDayOfMonthISO(period) {
@@ -366,7 +372,14 @@ async function renderAccounts() {
           <input type="text" name="name" required placeholder="z.B. DKB Girokonto" />
         </label>
         <label>Bank
-          <input type="text" name="bank" placeholder="z.B. DKB" />
+          <input list="bankList" name="bank" autocomplete="off" placeholder="z.B. DKB" />
+          <datalist id="bankList">
+            ${BANKS.map((b) => `<option value="${b.name}">`).join("")}
+          </datalist>
+          <small class="muted">
+            Bank fehlt? <a href="#" class="suggest-bank-link">Auf GitHub vorschlagen</a>
+            oder <a href="mailto:finanzgecko@kreativ-anders.de?subject=Bank%20vorschlagen">E-Mail schreiben</a>
+          </small>
         </label>
         <div class="grid">
           <label>Typ
@@ -381,9 +394,6 @@ async function renderAccounts() {
             </datalist>
           </label>
         </div>
-        <label>Farbe
-          <input type="color" name="color" value="#00c878" />
-        </label>
         <button type="submit">Konto anlegen</button>
       </form>
     </section>
@@ -391,16 +401,23 @@ async function renderAccounts() {
 
   const accountForm = document.getElementById("accountForm");
   if (accountForm) {
+    accountForm.querySelector(".suggest-bank-link").addEventListener("click", (e) => {
+      e.preventDefault();
+      const typed = accountForm.querySelector('[name="bank"]').value || "";
+      const title = encodeURIComponent(`Bank vorschlagen: ${typed}`);
+      Neutralino.os.open(`https://github.com/kreativanders/finanzgecko/issues/new?title=${title}`);
+    });
     accountForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
         const fd = new FormData(e.target);
+        const bank = fd.get("bank");
         await db.addAccount({
           name: fd.get("name"),
-          bank: fd.get("bank"),
+          bank,
           tag: fd.get("tag"),
           currency: fd.get("currency").toUpperCase(),
-          color: fd.get("color"),
+          color: getBankColor(bank) || TAG_COLORS[fd.get("tag")] || "#00c878",
         });
         await loadState();
         renderAccountList();
@@ -453,7 +470,14 @@ async function renderAccounts() {
           <input type="text" name="name" required value="${acc.name.replace(/"/g, "&quot;")}" />
         </label>
         <label>Bank
-          <input type="text" name="bank" value="${(acc.bank || "").replace(/"/g, "&quot;")}" />
+          <input list="bankListEdit" name="bank" autocomplete="off" value="${(acc.bank || "").replace(/"/g, "&quot;")}" />
+          <datalist id="bankListEdit">
+            ${BANKS.map((b) => `<option value="${b.name}">`).join("")}
+          </datalist>
+          <small class="muted">
+            Bank fehlt? <a href="#" class="suggest-bank-link">Auf GitHub vorschlagen</a>
+            oder <a href="mailto:finanzgecko@kreativ-anders.de?subject=Bank%20vorschlagen">E-Mail schreiben</a>
+          </small>
         </label>
         <div class="grid">
           <label>Typ
@@ -468,9 +492,6 @@ async function renderAccounts() {
             </datalist>
           </label>
         </div>
-        <label>Farbe
-          <input type="color" name="color" value="${acc.color}" />
-        </label>
         <div class="grid">
           <button type="submit">Speichern</button>
           <button type="button" class="secondary cancel-edit-btn">Abbrechen</button>
@@ -478,6 +499,13 @@ async function renderAccounts() {
       </form>
     `);
     row.replaceWith(form);
+
+    form.querySelector(".suggest-bank-link").addEventListener("click", (e) => {
+      e.preventDefault();
+      const typed = form.querySelector('[name="bank"]').value || "";
+      const title = encodeURIComponent(`Bank vorschlagen: ${typed}`);
+      Neutralino.os.open(`https://github.com/kreativanders/finanzgecko/issues/new?title=${title}`);
+    });
 
     form.querySelector(".cancel-edit-btn").addEventListener("click", () => {
       form.replaceWith(row);
@@ -487,12 +515,13 @@ async function renderAccounts() {
       e.preventDefault();
       try {
         const fd = new FormData(form);
+        const bank = fd.get("bank");
         await db.updateAccount(acc.id, {
           name: fd.get("name"),
-          bank: fd.get("bank"),
+          bank,
           tag: fd.get("tag"),
           currency: fd.get("currency").toUpperCase(),
-          color: fd.get("color"),
+          color: getBankColor(bank) || acc.color,
         });
         await loadState();
         renderAccountList();
