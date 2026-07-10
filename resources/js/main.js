@@ -535,6 +535,20 @@ async function renderAccounts() {
 
 // ---------- Kontostand erfassen ----------
 
+function entryRowHTML(account) {
+  return `
+    <div class="entry-row" data-account-id="${account.id}">
+      <div class="entry-row-info">
+        <span class="entry-row-name">${account.name} <span class="muted small">(${account.currency})</span></span>
+        <span class="entry-row-hint muted small"></span>
+      </div>
+      <div class="entry-row-input">
+        <input type="number" step="0.01" required inputmode="decimal" placeholder="Betrag" />
+        <span class="entry-status" aria-hidden="true"></span>
+      </div>
+    </div>`;
+}
+
 async function renderEntry() {
   if (state.accounts.length === 0) {
     appRoot().innerHTML = `
@@ -548,68 +562,131 @@ async function renderEntry() {
 
   appRoot().innerHTML = `
     <section class="card">
-      <h2>Kontostand erfassen</h2>
-      <p class="muted">Auch rückwirkend möglich — einfach den passenden Monat wählen. Ein bestehender Eintrag für Konto + Monat wird überschrieben.</p>
-      <form id="entryForm">
-        <label>Konto
-          <select name="accountId" required>
-            ${state.accounts.map((a) => `<option value="${a.id}">${a.name} (${a.currency})</option>`).join("")}
-          </select>
-        </label>
-        <label>Monat
-          ${monthPickerField("period", currentPeriod())}
-        </label>
-        <label>Betrag (in Kontowährung)
-          <input type="number" step="0.01" name="amount" required placeholder="z.B. 4230.50" />
-        </label>
-        <div id="rateNotice" class="hint"></div>
-        <button type="submit">Speichern</button>
+      <h2>Kontostände erfassen</h2>
+      <p class="muted">Auch rückwirkend möglich — einfach den passenden Monat wählen. Ein bestehender Eintrag für Konto + Monat wird überschrieben. Leere Felder werden übersprungen.</p>
+      <form id="entryForm" novalidate>
+        <div class="entry-toolbar">
+          <label class="entry-month-label">Monat
+            ${monthPickerField("period", currentPeriod())}
+          </label>
+          <label class="entry-filter">
+            <input type="checkbox" id="onlyMissing" role="switch" />
+            Nur fehlende anzeigen
+          </label>
+        </div>
+        <div class="entry-grid" id="entryGrid">
+          ${state.accounts.map((a) => entryRowHTML(a)).join("")}
+        </div>
+        <div id="entryNotice" class="hint"></div>
+        <button type="submit">Alle speichern</button>
       </form>
     </section>
   `;
 
   const form = document.getElementById("entryForm");
-  const rateNotice = document.getElementById("rateNotice");
+  const grid = document.getElementById("entryGrid");
+  const notice = document.getElementById("entryNotice");
+  const onlyMissing = document.getElementById("onlyMissing");
+
+  function rowsWithAccounts() {
+    return [...grid.querySelectorAll(".entry-row")].map((row) => ({
+      row,
+      account: state.accounts.find((a) => a.id === Number(row.dataset.accountId)),
+    }));
+  }
+
+  // Letzten bekannten Wert vor dem gewählten Monat ermitteln, als Orientierung.
+  function previousBalance(accountId, period) {
+    return [...state.balances]
+      .filter((b) => b.accountId === accountId && b.period < period)
+      .sort((a, b) => (a.period < b.period ? -1 : 1))
+      .pop();
+  }
+
+  function refreshGrid(period) {
+    const inPeriod = balancesInPeriod(period);
+    rowsWithAccounts().forEach(({ row, account }) => {
+      const input = row.querySelector("input");
+      const hint = row.querySelector(".entry-row-hint");
+      const current = inPeriod.find((b) => b.accountId === account.id);
+      input.value = current ? current.amountOriginal : "";
+
+      const prev = previousBalance(account.id, period);
+      hint.textContent = prev ? `zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})` : "";
+    });
+    applyMissingFilter();
+  }
+
+  function applyMissingFilter() {
+    const period = form.querySelector('input[name="period"]').value;
+    const inPeriod = balancesInPeriod(period);
+    rowsWithAccounts().forEach(({ row, account }) => {
+      const hasEntry = inPeriod.some((b) => b.accountId === account.id);
+      row.hidden = onlyMissing.checked && hasEntry;
+    });
+  }
+
+  refreshGrid(currentPeriod());
+
+  form.addEventListener("change", (e) => {
+    if (e.target.name === "period") refreshGrid(e.target.value);
+  });
+  onlyMissing.addEventListener("change", applyMissingFilter);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const fd = new FormData(form);
-    const accountId = Number(fd.get("accountId"));
-    const account = state.accounts.find((a) => a.id === accountId);
-    const period = fd.get("period"); // "YYYY-MM"
-    const amount = parseFloat(fd.get("amount"));
+    const period = form.querySelector('input[name="period"]').value;
     const dateISO = lastDayOfMonthISO(period);
+    const rateCache = new Map(); // currency -> rateResult|null, damit gleiche Währungen nur einmal abgefragt werden
 
-    rateNotice.textContent = "Kurs wird ermittelt …";
+    let saved = 0;
+    let failed = 0;
 
-    let rateResult = await getExchangeRate(account.currency, state.baseCurrency, dateISO);
+    notice.textContent = "Wird gespeichert …";
 
-    if (!rateResult) {
-      const manual = prompt(
-        `Kein Wechselkurs ${account.currency} → ${state.baseCurrency} für ${dateISO} verfügbar (offline?).\nBitte Kurs manuell eingeben (1 ${account.currency} = ? ${state.baseCurrency}):`
-      );
-      const manualRate = parseFloat(manual);
-      if (!manualRate || manualRate <= 0) {
-        rateNotice.textContent = "Ohne gültigen Kurs kann der Eintrag nicht gespeichert werden.";
-        return;
+    for (const { row, account } of rowsWithAccounts()) {
+      const input = row.querySelector("input");
+      const raw = input.value.trim();
+      if (raw === "") continue;
+      const amount = parseFloat(raw);
+      if (!Number.isFinite(amount)) continue;
+
+      if (!rateCache.has(account.currency)) {
+        let rateResult = await getExchangeRate(account.currency, state.baseCurrency, dateISO);
+        if (!rateResult) {
+          const manual = prompt(
+            `Kein Wechselkurs ${account.currency} → ${state.baseCurrency} für ${dateISO} verfügbar (offline?).\nBitte Kurs manuell eingeben (1 ${account.currency} = ? ${state.baseCurrency}):`
+          );
+          const manualRate = parseFloat(manual);
+          rateResult = manualRate > 0 ? { rate: manualRate, source: "manual", date: dateISO } : null;
+        }
+        rateCache.set(account.currency, rateResult);
       }
-      rateResult = { rate: manualRate, source: "manual", date: dateISO };
+
+      const rateResult = rateCache.get(account.currency);
+      if (!rateResult) {
+        failed++;
+        continue;
+      }
+
+      const amountBase = amount * rateResult.rate;
+      await db.upsertBalance({
+        accountId: account.id,
+        period,
+        amountOriginal: amount,
+        currencyOriginal: account.currency,
+        rate: rateResult.rate,
+        amountBase,
+      });
+      saved++;
     }
 
-    const amountBase = amount * rateResult.rate;
+    await loadState();
+    refreshGrid(period);
 
-    await db.upsertBalance({
-      accountId,
-      period,
-      amountOriginal: amount,
-      currencyOriginal: account.currency,
-      rate: rateResult.rate,
-      amountBase,
-    });
-
-    rateNotice.textContent = `Gespeichert: ${fmtMoney(amountBase, state.baseCurrency)} (Kurs ${rateResult.rate.toFixed(4)}, Quelle: ${rateResult.source}).`;
-    form.reset();
-    setMonthPickerValue(form.querySelector(".month-picker"), currentPeriod());
+    const parts = [`${saved} ${saved === 1 ? "Konto" : "Konten"} gespeichert.`];
+    if (failed > 0) parts.push(`${failed} ohne Kurs übersprungen.`);
+    notice.textContent = parts.join(" ");
   });
 }
 
