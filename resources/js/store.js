@@ -18,8 +18,9 @@ function defaultData() {
     baseCurrency: "EUR",
     accounts: [],
     balances: [],
+    assets: [],
     ratesCache: {},
-    meta: { nextAccountId: 1, nextBalanceId: 1, lastExportAt: null },
+    meta: { nextAccountId: 1, nextBalanceId: 1, nextAssetId: 1, lastExportAt: null },
   };
 }
 
@@ -33,13 +34,15 @@ function validateData(parsed) {
     baseCurrency: parsed.baseCurrency ?? "EUR",
     accounts: Array.isArray(parsed.accounts) ? parsed.accounts : [],
     balances: Array.isArray(parsed.balances) ? parsed.balances : [],
+    assets: Array.isArray(parsed.assets) ? parsed.assets : [],
     ratesCache: parsed.ratesCache && typeof parsed.ratesCache === 'object' ? parsed.ratesCache : {},
     meta: parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {},
   };
-  
+
   // Ensure meta has required fields
   validated.meta.nextAccountId = validated.meta.nextAccountId ?? 1;
   validated.meta.nextBalanceId = validated.meta.nextBalanceId ?? 1;
+  validated.meta.nextAssetId = validated.meta.nextAssetId ?? 1;
   validated.meta.lastExportAt = validated.meta.lastExportAt ?? null;
   
   return validated;
@@ -282,6 +285,66 @@ export async function getBalanceForAccountPeriod(accountId, period) {
   return data.balances.find((b) => b.accountId === accountId && b.period === period) || null;
 }
 
+// ---------- Vermögenswerte ----------
+
+export async function addAsset(asset) {
+  if (!isInitialized) {
+    throw new Error("Store not initialized. Call initStore() first.");
+  }
+
+  const now = new Date().toISOString();
+  const record = {
+    id: data.meta.nextAssetId++,
+    name: asset.name,
+    value: asset.value,
+    createdAt: now,
+    lastEvaluatedAt: now,
+  };
+
+  data.assets.push(record);
+  try {
+    await persist();
+  } catch (err) {
+    data.assets.pop();
+    throw new Error(`Failed to save asset: ${err.message}`);
+  }
+  return record;
+}
+
+// Ändert sich dabei "value", gilt der Vermögenswert als heute neu bewertet
+// — das treibt den 6-Monats-Reminder, ohne dass es einen eigenen "Neu
+// bewerten"-Knopf braucht.
+export async function updateAsset(id, changes) {
+  if (!isInitialized) {
+    throw new Error("Store not initialized. Call initStore() first.");
+  }
+
+  const asset = data.assets.find((a) => a.id === id);
+  if (!asset) throw new Error("Vermögenswert nicht gefunden");
+  Object.assign(asset, changes);
+  if (Object.prototype.hasOwnProperty.call(changes, "value")) {
+    asset.lastEvaluatedAt = new Date().toISOString();
+  }
+  await persist();
+  return asset;
+}
+
+export async function deleteAsset(id) {
+  if (!isInitialized) {
+    throw new Error("Store not initialized. Call initStore() first.");
+  }
+
+  data.assets = data.assets.filter((a) => a.id !== id);
+  await persist();
+}
+
+export async function getAssets() {
+  if (!isInitialized) {
+    await initStore();
+  }
+  return [...data.assets];
+}
+
 // ---------- Settings ----------
 
 export async function getSetting(key, fallback = null) {
@@ -334,6 +397,7 @@ export async function exportAllData() {
     baseCurrency: data.baseCurrency,
     accounts: data.accounts,
     balances: data.balances,
+    assets: data.assets,
   };
 }
 
@@ -348,12 +412,15 @@ export async function importAllData(imported) {
 
   const maxAccId = Math.max(0, ...(imported.accounts || []).map((a) => a.id || 0));
   const maxBalId = Math.max(0, ...(imported.balances || []).map((b) => b.id || 0));
+  const maxAssetId = Math.max(0, ...(imported.assets || []).map((a) => a.id || 0));
 
   data.accounts = imported.accounts || [];
   data.balances = imported.balances || [];
+  data.assets = imported.assets || [];
   if (imported.baseCurrency) data.baseCurrency = imported.baseCurrency;
   data.meta.nextAccountId = Math.max(data.meta.nextAccountId, maxAccId + 1);
   data.meta.nextBalanceId = Math.max(data.meta.nextBalanceId, maxBalId + 1);
+  data.meta.nextAssetId = Math.max(data.meta.nextAssetId, maxAssetId + 1);
 
   await persist();
   return snapshot;

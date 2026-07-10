@@ -22,6 +22,7 @@ let state = {
   baseCurrency: "EUR",
   accounts: [],
   balances: [],
+  assets: [],
 };
 
 // ---------- Helpers ----------
@@ -179,6 +180,21 @@ async function getBackupReminder() {
   return { overdue: false, message: `Letztes Backup vor ${days} Tag${days === 1 ? "" : "en"}.` };
 }
 
+const ASSET_REEVALUATION_DAYS = 182; // ~6 Monate
+
+function isAssetOverdue(asset) {
+  if (!asset.lastEvaluatedAt) return true;
+  const days = Math.floor((Date.now() - new Date(asset.lastEvaluatedAt).getTime()) / (1000 * 60 * 60 * 24));
+  return days >= ASSET_REEVALUATION_DAYS;
+}
+
+function getAssetReminder() {
+  const overdue = state.assets.filter(isAssetOverdue);
+  if (overdue.length === 0) return null;
+  const names = overdue.map((a) => a.name).join(", ");
+  return `${overdue.length} Vermögenswert${overdue.length === 1 ? "" : "e"} seit über 6 Monaten nicht neu bewertet: ${names}`;
+}
+
 function el(html) {
   const t = document.createElement("template");
   t.innerHTML = html.trim();
@@ -191,19 +207,22 @@ function appRoot() {
 
 async function loadState() {
   try {
-    const [accounts, balances, baseCurrency] = await Promise.all([
+    const [accounts, balances, assets, baseCurrency] = await Promise.all([
       db.getAccounts({ includeArchived: false }),
       db.getAllBalances(),
+      db.getAssets(),
       db.getSetting("baseCurrency", "EUR"),
     ]);
     state.accounts = accounts;
     state.balances = balances;
+    state.assets = assets;
     state.baseCurrency = baseCurrency;
   } catch (err) {
     console.error("Failed to load state:", err);
     // Set defaults to prevent errors
     state.accounts = [];
     state.balances = [];
+    state.assets = [];
     state.baseCurrency = "EUR";
   }
 }
@@ -216,6 +235,7 @@ const routes = {
   "#/accounts": renderAccounts,
   "#/entry": renderEntry,
   "#/entries": renderEntries,
+  "#/assets": renderAssets,
   "#/settings": renderSettings,
 };
 
@@ -250,16 +270,54 @@ window.addEventListener("resize", () => {
 
 // ---------- Dashboard ----------
 
+function assetsSectionHTML() {
+  const total = state.assets.reduce((sum, a) => sum + a.value, 0);
+  return `
+    <section class="card">
+      <h2>Vermögenswerte</h2>
+      ${
+        state.assets.length === 0
+          ? `<p class="empty-hint">Noch keine Vermögenswerte erfasst.</p>`
+          : `<p class="account-value">${fmtMoney(total, state.baseCurrency)}</p>
+             <p class="hint">${state.assets.length} Gegenstände erfasst</p>`
+      }
+      <a href="#/assets" role="button" class="secondary outline">Vermögenswerte verwalten</a>
+    </section>`;
+}
+
 async function renderDashboard() {
   const periods = allPeriodsSorted();
+  const backupReminder = await getBackupReminder();
+  const assetReminder = getAssetReminder();
+
+  const banners = `
+    ${
+      backupReminder.overdue
+        ? `<div class="backup-banner">
+             <span>⚠️ ${backupReminder.message}</span>
+             <a href="#/settings" role="button" class="secondary">Jetzt exportieren</a>
+           </div>`
+        : ""
+    }
+    ${
+      assetReminder
+        ? `<div class="backup-banner">
+             <span>⚠️ ${assetReminder}</span>
+             <a href="#/assets" role="button" class="secondary">Jetzt prüfen</a>
+           </div>`
+        : ""
+    }
+  `;
 
   if (periods.length === 0) {
     appRoot().innerHTML = `
+      ${banners}
       <section class="empty-state">
         <h2>Noch kein Vermögen erfasst</h2>
         <p>Leg zuerst ein Konto an und trag deinen ersten Kontostand ein.</p>
         <a role="button" href="#/accounts">Konto anlegen</a>
-      </section>`;
+      </section>
+      ${assetsSectionHTML()}`;
     return;
   }
 
@@ -291,17 +349,8 @@ async function renderDashboard() {
     color: TAG_COLORS[tag] || "#888",
   }));
 
-  const backupReminder = await getBackupReminder();
-
   appRoot().innerHTML = `
-    ${
-      backupReminder.overdue
-        ? `<div class="backup-banner">
-             <span>⚠️ ${backupReminder.message}</span>
-             <a href="#/settings" role="button" class="secondary">Jetzt exportieren</a>
-           </div>`
-        : ""
-    }
+    ${banners}
     <section class="dashboard-hero">
       <p class="eyebrow">Gesamtvermögen · Stand ${periodLabel(latestPeriod)}</p>
       <h1>${fmtMoney(currentTotal, state.baseCurrency)}</h1>
@@ -322,6 +371,8 @@ async function renderDashboard() {
       <h2>Verteilung nach Kontotyp</h2>
       <div id="donutChart"></div>
     </section>
+
+    ${assetsSectionHTML()}
 
     <section>
       <h2>Konten</h2>
@@ -808,6 +859,112 @@ function renderEntryEditRow(row, bal, acc) {
   });
 }
 
+// ---------- Vermögenswerte ----------
+
+async function renderAssets() {
+  const assetReminder = getAssetReminder();
+
+  appRoot().innerHTML = `
+    ${
+      assetReminder
+        ? `<div class="backup-banner">
+             <span>⚠️ ${assetReminder}</span>
+           </div>`
+        : ""
+    }
+    <section class="card">
+      <h2>Vermögenswerte</h2>
+      <p class="muted">Anschaffungen wie Elektronik, Möbel oder Fahrzeuge mit ihrem aktuellen Wert. Werte direkt in der Liste bearbeiten — beim Ändern gilt der Eintrag als heute neu bewertet.</p>
+      <div id="assetList"></div>
+    </section>
+
+    <section class="card">
+      <h2>Neuer Vermögenswert</h2>
+      <form id="assetForm">
+        <label>Bezeichnung
+          <input type="text" name="name" required placeholder="z.B. MacBook Pro" />
+        </label>
+        <label>Wert (${state.baseCurrency})
+          <input type="number" step="0.01" name="value" required placeholder="0,00" />
+        </label>
+        <button type="submit">Anlegen</button>
+      </form>
+    </section>
+  `;
+
+  renderAssetList();
+
+  document.getElementById("assetForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const value = parseFloat(fd.get("value"));
+    if (!Number.isFinite(value)) {
+      alert("Bitte einen gültigen Wert eingeben.");
+      return;
+    }
+    try {
+      await db.addAsset({ name: fd.get("name"), value });
+      await loadState();
+      renderAssetList();
+      e.target.reset();
+    } catch (err) {
+      console.error("Failed to add asset:", err);
+      alert("Fehler beim Anlegen: " + (err.message || String(err)));
+    }
+  });
+
+  function renderAssetList() {
+    const listEl = document.getElementById("assetList");
+    if (state.assets.length === 0) {
+      listEl.innerHTML = `<p class="empty-hint">Noch keine Vermögenswerte angelegt.</p>`;
+      return;
+    }
+    listEl.innerHTML = "";
+    [...state.assets]
+      .sort((a, b) => a.name.localeCompare(b.name, "de"))
+      .forEach((asset) => {
+        const overdue = isAssetOverdue(asset);
+        const row = el(`
+        <article class="card asset-row" data-id="${asset.id}">
+          <div class="asset-row-info">
+            <strong>${asset.name}</strong>
+            <span class="muted small">${asset.lastEvaluatedAt ? "zuletzt bewertet " + new Date(asset.lastEvaluatedAt).toLocaleDateString("de-DE") : "noch nie bewertet"}</span>
+          </div>
+          ${overdue ? `<span class="tag-badge overdue-badge">Neu bewerten</span>` : ""}
+          <input type="number" step="0.01" class="asset-value-input" value="${asset.value}" aria-label="Wert von ${asset.name}" />
+          <button type="button" class="secondary outline asset-delete-btn">Löschen</button>
+        </article>
+      `);
+
+        row.querySelector(".asset-value-input").addEventListener("change", async (e) => {
+          const newValue = parseFloat(e.target.value);
+          if (!Number.isFinite(newValue)) {
+            e.target.value = asset.value;
+            return;
+          }
+          try {
+            await db.updateAsset(asset.id, { value: newValue });
+            await loadState();
+            renderAssetList();
+          } catch (err) {
+            console.error("Failed to update asset:", err);
+            alert("Fehler beim Speichern: " + (err.message || String(err)));
+            e.target.value = asset.value;
+          }
+        });
+
+        row.querySelector(".asset-delete-btn").addEventListener("click", async () => {
+          if (!confirm(`"${asset.name}" wirklich löschen?`)) return;
+          await db.deleteAsset(asset.id);
+          await loadState();
+          renderAssetList();
+        });
+
+        listEl.appendChild(row);
+      });
+  }
+}
+
 // ---------- Einstellungen ----------
 
 async function renderSettings() {
@@ -937,7 +1094,7 @@ function setupNativeMenu() {
 // Diese URL zeigt auf ein kleines JSON-Manifest im eigenen GitHub-Repo
 // (siehe README: "update-manifest.json" bei jedem Release aktualisieren).
 const UPDATE_MANIFEST_URL =
-  "https://raw.githubusercontent.com/<dein-github-name>/finanzgecko/main/update-manifest.json";
+  "https://raw.githubusercontent.com/kreativanders/finanzgecko/main/update-manifest.json";
 
 async function checkForUpdates({ silent = true } = {}) {
   try {

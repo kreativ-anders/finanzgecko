@@ -143,13 +143,13 @@ nav a[aria-current="page"] {
   min-width: 0;
 }
 
-.asset-value-input {
+.asset-row input.asset-value-input {
   width: 9rem;
+  flex: 0 0 9rem;
   margin: 0;
-  flex-shrink: 0;
 }
 
-.asset-delete-btn {
+.asset-row .asset-delete-btn {
   width: auto;
   margin: 0;
   flex-shrink: 0;
