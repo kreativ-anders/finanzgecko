@@ -1,6 +1,8 @@
-/* Grün-Schwarz-Theme obendrauf auf Pico.css (Dark-Basis) */
+/* Grün-Schwarz-Theme obendrauf auf Pico.css (Dark-Basis)
+   [data-theme="dark"] statt :root, damit unsere Werte Picos eigenen
+   prefers-color-scheme-Regeln unabhängig vom OS-Theme vorgehen. */
 
-:root {
+[data-theme="dark"] {
   color-scheme: dark;
   --pico-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Cantarell, sans-serif;
   --pico-primary: #00c878;
