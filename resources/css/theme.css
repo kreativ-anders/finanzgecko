@@ -440,3 +440,128 @@ nav a[aria-current="page"] {
   color: #04140d;
   font-weight: 600;
 }
+
+/* Fixposten (wiederkehrende Ein-/Ausgaben) */
+
+.subscription-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+.subscription-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.subscription-summary-item strong {
+  font-size: 1.3rem;
+}
+
+.subscription-summary-item.income strong { color: var(--pico-primary); }
+.subscription-summary-item.expense strong { color: #ff6b6b; }
+.subscription-summary-item.net.positive strong { color: var(--pico-primary); }
+.subscription-summary-item.net.negative strong { color: #ff6b6b; }
+
+.subscription-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.subscription-row .subscription-name-input {
+  flex: 1 1 10rem;
+  min-width: 8rem;
+  margin: 0;
+}
+
+.subscription-row .subscription-interval-input {
+  flex: 0 1 9rem;
+  margin: 0;
+}
+
+.subscription-row .subscription-currency-input {
+  flex: 0 1 4.5rem;
+  margin: 0;
+}
+
+.subscription-monthly-hint {
+  white-space: nowrap;
+}
+
+.subscription-row .subscription-delete-btn {
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.subscription-amount {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.subscription-amount .subscription-magnitude-input {
+  width: 7rem;
+  margin: 0;
+}
+
+.sign-toggle {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sign-toggle.income {
+  background: rgba(0, 200, 120, 0.15);
+  border-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+.sign-toggle.expense {
+  background: rgba(255, 107, 107, 0.15);
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+}
+
+/* Riesiges Warnbanner: bewusst deutlich auffälliger als die stillen
+   .backup-banner-Hinweise, weil Ausgaben > Einnahmen sofort ins Auge
+   fallen soll. */
+.overspend-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  background: #ff6b6b;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(255, 107, 107, 0.35);
+}
+
+.overspend-banner strong {
+  color: #2b0000;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.overspend-banner a[role="button"] {
+  background: #2b0000;
+  color: #ffe6e6;
+  border-color: #2b0000;
+  white-space: nowrap;
+  margin: 0;
+}

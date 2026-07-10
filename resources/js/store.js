@@ -16,11 +16,13 @@ function defaultData() {
   return {
     schemaVersion: SCHEMA_VERSION,
     baseCurrency: "EUR",
+    defaultSubscriptionInterval: "monthly",
     accounts: [],
     balances: [],
     assets: [],
+    subscriptions: [],
     ratesCache: {},
-    meta: { nextAccountId: 1, nextBalanceId: 1, nextAssetId: 1, lastExportAt: null },
+    meta: { nextAccountId: 1, nextBalanceId: 1, nextAssetId: 1, nextSubscriptionId: 1, lastExportAt: null },
   };
 }
 
@@ -32,9 +34,11 @@ function validateData(parsed) {
   const validated = {
     schemaVersion: parsed.schemaVersion ?? SCHEMA_VERSION,
     baseCurrency: parsed.baseCurrency ?? "EUR",
+    defaultSubscriptionInterval: parsed.defaultSubscriptionInterval ?? "monthly",
     accounts: Array.isArray(parsed.accounts) ? parsed.accounts : [],
     balances: Array.isArray(parsed.balances) ? parsed.balances : [],
     assets: Array.isArray(parsed.assets) ? parsed.assets : [],
+    subscriptions: Array.isArray(parsed.subscriptions) ? parsed.subscriptions : [],
     ratesCache: parsed.ratesCache && typeof parsed.ratesCache === 'object' ? parsed.ratesCache : {},
     meta: parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {},
   };
@@ -43,8 +47,9 @@ function validateData(parsed) {
   validated.meta.nextAccountId = validated.meta.nextAccountId ?? 1;
   validated.meta.nextBalanceId = validated.meta.nextBalanceId ?? 1;
   validated.meta.nextAssetId = validated.meta.nextAssetId ?? 1;
+  validated.meta.nextSubscriptionId = validated.meta.nextSubscriptionId ?? 1;
   validated.meta.lastExportAt = validated.meta.lastExportAt ?? null;
-  
+
   return validated;
 }
 
@@ -345,6 +350,65 @@ export async function getAssets() {
   return [...data.assets];
 }
 
+// ---------- Fixposten (wiederkehrende Ein-/Ausgaben) ----------
+// Vorzeichen von amountOriginal/amountBase entscheidet über die Richtung:
+// negativ = Ausgabe, positiv = Einnahme. Die Umrechnung in die Basiswährung
+// erfolgt beim Speichern (wie bei Balances), nicht live bei jedem Rendern.
+
+export async function addSubscription(sub) {
+  if (!isInitialized) {
+    throw new Error("Store not initialized. Call initStore() first.");
+  }
+
+  const record = {
+    id: data.meta.nextSubscriptionId++,
+    name: sub.name,
+    interval: sub.interval,
+    amountOriginal: sub.amountOriginal,
+    currencyOriginal: sub.currencyOriginal,
+    rate: sub.rate,
+    amountBase: sub.amountBase,
+    createdAt: new Date().toISOString(),
+  };
+
+  data.subscriptions.push(record);
+  try {
+    await persist();
+  } catch (err) {
+    data.subscriptions.pop();
+    throw new Error(`Failed to save subscription: ${err.message}`);
+  }
+  return record;
+}
+
+export async function updateSubscription(id, changes) {
+  if (!isInitialized) {
+    throw new Error("Store not initialized. Call initStore() first.");
+  }
+
+  const sub = data.subscriptions.find((s) => s.id === id);
+  if (!sub) throw new Error("Fixposten nicht gefunden");
+  Object.assign(sub, changes);
+  await persist();
+  return sub;
+}
+
+export async function deleteSubscription(id) {
+  if (!isInitialized) {
+    throw new Error("Store not initialized. Call initStore() first.");
+  }
+
+  data.subscriptions = data.subscriptions.filter((s) => s.id !== id);
+  await persist();
+}
+
+export async function getSubscriptions() {
+  if (!isInitialized) {
+    await initStore();
+  }
+  return [...data.subscriptions];
+}
+
 // ---------- Settings ----------
 
 export async function getSetting(key, fallback = null) {
@@ -352,6 +416,7 @@ export async function getSetting(key, fallback = null) {
     await initStore();
   }
   if (key === "baseCurrency") return data.baseCurrency ?? fallback;
+  if (key === "defaultSubscriptionInterval") return data.defaultSubscriptionInterval ?? fallback;
   if (key === "lastExportAt") return data.meta.lastExportAt ?? fallback;
   return fallback;
 }
@@ -360,8 +425,9 @@ export async function setSetting(key, value) {
   if (!isInitialized) {
     throw new Error("Store not initialized. Call initStore() first.");
   }
-  
+
   if (key === "baseCurrency") data.baseCurrency = value;
+  if (key === "defaultSubscriptionInterval") data.defaultSubscriptionInterval = value;
   if (key === "lastExportAt") data.meta.lastExportAt = value;
   await persist();
 }
@@ -395,9 +461,11 @@ export async function exportAllData() {
     schemaVersion: data.schemaVersion,
     exportedAt: new Date().toISOString(),
     baseCurrency: data.baseCurrency,
+    defaultSubscriptionInterval: data.defaultSubscriptionInterval,
     accounts: data.accounts,
     balances: data.balances,
     assets: data.assets,
+    subscriptions: data.subscriptions,
   };
 }
 

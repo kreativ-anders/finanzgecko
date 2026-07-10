@@ -18,11 +18,33 @@ const TAG_COLORS = {
 const CURRENCIES = ["EUR", "USD", "CHF", "GBP", "JPY", "SEK", "NOK", "DKK"];
 const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
+// Fixposten: wiederkehrende Ein-/Ausgaben. monthFactor rechnet den jeweiligen
+// Turnus auf ein Monatsäquivalent um, damit z.B. ein jährlicher und ein
+// monatlicher Betrag vergleichbar sind.
+const SUBSCRIPTION_INTERVALS = [
+  { value: "daily", label: "Täglich", monthFactor: 30.4368 },
+  { value: "weekly", label: "Wöchentlich", monthFactor: 4.34524 },
+  { value: "monthly", label: "Monatlich", monthFactor: 1 },
+  { value: "quarterly", label: "Vierteljährlich", monthFactor: 1 / 3 },
+  { value: "yearly", label: "Jährlich", monthFactor: 1 / 12 },
+];
+
+function intervalLabel(value) {
+  return SUBSCRIPTION_INTERVALS.find((i) => i.value === value)?.label || value;
+}
+
+function monthlyEquivalent(sub) {
+  const factor = SUBSCRIPTION_INTERVALS.find((i) => i.value === sub.interval)?.monthFactor ?? 1;
+  return sub.amountBase * factor;
+}
+
 let state = {
   baseCurrency: "EUR",
+  defaultSubscriptionInterval: "monthly",
   accounts: [],
   balances: [],
   assets: [],
+  subscriptions: [],
 };
 
 // ---------- Helpers ----------
@@ -207,23 +229,29 @@ function appRoot() {
 
 async function loadState() {
   try {
-    const [accounts, balances, assets, baseCurrency] = await Promise.all([
+    const [accounts, balances, assets, subscriptions, baseCurrency, defaultSubscriptionInterval] = await Promise.all([
       db.getAccounts({ includeArchived: false }),
       db.getAllBalances(),
       db.getAssets(),
+      db.getSubscriptions(),
       db.getSetting("baseCurrency", "EUR"),
+      db.getSetting("defaultSubscriptionInterval", "monthly"),
     ]);
     state.accounts = accounts;
     state.balances = balances;
     state.assets = assets;
+    state.subscriptions = subscriptions;
     state.baseCurrency = baseCurrency;
+    state.defaultSubscriptionInterval = defaultSubscriptionInterval;
   } catch (err) {
     console.error("Failed to load state:", err);
     // Set defaults to prevent errors
     state.accounts = [];
     state.balances = [];
     state.assets = [];
+    state.subscriptions = [];
     state.baseCurrency = "EUR";
+    state.defaultSubscriptionInterval = "monthly";
   }
 }
 
@@ -236,6 +264,7 @@ const routes = {
   "#/entry": renderEntry,
   "#/entries": renderEntries,
   "#/assets": renderAssets,
+  "#/subscriptions": renderSubscriptions,
   "#/settings": renderSettings,
 };
 
@@ -285,6 +314,55 @@ function assetsSectionHTML() {
     </section>`;
 }
 
+// ---------- Fixposten: gemeinsame Berechnungen (Dashboard + Verwaltungsseite) ----------
+
+function computeSubscriptionTotals() {
+  const totalIncome = state.subscriptions
+    .filter((s) => s.amountBase > 0)
+    .reduce((sum, s) => sum + monthlyEquivalent(s), 0);
+  const totalExpense = state.subscriptions
+    .filter((s) => s.amountBase < 0)
+    .reduce((sum, s) => sum + Math.abs(monthlyEquivalent(s)), 0);
+  return { totalIncome, totalExpense, net: totalIncome - totalExpense };
+}
+
+function subscriptionsSectionHTML() {
+  const { totalIncome, totalExpense, net } = computeSubscriptionTotals();
+  return `
+    <section class="card">
+      <h2>Fixposten</h2>
+      ${
+        state.subscriptions.length === 0
+          ? `<p class="empty-hint">Noch keine wiederkehrenden Ein-/Ausgaben erfasst.</p>`
+          : `<div class="subscription-summary">
+               <div class="subscription-summary-item income">
+                 <span class="muted small">Einnahmen/Monat</span>
+                 <strong>${fmtMoney(totalIncome, state.baseCurrency)}</strong>
+               </div>
+               <div class="subscription-summary-item expense">
+                 <span class="muted small">Ausgaben/Monat</span>
+                 <strong>${fmtMoney(totalExpense, state.baseCurrency)}</strong>
+               </div>
+               <div class="subscription-summary-item net ${net >= 0 ? "positive" : "negative"}">
+                 <span class="muted small">Differenz</span>
+                 <strong>${net >= 0 ? "+" : ""}${fmtMoney(net, state.baseCurrency)}</strong>
+               </div>
+             </div>`
+      }
+      <a href="#/subscriptions" role="button" class="secondary outline">Fixposten verwalten</a>
+    </section>`;
+}
+
+function overspendBannerHTML() {
+  const { totalIncome, totalExpense, net } = computeSubscriptionTotals();
+  if (state.subscriptions.length === 0 || net >= 0) return "";
+  return `
+    <div class="overspend-banner">
+      <strong>⚠️ Deine wiederkehrenden Ausgaben (${fmtMoney(totalExpense, state.baseCurrency)}/Monat) übersteigen deine wiederkehrenden Einnahmen (${fmtMoney(totalIncome, state.baseCurrency)}/Monat)!</strong>
+      <a href="#/subscriptions" role="button">Fixposten prüfen</a>
+    </div>`;
+}
+
 async function renderDashboard() {
   const periods = allPeriodsSorted();
   const backupReminder = await getBackupReminder();
@@ -311,13 +389,15 @@ async function renderDashboard() {
 
   if (periods.length === 0) {
     appRoot().innerHTML = `
+      ${overspendBannerHTML()}
       ${banners}
       <section class="empty-state">
         <h2>Noch kein Vermögen erfasst</h2>
         <p>Leg zuerst ein Konto an und trag deinen ersten Kontostand ein.</p>
         <a role="button" href="#/accounts">Konto anlegen</a>
       </section>
-      ${assetsSectionHTML()}`;
+      ${assetsSectionHTML()}
+      ${subscriptionsSectionHTML()}`;
     return;
   }
 
@@ -350,6 +430,7 @@ async function renderDashboard() {
   }));
 
   appRoot().innerHTML = `
+    ${overspendBannerHTML()}
     ${banners}
     <section class="dashboard-hero">
       <p class="eyebrow">Gesamtvermögen · Stand ${periodLabel(latestPeriod)}</p>
@@ -373,6 +454,7 @@ async function renderDashboard() {
     </section>
 
     ${assetsSectionHTML()}
+    ${subscriptionsSectionHTML()}
 
     <section>
       <h2>Konten</h2>
@@ -965,6 +1047,257 @@ async function renderAssets() {
   }
 }
 
+// ---------- Fixposten (wiederkehrende Ein-/Ausgaben) ----------
+
+// Rechnet einen positiven Betrag in der angegebenen Währung in die
+// Basiswährung um (heutiger Kurs). Bei fehlgeschlagener/fehlender API fragt
+// es — wie beim Kontostand-Erfassen — nach einem manuellen Kurs.
+async function convertMagnitudeToBase(magnitude, currency) {
+  const dateISO = new Date().toISOString().slice(0, 10);
+  let rateResult = await getExchangeRate(currency, state.baseCurrency, dateISO);
+  if (!rateResult) {
+    const manual = prompt(
+      `Kein Wechselkurs ${currency} → ${state.baseCurrency} verfügbar (offline?).\nBitte Kurs manuell eingeben (1 ${currency} = ? ${state.baseCurrency}):`
+    );
+    const manualRate = parseFloat(manual);
+    rateResult = manualRate > 0 ? { rate: manualRate, source: "manual", date: dateISO } : null;
+  }
+  if (!rateResult) return null;
+  return { rate: rateResult.rate, amountBase: magnitude * rateResult.rate };
+}
+
+function signToggleHTML(sign) {
+  const isExpense = sign < 0;
+  return `<button type="button" class="sign-toggle ${isExpense ? "expense" : "income"}" data-sign="${isExpense ? -1 : 1}" aria-label="${isExpense ? "Ausgabe" : "Einnahme"}">${isExpense ? "−" : "+"}</button>`;
+}
+
+function subscriptionRowHTML(sub) {
+  const monthly = monthlyEquivalent(sub);
+  return `
+    <article class="card subscription-row" data-id="${sub.id}">
+      <input type="text" class="subscription-name-input" value="${sub.name.replace(/"/g, "&quot;")}" aria-label="Name" />
+      <select class="subscription-interval-input" aria-label="Intervall">
+        ${SUBSCRIPTION_INTERVALS.map((i) => `<option value="${i.value}" ${i.value === sub.interval ? "selected" : ""}>${i.label}</option>`).join("")}
+      </select>
+      <input type="text" list="currencyListSub" class="subscription-currency-input" value="${sub.currencyOriginal}" aria-label="Währung" />
+      <div class="subscription-amount">
+        ${signToggleHTML(sub.amountOriginal < 0 ? -1 : 1)}
+        <input type="number" step="0.01" min="0" class="subscription-magnitude-input" value="${Math.abs(sub.amountOriginal)}" aria-label="Betrag" />
+      </div>
+      <span class="muted small subscription-monthly-hint">≈ ${fmtMoney(Math.abs(monthly), state.baseCurrency)}/Monat</span>
+      <button type="button" class="secondary outline subscription-delete-btn" aria-label="Löschen">Löschen</button>
+    </article>`;
+}
+
+async function renderSubscriptions() {
+  appRoot().innerHTML = `
+    ${overspendBannerHTML()}
+    <section class="card">
+      <h2>Fixposten</h2>
+      <p class="muted">Wiederkehrende Ein- und Ausgaben wie Gehalt, Dividenden oder Abos. Über das Vorzeichen-Symbol zwischen Einnahme (+) und Ausgabe (−) umschalten. Alle Felder sind direkt bearbeitbar.</p>
+      <div class="subscription-summary" id="subscriptionSummary"></div>
+    </section>
+
+    <datalist id="currencyListSub">
+      ${CURRENCIES.map((c) => `<option value="${c}">`).join("")}
+    </datalist>
+
+    <section class="card">
+      <h2>Einnahmen</h2>
+      <div id="subscriptionIncomeList"></div>
+    </section>
+
+    <section class="card">
+      <h2>Ausgaben</h2>
+      <div id="subscriptionExpenseList"></div>
+    </section>
+
+    <section class="card">
+      <h2>Neuer Fixposten</h2>
+      <form id="subscriptionForm">
+        <label>Name
+          <input type="text" name="name" required placeholder="z.B. Netflix, Gehalt, Dividenden" />
+        </label>
+        <div class="grid">
+          <label>Intervall
+            <select name="interval">
+              ${SUBSCRIPTION_INTERVALS.map((i) => `<option value="${i.value}" ${i.value === state.defaultSubscriptionInterval ? "selected" : ""}>${i.label}</option>`).join("")}
+            </select>
+          </label>
+          <label>Währung
+            <input list="currencyListSub" name="currency" value="${state.baseCurrency}" required />
+          </label>
+        </div>
+        <label>Betrag
+          <div class="subscription-amount">
+            ${signToggleHTML(-1)}
+            <input type="number" step="0.01" min="0" name="magnitude" required placeholder="0,00" />
+          </div>
+          <small class="muted">Standard ist Ausgabe (−). Für eine Einnahme wie Gehalt auf + umschalten.</small>
+        </label>
+        <button type="submit">Anlegen</button>
+      </form>
+    </section>
+  `;
+
+  renderSubscriptionSummary();
+  renderSubscriptionLists();
+
+  const form = document.getElementById("subscriptionForm");
+  const formSignToggle = form.querySelector(".sign-toggle");
+  formSignToggle.addEventListener("click", () => {
+    const isExpense = formSignToggle.classList.contains("expense");
+    formSignToggle.classList.toggle("expense", !isExpense);
+    formSignToggle.classList.toggle("income", isExpense);
+    formSignToggle.dataset.sign = isExpense ? "1" : "-1";
+    formSignToggle.textContent = isExpense ? "+" : "−";
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const name = fd.get("name").trim();
+    const interval = fd.get("interval");
+    const currency = fd.get("currency").toUpperCase().trim();
+    const magnitude = parseFloat(fd.get("magnitude"));
+    if (!name || !Number.isFinite(magnitude) || magnitude <= 0) {
+      alert("Bitte Name und einen gültigen Betrag eingeben.");
+      return;
+    }
+    const sign = Number(formSignToggle.dataset.sign);
+    const conv = await convertMagnitudeToBase(magnitude, currency);
+    if (!conv) {
+      alert("Kein Wechselkurs verfügbar — Fixposten wurde nicht gespeichert.");
+      return;
+    }
+    try {
+      await db.addSubscription({
+        name,
+        interval,
+        amountOriginal: sign * magnitude,
+        currencyOriginal: currency,
+        rate: conv.rate,
+        amountBase: sign * conv.amountBase,
+      });
+      await loadState();
+      renderSubscriptionSummary();
+      renderSubscriptionLists();
+      form.reset();
+      formSignToggle.classList.add("expense");
+      formSignToggle.classList.remove("income");
+      formSignToggle.dataset.sign = "-1";
+      formSignToggle.textContent = "−";
+      form.querySelector('[name="currency"]').value = state.baseCurrency;
+      form.querySelector('[name="interval"]').value = state.defaultSubscriptionInterval;
+    } catch (err) {
+      console.error("Failed to add subscription:", err);
+      alert("Fehler beim Anlegen: " + (err.message || String(err)));
+    }
+  });
+
+  function renderSubscriptionSummary() {
+    const { totalIncome, totalExpense, net } = computeSubscriptionTotals();
+    document.getElementById("subscriptionSummary").innerHTML = `
+      <div class="subscription-summary-item income">
+        <span class="muted small">Einnahmen/Monat</span>
+        <strong>${fmtMoney(totalIncome, state.baseCurrency)}</strong>
+      </div>
+      <div class="subscription-summary-item expense">
+        <span class="muted small">Ausgaben/Monat</span>
+        <strong>${fmtMoney(totalExpense, state.baseCurrency)}</strong>
+      </div>
+      <div class="subscription-summary-item net ${net >= 0 ? "positive" : "negative"}">
+        <span class="muted small">Differenz</span>
+        <strong>${net >= 0 ? "+" : ""}${fmtMoney(net, state.baseCurrency)}</strong>
+      </div>
+    `;
+  }
+
+  function renderSubscriptionLists() {
+    const incomeEl = document.getElementById("subscriptionIncomeList");
+    const expenseEl = document.getElementById("subscriptionExpenseList");
+    const income = state.subscriptions.filter((s) => s.amountOriginal > 0).sort((a, b) => a.name.localeCompare(b.name, "de"));
+    const expense = state.subscriptions.filter((s) => s.amountOriginal < 0).sort((a, b) => a.name.localeCompare(b.name, "de"));
+
+    incomeEl.innerHTML = income.length === 0 ? `<p class="empty-hint">Noch keine Einnahmen erfasst.</p>` : "";
+    expenseEl.innerHTML = expense.length === 0 ? `<p class="empty-hint">Noch keine Ausgaben erfasst.</p>` : "";
+
+    income.forEach((sub) => wireSubscriptionRow(el(subscriptionRowHTML(sub)), sub, incomeEl));
+    expense.forEach((sub) => wireSubscriptionRow(el(subscriptionRowHTML(sub)), sub, expenseEl));
+  }
+
+  function wireSubscriptionRow(row, sub, container) {
+    container.appendChild(row);
+
+    const signToggle = row.querySelector(".sign-toggle");
+    signToggle.addEventListener("click", async () => {
+      const isExpense = signToggle.classList.contains("expense");
+      signToggle.classList.toggle("expense", !isExpense);
+      signToggle.classList.toggle("income", isExpense);
+      signToggle.dataset.sign = isExpense ? "1" : "-1";
+      signToggle.textContent = isExpense ? "+" : "−";
+      await saveRow();
+    });
+
+    ["change"].forEach((evt) => {
+      row.querySelector(".subscription-name-input").addEventListener(evt, saveRow);
+      row.querySelector(".subscription-interval-input").addEventListener(evt, saveRow);
+      row.querySelector(".subscription-currency-input").addEventListener(evt, saveRow);
+      row.querySelector(".subscription-magnitude-input").addEventListener(evt, saveRow);
+    });
+
+    row.querySelector(".subscription-delete-btn").addEventListener("click", async () => {
+      if (!confirm(`"${sub.name}" wirklich löschen?`)) return;
+      await db.deleteSubscription(sub.id);
+      await loadState();
+      renderSubscriptionSummary();
+      renderSubscriptionLists();
+    });
+
+    async function saveRow() {
+      const name = row.querySelector(".subscription-name-input").value.trim();
+      const interval = row.querySelector(".subscription-interval-input").value;
+      const currency = row.querySelector(".subscription-currency-input").value.toUpperCase().trim();
+      const magnitude = parseFloat(row.querySelector(".subscription-magnitude-input").value);
+      const sign = Number(row.querySelector(".sign-toggle").dataset.sign);
+
+      if (!name || !Number.isFinite(magnitude) || magnitude < 0) {
+        alert("Bitte einen gültigen Namen und Betrag eingeben.");
+        await loadState();
+        renderSubscriptionLists();
+        return;
+      }
+
+      const conv = await convertMagnitudeToBase(magnitude, currency);
+      if (!conv) {
+        alert("Kein Wechselkurs verfügbar — Änderung wurde nicht gespeichert.");
+        await loadState();
+        renderSubscriptionLists();
+        return;
+      }
+
+      try {
+        await db.updateSubscription(sub.id, {
+          name,
+          interval,
+          currencyOriginal: currency,
+          amountOriginal: sign * magnitude,
+          rate: conv.rate,
+          amountBase: sign * conv.amountBase,
+        });
+        await loadState();
+        renderSubscriptionSummary();
+        renderSubscriptionLists();
+      } catch (err) {
+        console.error("Failed to update subscription:", err);
+        alert("Fehler beim Speichern: " + (err.message || String(err)));
+        await loadState();
+        renderSubscriptionLists();
+      }
+    }
+  }
+}
+
 // ---------- Einstellungen ----------
 
 async function renderSettings() {
@@ -976,6 +1309,14 @@ async function renderSettings() {
       <p class="muted">Alle Beträge werden für Dashboard-Ansichten in diese Währung umgerechnet.</p>
       <select id="baseCurrencySelect">
         ${CURRENCIES.map((c) => `<option value="${c}" ${c === state.baseCurrency ? "selected" : ""}>${c}</option>`).join("")}
+      </select>
+    </section>
+
+    <section class="card">
+      <h2>Standardintervall für Fixposten</h2>
+      <p class="muted">Wird beim Anlegen eines neuen Fixpostens vorausgewählt. Monatlich passt für die meisten, da Gehalt in der Regel monatlich eingeht.</p>
+      <select id="defaultSubscriptionIntervalSelect">
+        ${SUBSCRIPTION_INTERVALS.map((i) => `<option value="${i.value}" ${i.value === state.defaultSubscriptionInterval ? "selected" : ""}>${i.label}</option>`).join("")}
       </select>
     </section>
 
@@ -1004,6 +1345,15 @@ async function renderSettings() {
       }
     });
   }
+
+  document.getElementById("defaultSubscriptionIntervalSelect").addEventListener("change", async (e) => {
+    try {
+      await db.setSetting("defaultSubscriptionInterval", e.target.value);
+      await loadState();
+    } catch (err) {
+      console.error("Failed to update default subscription interval:", err);
+    }
+  });
 
   document.getElementById("exportBtn").addEventListener("click", async () => {
     try {
