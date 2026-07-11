@@ -26,7 +26,11 @@ on:
   push:
     tags:
       - "v*.*.*"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag für das Release (z. B. v1.2.3)"
+        required: true
 
 permissions:
   contents: write
@@ -39,7 +43,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: neu CLI installieren
         # Version gepinnt: v11.7.2 zieht uuid@14 (ESM-only), das der CLI-Code
@@ -69,6 +73,7 @@ jobs:
       - name: Release-Assets hochladen
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.tag_name }}
           files: |
             dist/finanzgecko/finanzgecko-linux_x64
             dist/finanzgecko/finanzgecko-linux_arm64
