@@ -1410,8 +1410,6 @@ function setupNativeMenu() {
           { id: "export", text: "Backup exportieren…", shortcut: `${modKey}+e` },
           { id: "import", text: "Backup importieren…", shortcut: `${modKey}+i` },
           { id: "sep1", text: "-" },
-          { id: "checkUpdate", text: "Nach Updates suchen…", shortcut: `${modKey}+u` },
-          { id: "sep2", text: "-" },
           { id: "quit", text: "Beenden", shortcut: `${modKey}+q` },
         ],
       },
@@ -1429,44 +1427,11 @@ function setupNativeMenu() {
         location.hash = "#/settings";
         setTimeout(() => document.getElementById("importBtn")?.click(), 150);
         break;
-      case "checkUpdate":
-        await checkForUpdates({ silent: false });
-        break;
       case "quit":
         Neutralino.app.exit();
         break;
     }
   });
-}
-
-// ---------- Auto-Updater ----------
-
-// Diese URL zeigt auf ein kleines JSON-Manifest im eigenen GitHub-Repo
-// (siehe README: "update-manifest.json" bei jedem Release aktualisieren).
-const UPDATE_MANIFEST_URL =
-  "https://raw.githubusercontent.com/kreativanders/finanzgecko/main/update-manifest.json";
-
-async function checkForUpdates({ silent = true } = {}) {
-  try {
-    const manifest = await Neutralino.updater.checkForUpdates(UPDATE_MANIFEST_URL);
-    if (manifest.version !== NL_APPVERSION) {
-      const proceed = confirm(
-        `Version ${manifest.version} ist verfügbar (aktuell: ${NL_APPVERSION}). Jetzt installieren? Die App startet danach neu.`
-      );
-      if (proceed) {
-        await Neutralino.updater.install();
-        await Neutralino.app.restartProcess();
-      }
-    } else if (!silent) {
-      alert("Du hast bereits die neueste Version.");
-    }
-  } catch (err) {
-    if (!silent) {
-      alert("Update-Prüfung fehlgeschlagen (offline oder Manifest nicht erreichbar).\n" + err.message);
-    }
-    // Im Hintergrund-Check (silent) bewusst keine Fehlermeldung — offline
-    // beim normalen Start soll die App nicht nerven.
-  }
 }
 
 async function init() {
@@ -1519,8 +1484,6 @@ async function init() {
     console.error("Failed to load initial route:", err);
     alert(`Fehler beim Laden der Startseite: ${err.message || String(err)}`);
   }
-  
-  checkForUpdates({ silent: true }); // unauffällig im Hintergrund, keine App-Blockade
 }
 
 // Wait for both DOM and Neutralino to be ready

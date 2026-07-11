@@ -57,12 +57,21 @@ Startet die App im Entwicklungsmodus mit Live-Reload bei Dateiänderungen.
 ## Bauen (Release)
 
 ```bash
-neu build --release
+neu build --release --embed-resources
 ```
 
-Ergebnis liegt in `dist/finanzgecko/` — darunter eine `resources.neu`
-(gebündelte Web-Ressourcen) und je eine Binary pro Plattform/Architektur
-(`finanzgecko-linux_x64`, `finanzgecko-mac_arm64`, `finanzgecko-win_x64.exe`, …).
+Ergebnis liegt in `dist/finanzgecko/` — je eine self-contained Binary pro
+Plattform/Architektur (`finanzgecko-linux_x64`, `finanzgecko-mac_arm64`,
+`finanzgecko-win_x64.exe`, …). `--embed-resources` bettet die Web-Ressourcen
+direkt in jede Binary ein, es gibt kein separates `resources.neu` mehr, das
+beim Verteilen mitgeschickt werden müsste — eine einzelne Datei reicht.
+
+> **Ohne `--embed-resources`** erzeugt `neu build --release` zusätzlich eine
+> `resources.neu` neben den Binaries, die zwingend im selben Verzeichnis wie
+> die jeweilige Binary liegen muss. Fehlt sie (z. B. weil nur die `.exe`
+> alleine weitergegeben wurde), zeigt die App beim Start nur die
+> Neutralino-Standardseite statt FinanzGecko — daher grundsätzlich mit
+> `--embed-resources` bauen.
 
 Windows-Metadaten (Firmenname, Beschreibung, Copyright, Produktname im
 Explorer-Eigenschaften-Dialog) sowie das `.exe`-Icon werden von `neu build`
@@ -93,7 +102,7 @@ Finder das aber nicht als echtes Bundle und zeigt kein eigenes Dock-Icon.
 Einmalig/pro Release:
 
 ```bash
-neu build --release   # falls noch nicht geschehen
+neu build --release --embed-resources   # falls noch nicht geschehen
 ./packaging/macos/build-app.sh          # universal (Standard)
 ./packaging/macos/build-app.sh arm64    # oder gezielt x64 / arm64
 ```
@@ -119,7 +128,7 @@ Taskleisten-Icon.
 Einmalig beheben:
 
 ```bash
-neu build --release   # falls noch nicht geschehen
+neu build --release --embed-resources   # falls noch nicht geschehen
 ./packaging/linux/install.sh
 ```
 
@@ -138,8 +147,7 @@ nicht mehr direkt über das Binary.
 | `resources/js/store.js` | **Ersetzt IndexedDB.** Eine JSON-Datei im System-Datenverzeichnis (`NL_DATAPATH`), atomar geschrieben (temp-Datei + `move`) |
 | `resources/js/currency.js` | Unverändert: Frankfurter.app-Anbindung mit Cache |
 | `resources/js/charts.js` | Unverändert: eigener SVG-Linienchart + CSS-Donut |
-| `resources/js/main.js` | Views, Routing, native Menüleiste (`Neutralino.window.setMainMenu`), Auto-Updater-Check |
-| `update-manifest.json` | Manifest für den Auto-Updater (siehe unten) |
+| `resources/js/main.js` | Views, Routing, native Menüleiste (`Neutralino.window.setMainMenu`) |
 | `packaging/linux/` | `.desktop`-Datei + `install.sh` für Taskleisten-Icon unter Wayland/X11 |
 | `packaging/macos/build-app.sh` | Baut ein echtes `.app`-Bundle (Info.plist, `.icns`, Ad-hoc-Signatur) aus der rohen Mac-Binary |
 | `.github/workflows/release.yml` | CI: baut bei jedem Tag-Push alle Plattform-Binaries + macOS-Bundle und hängt sie ans GitHub-Release |
@@ -160,40 +168,39 @@ Export/Import laufen über native Save/Open-Dialoge
 (`Neutralino.os.showSaveDialog` / `showOpenDialog`), nicht mehr über
 Browser-Downloads.
 
-## Auto-Updater einrichten
+## Updates
 
-Zeigt bereits auf `github.com/kreativanders/finanzgecko` (in
-`update-manifest.json` und `resources/js/main.js`, `UPDATE_MANIFEST_URL`).
-Bei einem Fork: beide Stellen auf den eigenen GitHub-Nutzernamen/Repo
-anpassen.
+Kein In-App-Auto-Updater (mehr) — jede Binary ist dank `--embed-resources`
+eine self-contained Datei, in der Web-Ressourcen und Neutralino-Runtime
+fest verbacken sind. Es gibt daher nichts, das man im laufenden Betrieb
+punktuell austauschen könnte; ein Update bedeutet schlicht: neue Binary aus
+dem GitHub-Release herunterladen und die alte damit ersetzen.
+
+Das ist unkritisch für bestehende Nutzerdaten: `dataLocation`/
+`storageLocation` stehen auf `"system"`, das Datenverzeichnis
+(`NL_DATAPATH`, siehe oben) hängt nur von `applicationId` ab, nicht vom
+Binary-Pfad oder der Version. Eine neue Binary findet beim ersten Start
+automatisch dieselbe `app-data.json` wieder. `store.js` trägt zusätzlich
+ein `schemaVersion`-Feld pro Datei für den Fall künftiger Formatänderungen.
 
 1. Bei jedem neuen Release:
-   - Version in `neutralino.config.json` (`"version"`) hochzählen
-   - `neu build --release`
-   - Die entstandene `resources.neu` (in `dist/finanzgecko/`) als Asset an
-     ein neues GitHub-Release anhängen (Tag z.B. `v1.1.0`)
-   - `update-manifest.json` aktualisieren: `version` und `resourcesURL`
-     auf das neue Release-Asset zeigen lassen, committen und pushen
-2. Die App prüft beim Start automatisch im Hintergrund (unauffällig, ohne
-   Fehlermeldung bei fehlender Verbindung) und zusätzlich manuell über
-   *Datei → Nach Updates suchen…*
-
-Kein eigener Server nötig — GitHub Releases + ein rohes JSON-Manifest im
-Repo reichen als Update-Infrastruktur.
+   - Version in `neutralino.config.json` (`"version"`) hochzählen und committen
+   - Tag pushen, z. B.: `git tag v1.1.0 && git push origin v1.1.0`
+2. Nutzer laden die neue Binary manuell vom GitHub-Release herunter und
+   ersetzen die alte Datei.
 
 **CI-Unterstützung:** `.github/workflows/release.yml` baut bei jedem
-gepushten Tag (`vX.Y.Z`) automatisch alle Plattform-Binaries plus das
-macOS-App-Bundle und hängt sie als Assets ans passende GitHub-Release.
-Nimmt aus obiger Liste die manuellen `neu build --release`-/Upload-Schritte
-ab — `version` in `neutralino.config.json` und `update-manifest.json`
-müssen weiterhin von Hand aktualisiert und committet werden, bevor der Tag
-gepusht wird.
+gepushten Tag (`vX.Y.Z`) automatisch alle Plattform-Binaries (mit
+`--embed-resources`) plus das macOS-App-Bundle und hängt sie als Assets ans
+passende GitHub-Release. Nimmt aus obiger Liste den manuellen Build-/
+Upload-Schritt ab — `version` in `neutralino.config.json` muss weiterhin
+von Hand aktualisiert und committet werden, bevor der Tag gepusht wird.
 
 ## Native Menüleiste
 
-*Datei* → Backup exportieren (⌘E), Backup importieren, Nach Updates
-suchen, Beenden (⌘Q) — vollständig nativ über
-`Neutralino.window.setMainMenu()`, nicht Teil des HTML/CSS.
+*Datei* → Backup exportieren (⌘E), Backup importieren, Beenden (⌘Q) —
+vollständig nativ über `Neutralino.window.setMainMenu()`, nicht Teil des
+HTML/CSS.
 
 ## Fenstergröße
 

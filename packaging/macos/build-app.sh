@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Baut ein echtes macOS-App-Bundle (Contents/MacOS + Contents/Resources +
-# Info.plist + .icns) aus dem von `neu build --release` erzeugten rohen
-# Mach-O-Binary.
+# Info.plist + .icns) aus dem von `neu build --release --embed-resources`
+# erzeugten rohen Mach-O-Binary (bereits self-contained, ohne separate
+# resources.neu).
 #
 # Hintergrund: `neu build --macos-bundle` erzeugt *kein* echtes App-Bundle,
 # sondern hängt nur die Endung ".app" an die rohe Binary-Datei an (siehe
@@ -46,13 +47,7 @@ binary_name="$(sed -n 's/.*"binaryName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1
 src_binary="$repo_dir/dist/$binary_name/$binary_name-mac_$arch"
 if [ ! -f "$src_binary" ]; then
   echo "Kein Build gefunden: $src_binary" >&2
-  echo "Erst 'neu build --release' ausführen." >&2
-  exit 1
-fi
-
-resources_neu="$repo_dir/dist/$binary_name/resources.neu"
-if [ ! -f "$resources_neu" ]; then
-  echo "resources.neu fehlt in $repo_dir/dist/$binary_name/ -- 'neu build --release' erneut ausführen." >&2
+  echo "Erst 'neu build --release --embed-resources' ausführen." >&2
   exit 1
 fi
 
@@ -67,9 +62,6 @@ mkdir -p "$macos_dir" "$resources_dir"
 
 cp "$src_binary" "$macos_dir/$binary_name"
 chmod +x "$macos_dir/$binary_name"
-# Neutralino sucht resources.neu relativ zum Verzeichnis der Binary (argv[0]),
-# nicht relativ zum Bundle-Root -- deshalb landet sie in Contents/MacOS/.
-cp "$resources_neu" "$macos_dir/resources.neu"
 
 # .icns aus dem größten vorhandenen PNG erzeugen (source: icons/icon-512.png).
 icon_png="$repo_dir/icons/icon-512.png"

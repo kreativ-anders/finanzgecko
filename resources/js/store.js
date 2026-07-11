@@ -1,8 +1,14 @@
 // store.js — ersetzt den bisherigen IndexedDB-Layer komplett.
 // Die gesamte App-Datenbank ist eine einzige JSON-Datei im system-eigenen
 // Datenverzeichnis der App (NL_DATAPATH, siehe "dataLocation": "system" in
-// neutralino.config.json). Das ist automatisch sandbox-sicher — auch unter
-// Flatpak wäre das ohne jede zusätzliche Berechtigung beschreibbar.
+// neutralino.config.json). Das ist ohne jede zusätzliche Berechtigung
+// beschreibbar, auch unter Flatpak.
+//
+// Achtung: Die Datei ist unverschlüsselt. Vertraulichkeit gegenüber anderen
+// lokalen OS-Accounts wird ausschließlich über Dateirechte (chmod 0600 für
+// die Datei, 0700 für das Verzeichnis, siehe unten) hergestellt - nicht über
+// Verschlüsselung. Andere Prozesse desselben Benutzerkontos (z. B. Malware,
+// die mit denselben Rechten läuft) können die Datei weiterhin lesen.
 
 const STORE_FILENAME = "app-data.json";
 const SCHEMA_VERSION = 1;
@@ -68,6 +74,13 @@ async function ensureDirectoryExists(path) {
     } catch (err) {
       throw new Error(`Cannot create directory ${path}: ${err.message}`);
     }
+  }
+  // Datenverzeichnis nur für den Besitzer zugänglich machen (0700),
+  // damit andere lokale OS-Accounts weder lesen noch die Datei auflisten können.
+  try {
+    await Neutralino.filesystem.chmod(path, 0o700);
+  } catch {
+    // Auf manchen Plattformen (z. B. Windows) nicht anwendbar - ignorieren.
   }
 }
 
@@ -137,7 +150,7 @@ async function persist() {
   
   try {
     await Neutralino.filesystem.writeFile(tmpPath, json);
-    
+
     // Try atomic move first
     if (Neutralino.filesystem.move) {
       try {
@@ -149,6 +162,15 @@ async function persist() {
     } else {
       // Fallback: direct write
       await Neutralino.filesystem.writeFile(filePath, json);
+    }
+
+    // Datei auf reinen Besitzer-Zugriff beschränken (0600), da sie
+    // unverschlüsselte Finanzdaten enthält. Kein Passphrase-Schutz -
+    // Vertraulichkeit stützt sich bewusst auf OS-Dateirechte.
+    try {
+      await Neutralino.filesystem.chmod(filePath, 0o600);
+    } catch {
+      // Auf manchen Plattformen (z. B. Windows) nicht anwendbar - ignorieren.
     }
   } finally {
     // Always clean up temp file
