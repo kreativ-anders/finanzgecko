@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/asset.dart';
 import '../../state/app_state.dart';
+import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
 import '../widgets/app_snackbar.dart';
@@ -34,7 +35,7 @@ class _AssetsViewState extends State<AssetsView> {
 
   Future<void> _submit(AppState app) async {
     if (!_formKey.currentState!.validate()) return;
-    final value = double.tryParse(_valueCtrl.text.replaceAll(',', '.'));
+    final value = parseInputNumber(_valueCtrl.text);
     if (value == null) return;
     try {
       await app.addAsset(name: _nameCtrl.text.trim(), value: value);
@@ -96,7 +97,7 @@ class _AssetsViewState extends State<AssetsView> {
                     controller: _valueCtrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(labelText: 'Wert (${app.baseCurrency})', hintText: '0,00'),
-                    validator: (v) => (double.tryParse((v ?? '').replaceAll(',', '.')) == null) ? 'Ungültiger Wert' : null,
+                    validator: (v) => (parseInputNumber(v ?? '') == null) ? 'Ungültiger Wert' : null,
                   ),
                   const SizedBox(height: 18),
                   ElevatedButton(onPressed: () => _submit(app), child: noSelect(const Text('Anlegen'))),
@@ -122,16 +123,14 @@ class _AssetRow extends StatefulWidget {
 }
 
 class _AssetRowState extends State<_AssetRow> {
-  late final TextEditingController _valueCtrl = TextEditingController(text: _fmt(widget.asset.value));
+  late final TextEditingController _valueCtrl = TextEditingController(text: fmtInputNumber(widget.asset.value));
   Timer? _debounce;
-
-  String _fmt(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
   @override
   void didUpdateWidget(covariant _AssetRow oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.asset.value != widget.asset.value) {
-      _valueCtrl.text = _fmt(widget.asset.value);
+      _valueCtrl.text = fmtInputNumber(widget.asset.value);
     }
   }
 
@@ -149,9 +148,9 @@ class _AssetRowState extends State<_AssetRow> {
 
   Future<void> _saveValue() async {
     _debounce?.cancel();
-    final newValue = double.tryParse(_valueCtrl.text.replaceAll(',', '.'));
+    final newValue = parseInputNumber(_valueCtrl.text);
     if (newValue == null) {
-      _valueCtrl.text = _fmt(widget.asset.value);
+      _valueCtrl.text = fmtInputNumber(widget.asset.value);
       return;
     }
     try {
@@ -161,7 +160,7 @@ class _AssetRowState extends State<_AssetRow> {
     } catch (err) {
       if (!mounted) return;
       showErrorSnackBar(context, 'Fehler beim Speichern: $err');
-      _valueCtrl.text = _fmt(widget.asset.value);
+      _valueCtrl.text = fmtInputNumber(widget.asset.value);
     }
   }
 

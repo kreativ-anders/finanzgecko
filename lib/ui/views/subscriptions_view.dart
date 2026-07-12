@@ -51,7 +51,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
     if (!_formKey.currentState!.validate()) return;
     final name = _nameCtrl.text.trim();
     final currency = _currencyCtrl.text.trim().toUpperCase();
-    final magnitude = double.tryParse(_magnitudeCtrl.text.replaceAll(',', '.'));
+    final magnitude = parseInputNumber(_magnitudeCtrl.text);
     if (name.isEmpty || magnitude == null || magnitude <= 0) {
       showErrorSnackBar(context, 'Bitte Name und einen gültigen Betrag eingeben.');
       return;
@@ -200,12 +200,10 @@ class _SubscriptionRow extends StatefulWidget {
 class _SubscriptionRowState extends State<_SubscriptionRow> {
   late final TextEditingController _nameCtrl = TextEditingController(text: widget.sub.name);
   late final TextEditingController _currencyCtrl = TextEditingController(text: widget.sub.currencyOriginal);
-  late final TextEditingController _magnitudeCtrl = TextEditingController(text: _fmt(widget.sub.amountOriginal.abs()));
+  late final TextEditingController _magnitudeCtrl = TextEditingController(text: fmtInputNumber(widget.sub.amountOriginal.abs()));
   late String _interval = widget.sub.interval;
   late bool _isExpense = widget.sub.amountOriginal < 0;
   Timer? _debounce;
-
-  String _fmt(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
   @override
   void dispose() {
@@ -223,7 +221,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
   }
 
   double get _previewMonthly {
-    final magnitude = double.tryParse(_magnitudeCtrl.text.replaceAll(',', '.')) ?? widget.sub.amountOriginal.abs();
+    final magnitude = parseInputNumber(_magnitudeCtrl.text) ?? widget.sub.amountOriginal.abs();
     return (magnitude * widget.sub.rate * intervalMonthFactor(_interval)).abs();
   }
 
@@ -232,7 +230,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
     final app = widget.app;
     final name = _nameCtrl.text.trim();
     final currency = _currencyCtrl.text.trim().toUpperCase();
-    final magnitude = double.tryParse(_magnitudeCtrl.text.replaceAll(',', '.'));
+    final magnitude = parseInputNumber(_magnitudeCtrl.text);
 
     if (name.isEmpty || magnitude == null || magnitude < 0) {
       showErrorSnackBar(context, 'Bitte einen gültigen Namen und Betrag eingeben.');

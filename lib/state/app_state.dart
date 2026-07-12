@@ -93,6 +93,15 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
+  Future<void> restoreAccount(int id) async {
+    await store.restoreAccount(id);
+    await _reloadAndNotify();
+  }
+
+  /// Looks up an account regardless of archived status — [accounts] only
+  /// holds active ones. Returns null if the account no longer exists at all.
+  Account? findAccount(int id) => store.getAccount(id);
+
   // ---------- Balances ----------
 
   Future<void> upsertBalance({

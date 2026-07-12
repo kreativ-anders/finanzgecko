@@ -41,20 +41,15 @@ class _EntriesViewState extends State<EntriesView> {
   TextEditingController _controllerFor(int accountId, Balance? balance) {
     final existing = _controllers[accountId];
     if (existing != null) return existing;
-    final ctrl = TextEditingController(text: balance == null ? '' : _trimZeros(balance.amountOriginal));
+    final ctrl = TextEditingController(text: balance == null ? '' : fmtInputNumber(balance.amountOriginal));
     _controllers[accountId] = ctrl;
     return ctrl;
-  }
-
-  String _trimZeros(double v) {
-    if (v == v.roundToDouble()) return v.toStringAsFixed(0);
-    return v.toString();
   }
 
   void _syncControllers(AppState app) {
     for (final accountId in _controllers.keys) {
       final matches = app.balances.where((b) => b.accountId == accountId && b.period == _period);
-      _controllers[accountId]!.text = matches.isEmpty ? '' : _trimZeros(matches.first.amountOriginal);
+      _controllers[accountId]!.text = matches.isEmpty ? '' : fmtInputNumber(matches.first.amountOriginal);
     }
   }
 
@@ -83,7 +78,7 @@ class _EntriesViewState extends State<EntriesView> {
       final ctrl = _controllers[acc.id];
       final raw = ctrl?.text.trim() ?? '';
       if (raw.isEmpty) continue;
-      final amount = double.tryParse(raw.replaceAll(',', '.'));
+      final amount = parseInputNumber(raw);
       if (amount == null) {
         invalid++;
         continue;
@@ -220,7 +215,7 @@ class _EntriesViewState extends State<EntriesView> {
                 ),
                 if (orphanBalances.isNotEmpty) ...[
                   cardGap,
-                  _OrphanEntriesSection(balances: orphanBalances, onNavigate: widget.onNavigate),
+                  _OrphanEntriesSection(balances: orphanBalances, app: app, onNavigate: widget.onNavigate),
                 ],
               ],
             ),
@@ -323,39 +318,31 @@ class _EntryRow extends StatelessWidget {
   }
 }
 
-/// Balances left behind by accounts that have since been archived or
-/// deleted — kept correctable here since they no longer surface anywhere
-/// else in the app.
-class _OrphanEntriesSection extends StatefulWidget {
-  const _OrphanEntriesSection({required this.balances, required this.onNavigate});
+/// Balances left behind by accounts that have since been archived — kept
+/// visible here (with a way back to the account) since they no longer
+/// surface anywhere else in the app.
+class _OrphanEntriesSection extends StatelessWidget {
+  const _OrphanEntriesSection({required this.balances, required this.app, required this.onNavigate});
 
   final List<Balance> balances;
+  final AppState app;
   final ValueChanged<AppView> onNavigate;
-
-  @override
-  State<_OrphanEntriesSection> createState() => _OrphanEntriesSectionState();
-}
-
-class _OrphanEntriesSectionState extends State<_OrphanEntriesSection> {
-  int? _editingId;
 
   @override
   Widget build(BuildContext context) {
     return SectionCard(
-      title: 'Archivierte/gelöschte Konten',
+      title: 'Archivierte Konten',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
             padding: EdgeInsets.only(bottom: 12),
-            child: Text('Einträge von Konten, die inzwischen archiviert oder gelöscht wurden.', style: TextStyle(color: kMuted)),
+            child: Text('Einträge von Konten, die inzwischen archiviert wurden.', style: TextStyle(color: kMuted)),
           ),
-          for (final bal in widget.balances)
+          for (final bal in balances)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              child: bal.id == _editingId
-                  ? _EditRow(balance: bal, onDone: () => setState(() => _editingId = null), onNavigate: widget.onNavigate)
-                  : _DisplayRow(balance: bal, onEdit: () => setState(() => _editingId = bal.id), onNavigate: widget.onNavigate),
+              child: _OrphanRow(balance: bal, account: app.findAccount(bal.accountId), onNavigate: onNavigate),
             ),
         ],
       ),
@@ -363,19 +350,29 @@ class _OrphanEntriesSectionState extends State<_OrphanEntriesSection> {
   }
 }
 
-class _DisplayRow extends StatelessWidget {
-  const _DisplayRow({required this.balance, required this.onEdit, required this.onNavigate});
+class _OrphanRow extends StatelessWidget {
+  const _OrphanRow({required this.balance, required this.account, required this.onNavigate});
 
   final Balance balance;
-  final VoidCallback onEdit;
+  // Null in the rare case the account record itself is gone entirely (e.g. a
+  // hand-edited import) rather than merely archived — then only Löschen applies.
+  final Account? account;
   final ValueChanged<AppView> onNavigate;
+
+  Future<void> _restore(BuildContext context) async {
+    final acc = account;
+    if (acc == null) return;
+    await context.read<AppState>().restoreAccount(acc.id);
+    if (!context.mounted) return;
+    showSavedSnackBar(context, onNavigate, message: 'Wiederhergestellt.');
+  }
 
   Future<void> _delete(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eintrag löschen'),
-        content: Text('Eintrag für ${periodLabel(balance.period)} wirklich löschen?'),
+        content: Text('Eintrag für ${account?.name ?? 'unbekanntes Konto'} · ${periodLabel(balance.period)} wirklich löschen?'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
           ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Löschen'))),
@@ -392,80 +389,27 @@ class _DisplayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final acc = account;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(width: 110, child: Text(periodLabel(balance.period))),
-        Expanded(child: Text(fmtMoney(balance.amountOriginal, balance.currencyOriginal))),
-        OutlinedButton(onPressed: onEdit, child: noSelect(const Text('Bearbeiten'))),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: () => _delete(context), child: noSelect(const Text('Löschen'))),
-      ],
-    );
-  }
-}
-
-class _EditRow extends StatefulWidget {
-  const _EditRow({required this.balance, required this.onDone, required this.onNavigate});
-
-  final Balance balance;
-  final VoidCallback onDone;
-  final ValueChanged<AppView> onNavigate;
-
-  @override
-  State<_EditRow> createState() => _EditRowState();
-}
-
-class _EditRowState extends State<_EditRow> {
-  late final TextEditingController _ctrl = TextEditingController(text: widget.balance.amountOriginal.toString());
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    final amount = double.tryParse(_ctrl.text.replaceAll(',', '.'));
-    if (amount == null) {
-      showErrorSnackBar(context, 'Bitte einen gültigen Betrag eingeben.');
-      return;
-    }
-    try {
-      final amountBase = amount * widget.balance.rate;
-      await context.read<AppState>().updateBalance(widget.balance.id, amountOriginal: amount, amountBase: amountBase);
-      if (!mounted) return;
-      showSavedSnackBar(context, widget.onNavigate);
-      widget.onDone();
-    } catch (err) {
-      if (!mounted) return;
-      showErrorSnackBar(context, 'Fehler beim Speichern: $err');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(width: 110, child: Text(periodLabel(widget.balance.period))),
         Expanded(
-          child: Row(
-            children: [
-              SizedBox(
-                width: 140,
-                child: TextField(
-                  controller: _ctrl,
-                  autofocus: true,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(widget.balance.currencyOriginal, style: const TextStyle(color: kMuted)),
-            ],
+          child: Text(
+            acc?.name ?? 'Konto gelöscht',
+            style: acc == null ? const TextStyle(color: kMuted) : const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
-        ElevatedButton(onPressed: _save, child: noSelect(const Text('Speichern'))),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: widget.onDone, child: noSelect(const Text('Abbrechen'))),
+        SizedBox(
+          width: 120,
+          child: Text(fmtMoney(balance.amountOriginal, balance.currencyOriginal), textAlign: TextAlign.right),
+        ),
+        const SizedBox(width: 12),
+        if (acc != null) ...[
+          OutlinedButton(onPressed: () => _restore(context), child: noSelect(const Text('Wiederherstellen'))),
+          const SizedBox(width: 8),
+        ],
+        OutlinedButton(onPressed: () => _delete(context), child: noSelect(const Text('Löschen'))),
       ],
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/formatting.dart';
 import '../theme.dart';
 
 /// Asks the user for a manual "1 [from] = ? [to]" rate when neither the live
@@ -28,7 +29,7 @@ Future<double?> promptManualRate(BuildContext context, {required String from, re
       actions: [
         TextButton(onPressed: () => Navigator.of(ctx).pop(), child: noSelect(const Text('Abbrechen'))),
         ElevatedButton(
-          onPressed: () => Navigator.of(ctx).pop(double.tryParse(ctrl.text.replaceAll(',', '.'))),
+          onPressed: () => Navigator.of(ctx).pop(parseInputNumber(ctrl.text)),
           child: noSelect(const Text('Übernehmen')),
         ),
       ],
