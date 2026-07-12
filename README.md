@@ -1,47 +1,56 @@
 # FinanzGecko 🦎
 
-Nativer macOS-Vermögenstracker. Kein Server, keine Cloud, kein Account —
+Nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account —
 alle Daten liegen in einer einzigen JSON-Datei im eigenen Datenverzeichnis
-der App. Basiert auf [Neutralinojs](https://neutralino.js.org/).
+der App. Gebaut mit [Flutter](https://flutter.dev) (Desktop-Target), lokal
+lauffähig auf Linux, macOS und Windows.
 
-## Einmalig einrichten
+> Dieser Branch (`flutter`) ist eine vollständige Neuimplementierung der
+> bisherigen [Neutralinojs](https://neutralino.js.org/)-App. Die
+> Geschäftslogik (Kontostände, Wechselkurse, Fixposten, Backup/Restore) ist
+> 1:1 übernommen, die UI ist nativ in Dart/Flutter statt HTML/CSS/JS gebaut.
+> Bestehende `app-data.json`-Dateien der alten Version werden unverändert
+> weiterverwendet (siehe unten).
 
-**Voraussetzung:** Node.js >= 20 (z. B. über [nvm](https://github.com/nvm-sh/nvm))
+## Einmalig einrichten (Linux, z. B. TUXEDO OS)
 
-**Linux (Ubuntu/Debian):**
+TUXEDO OS ist Ubuntu-basiert — die folgenden Schritte funktionieren auf jeder
+Ubuntu/Debian-Ableitung.
+
+**1. Linux-Toolchain für Flutter-Desktop-Builds:**
+
 ```bash
-# WebKitGTK für Neutralino (Ubuntu 22.04+ / Debian 12+)
 sudo apt-get update
-sudo apt-get install libwebkit2gtk-4.1-0
-
-# Falls auf älteren Distributionen:
-# Ubuntu 20.04: libwebkit2gtk-4.0-37
-# Debian 11: libwebkit2gtk-4.0-37
+sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev
 ```
 
-**macOS:** Keine zusätzlichen Abhängigkeiten nötig.
+Diese Pakete kompilieren/linken den nativen GTK-Runner — ohne sie bricht
+`flutter build linux` / `flutter run -d linux` beim CMake-Schritt ab.
 
-**Windows:** Keine zusätzlichen Abhängigkeiten nötig.
+**2. Flutter SDK installieren** (eine der beiden Varianten):
 
 ```bash
-# Neutralino-CLI installieren (global, einmalig)
-npm i -g @neutralinojs/neu
+# Variante A: per snap (einfachste Option auf TUXEDO OS/Ubuntu)
+sudo snap install flutter --classic
+flutter sdk-path   # zeigt den Installationspfad
 
-# Im Projektordner: Client-Library + Binaries herunterladen
-neu update
+# Variante B: manuell, z. B. nach ~/development
+git clone https://github.com/flutter/flutter.git -b stable ~/development/flutter
+echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-> **Bekannter CLI-Bug (Stand v11.7.2):** Diese Version zieht `uuid@14` (ESM-only),
-> obwohl der CLI-Code es per CommonJS `require()` lädt — jeder `neu`-Befehl
-> bricht sofort mit `ERR_REQUIRE_ESM` ab. Betrifft alle Plattformen, nicht nur
-> Linux. Falls das auftritt: `sudo npm install -g @neutralinojs/neu@11.7.1`
-> (letzte Version vor dem kaputten `uuid`-Update).
+**3. Linux-Desktop-Unterstützung aktivieren und prüfen:**
 
-`neu update` lädt `neutralino.js` sowie die plattformspezifischen Binaries
-in `resources/` bzw. `bin/` — diese Dateien sind bewusst in `.gitignore`,
-weil sie bei jedem `neu update` neu generiert werden.
+```bash
+flutter config --enable-linux-desktop
+flutter doctor
+```
 
-**Datenverzeichnis:**
+`flutter doctor` sollte unter "Linux toolchain" ein ✓ zeigen. Fehlt
+`clang++`, wurde Schritt 1 übersprungen oder `libgtk-3-dev` fehlt noch.
+
+**Datenverzeichnis** (unverändert gegenüber der Neutralino-Version):
 - **Linux:** `~/.local/share/de.finanzgecko.app/`
 - **macOS:** `~/Library/Application Support/de.finanzgecko.app/`
 - **Windows:** `%APPDATA%\de.finanzgecko.app\`
@@ -49,196 +58,187 @@ weil sie bei jedem `neu update` neu generiert werden.
 ## Entwickeln
 
 ```bash
-neu run
+flutter pub get
+flutter run -d linux
 ```
 
-Startet die App im Entwicklungsmodus mit Live-Reload bei Dateiänderungen.
+Startet die App mit Hot Reload (`r` im Terminal drücken, oder im
+IDE-Plugin). `-d linux` wählt explizit das Linux-Desktop-Target — nötig,
+sobald mehr als ein Gerät verfügbar ist (z. B. ein angeschlossenes Android-
+Handy oder Chrome für Web).
 
 ## Bauen (Release)
 
 ```bash
-neu build --release --embed-resources
+flutter build linux --release
 ```
 
-Ergebnis liegt in `dist/finanzgecko/` — je eine self-contained Binary pro
-Plattform/Architektur (`finanzgecko-linux_x64`, `finanzgecko-mac_arm64`,
-`finanzgecko-win_x64.exe`, …). `--embed-resources` bettet die Web-Ressourcen
-direkt in jede Binary ein, es gibt kein separates `resources.neu` mehr, das
-beim Verteilen mitgeschickt werden müsste — eine einzelne Datei reicht.
+Ergebnis liegt in `build/linux/x64/release/bundle/` — ein **Ordner**, kein
+Single-File-Binary wie bei der alten Neutralino-Version: die ausführbare
+Datei `finanzgecko` braucht die mitgelieferten `data/` und `lib/*.so`
+daneben, um zu starten. Beim Verteilen immer den kompletten Ordner
+zippen/mitgeben, nicht nur die Executable.
 
-> **Ohne `--embed-resources`** erzeugt `neu build --release` zusätzlich eine
-> `resources.neu` neben den Binaries, die zwingend im selben Verzeichnis wie
-> die jeweilige Binary liegen muss. Fehlt sie (z. B. weil nur die `.exe`
-> alleine weitergegeben wurde), zeigt die App beim Start nur die
-> Neutralino-Standardseite statt FinanzGecko — daher grundsätzlich mit
-> `--embed-resources` bauen.
-
-Windows-Metadaten (Firmenname, Beschreibung, Copyright, Produktname im
-Explorer-Eigenschaften-Dialog) sowie das `.exe`-Icon werden von `neu build`
-automatisch aus `author`/`description`/`copyright`/`applicationName` in
-`neutralino.config.json` bzw. aus `modes.window.icon` erzeugt — keine
-manuelle Nachbearbeitung nötig.
-
-**Erster Start auf einem "fremden" Mac/Windows-Rechner:** Ohne Code-Signierung
-zeigen macOS Gatekeeper ("nicht verifizierter Entwickler") und Windows
-SmartScreen ("unbekannter Herausgeber") eine Warnung. Auf dem Mac einmalig
-per Rechtsklick auf die App → *Öffnen* bestätigen, unter Windows über
-"Weitere Informationen" → "Trotzdem ausführen". Betrifft nur den
-allerersten Start und erfordert ein kostenpflichtiges Signierzertifikat,
-um vollständig zu verschwinden.
-
-`neu build --release` ruft `zip-lib` auf, das Node.js >= 20 voraussetzt
-(`npm WARN EBADENGINE`, falls die installierte Node-Version älter ist).
-Auf reinen `neu run`-Workflows ohne Release-Build fällt das nicht auf.
-
-### macOS: als richtiges App-Bundle bauen (Dock-Icon, Finder)
-
-`neu build` (auch mit `--macos-bundle`) liefert nur eine rohe Unix-Binary.
-Die CLI-eigene `--macos-bundle`-Option hängt dabei lediglich die Endung
-`.app` an die Datei an (siehe `neutralinojs-cli/src/modules/bundler.js`) —
-ohne `Contents/Info.plist` und `Contents/Resources/icon.icns` erkennt der
-Finder das aber nicht als echtes Bundle und zeigt kein eigenes Dock-Icon.
-
-Einmalig/pro Release:
+Zum Ausprobieren direkt aus dem Bundle heraus:
 
 ```bash
-neu build --release --embed-resources   # falls noch nicht geschehen
-./packaging/macos/build-app.sh          # universal (Standard)
-./packaging/macos/build-app.sh arm64    # oder gezielt x64 / arm64
+./build/linux/x64/release/bundle/finanzgecko
 ```
 
-Baut `dist/finanzgecko/FinanzGecko.app` mit Info.plist, `.icns`
-(generiert aus `icons/icon-512.png` per `sips`/`iconutil`) und einer
-Ad-hoc-Signatur (`codesign --sign -`, kein Apple-Zertifikat nötig — auf
-Apple Silicon startet eine gänzlich unsignierte App sonst nicht). Muss auf
-einem Mac ausgeführt werden. Die `.app` danach normal in den
-Programme-Ordner ziehen oder direkt aus `dist/finanzgecko/` starten.
+### Als Desktop-Anwendung installieren (Startmenü- & Taskleisten-Icon)
 
-### Linux: als Desktop-Anwendung installieren (Taskleisten-Icon)
-
-Direkt gestartete Binaries (`neu run` oder das Release-Binary per Doppelklick)
-zeigen in der Taskleiste unter Wayland/X11 ein generisches Icon statt des
-App-Icons. Grund: Neutralino setzt keine GTK-Application-ID, wodurch die
-Fenster-Identität (`WM_CLASS`/Wayland-`app_id`) vom Binary-Dateinamen abhängt
-(z. B. `finanzgecko-linux_x64`) — ohne passende `.desktop`-Datei kann die
-Shell (GNOME, KDE, …) kein Icon zuordnen. Die Config-Option
-`modes.window.icon` setzt nur das Icon im Fenster selbst, nicht das
-Taskleisten-Icon.
+Ein direkt gestartetes Bundle zeigt in der Taskleiste unter Wayland/X11 ein
+generisches Icon statt des App-Icons und taucht nicht im Startmenü auf —
+GTK-Fensteridentität (`WM_CLASS`/Wayland-`app_id`) und Icon-Zuordnung laufen
+über eine `.desktop`-Datei, die es für ein lose gestartetes Bundle nicht
+gibt.
 
 Einmalig beheben:
 
 ```bash
-neu build --release --embed-resources   # falls noch nicht geschehen
+flutter build linux --release   # falls noch nicht geschehen
 ./packaging/linux/install.sh
 ```
 
-Legt einen stabil benannten Symlink (`~/.local/bin/finanzgecko`), einen
-Startmenü-Eintrag (`~/.local/share/applications/de.finanzgecko.app.desktop`)
-und die Icons im hicolor-Theme an. App danach über das Startmenü starten,
-nicht mehr direkt über das Binary.
+Kopiert das Bundle nach `~/.local/share/finanzgecko/`, legt einen stabil
+benannten Symlink (`~/.local/bin/finanzgecko`), einen Startmenü-Eintrag
+(`~/.local/share/applications/de.finanzgecko.app.desktop`) sowie die Icons im
+hicolor-Theme an. App danach über das Startmenü starten, nicht mehr direkt
+über `build/`.
+
+## macOS / Windows
+
+Flutter-Desktop-Builds sind **nicht cross-kompilierbar** — ein macOS-Build
+muss auf einem Mac laufen, ein Windows-Build unter Windows:
+
+```bash
+flutter build macos --release     # auf einem Mac
+flutter build windows --release   # unter Windows
+```
+
+`flutter build macos` erzeugt bereits ein vollständiges `FinanzGecko.app`
+mit Info.plist, Icon und Ad-hoc-Signatur — anders als bei Neutralino ist
+dafür kein zusätzliches `packaging/macos/build-app.sh` mehr nötig, Flutter
+übernimmt das Bundling selbst. `flutter build windows` erzeugt einen Ordner
+unter `build/windows/x64/runner/Release/` (Executable + `data/` + DLLs), der
+komplett verteilt werden muss — auch hier keine Einzeldatei mehr.
+
+Erster Start auf einem "fremden" Mac/Windows-Rechner zeigt ohne
+Code-Signierung weiterhin Gatekeeper-/SmartScreen-Warnungen (siehe
+"Bekannte Einschränkungen" unten).
 
 ## Architektur
 
-| Datei | Zweck |
+| Datei/Ordner | Zweck |
 |---|---|
-| `neutralino.config.json` | Fenstergröße, `nativeAllowList`, Datenverzeichnis-Konfiguration |
-| `resources/index.html` | App-Shell, native Menüleiste kommt separat aus `main.js` |
-| `resources/css/theme.css` | Grün-Schwarz-Theme, System-Font-Stack für OS-natives Aussehen |
-| `resources/js/store.js` | **Ersetzt IndexedDB.** Eine JSON-Datei im System-Datenverzeichnis (`NL_DATAPATH`), atomar geschrieben (temp-Datei + `move`) |
-| `resources/js/currency.js` | Unverändert: Frankfurter.app-Anbindung mit Cache |
-| `resources/js/charts.js` | Unverändert: eigener SVG-Linienchart + CSS-Donut |
-| `resources/js/main.js` | Views, Routing, native Menüleiste (`Neutralino.window.setMainMenu`) |
-| `packaging/linux/` | `.desktop`-Datei + `install.sh` für Taskleisten-Icon unter Wayland/X11 |
-| `packaging/macos/build-app.sh` | Baut ein echtes `.app`-Bundle (Info.plist, `.icns`, Ad-hoc-Signatur) aus der rohen Mac-Binary |
-| `.github/workflows/release.yml` | CI: baut bei jedem Tag-Push alle Plattform-Binaries + macOS-Bundle und hängt sie ans GitHub-Release |
+| `pubspec.yaml` | Paketname, Version, Dependencies (provider, http, file_selector, window_manager, fl_chart, intl, url_launcher) |
+| `lib/main.dart` | Einstiegspunkt: Fenster-Setup (`window_manager`), Store-Initialisierung, `runApp()` |
+| `lib/data/app_store.dart` | **Ersetzt store.js.** Persistiert die komplette App-Datenbank als JSON-Datei im System-Datenverzeichnis, atomar geschrieben (temp-Datei + rename) |
+| `lib/data/app_data.dart` | In-Memory-Schema der JSON-Datei (Accounts, Balances, Assets, Subscriptions, Settings, Rate-Cache) |
+| `lib/models/` | Datenklassen (`Account`, `Balance`, `Asset`, `Subscription`) mit `fromJson`/`toJson` |
+| `lib/services/currency_service.dart` | Unverändert in der Logik: Frankfurter.app-Anbindung mit Cache |
+| `lib/state/app_state.dart` | Zentraler `ChangeNotifier` (Provider) — lädt den Store, exponiert CRUD-Methoden + berechnete Werte (Perioden, Fixposten-Summen, Reminder) an die UI |
+| `lib/ui/app_shell.dart` | Navigation, In-App-Menü ("Datei"), Tastenkürzel, Export/Import-Dialoge |
+| `lib/ui/views/` | Die sieben Ansichten: Dashboard, Erfassen, Einträge, Konten, Vermögenswerte, Fixposten, Einstellungen |
+| `lib/ui/widgets/` | Wiederverwendbare Bausteine: Linienchart/Donut (`fl_chart`), Monatsauswahl, Vorzeichen-Umschalter, Banner |
+| `packaging/linux/` | `.desktop`-Datei + `install.sh` für Startmenü-/Taskleisten-Icon unter Wayland/X11 |
+| `.github/workflows/release.yml` | CI: baut bei jedem Tag-Push die drei Plattform-Bundles (je ein nativer Runner pro OS) und hängt sie ans GitHub-Release |
 
-## Warum keine IndexedDB mehr
+## Warum weiterhin keine Datenbank-Engine
 
-Die App schreibt jetzt direkt in eine JSON-Datei im OS-eigenen Datenverzeichnis
-(dank `"dataLocation": "system"` in der Config). Das eliminiert das
-gesamte Thema Safari-Speicher-Eviction, das für die PWA-Version relevant
-war — eine normale Datei auf der Festplatte unterliegt keiner Verfallsregel.
+Wie schon bei der Neutralino-Version: eine einzige JSON-Datei im
+OS-eigenen Datenverzeichnis, keine SQLite/Hive/Isar-Abhängigkeit. Für die
+Datenmenge eines persönlichen Vermögenstrackers (ein paar hundert
+Kontostände) ist "ganze Datei einlesen/schreiben" völlig ausreichend und
+hält den Code einfach.
 
 **Dateipfad:**
 - **Linux:** `~/.local/share/de.finanzgecko.app/app-data.json`
 - **macOS:** `~/Library/Application Support/de.finanzgecko.app/app-data.json`
 - **Windows:** `%APPDATA%\de.finanzgecko.app\app-data.json`
 
-Export/Import laufen über native Save/Open-Dialoge
-(`Neutralino.os.showSaveDialog` / `showOpenDialog`), nicht mehr über
-Browser-Downloads.
+Die Datei ist unverschlüsselt. Vertraulichkeit gegenüber anderen lokalen
+OS-Accounts wird über Dateirechte hergestellt (`chmod 0700` fürs
+Datenverzeichnis, `0600` für die Datei, unter Linux/macOS) — nicht über
+Verschlüsselung. Unter Windows ist das (mangels POSIX-Rechten) nicht
+anwendbar; dort schützt allein das Benutzerprofil-ACL des Betriebssystems.
 
-## Updates
+Export/Import laufen über native Save/Open-Dialoge (`file_selector`), nicht
+über Browser-Downloads.
 
-Kein In-App-Auto-Updater (mehr) — jede Binary ist dank `--embed-resources`
-eine self-contained Datei, in der Web-Ressourcen und Neutralino-Runtime
-fest verbacken sind. Es gibt daher nichts, das man im laufenden Betrieb
-punktuell austauschen könnte; ein Update bedeutet schlicht: neue Binary aus
-dem GitHub-Release herunterladen und die alte damit ersetzen.
+## Fensterverhalten
 
-Das ist unkritisch für bestehende Nutzerdaten: `dataLocation`/
-`storageLocation` stehen auf `"system"`, das Datenverzeichnis
-(`NL_DATAPATH`, siehe oben) hängt nur von `applicationId` ab, nicht vom
-Binary-Pfad oder der Version. Eine neue Binary findet beim ersten Start
-automatisch dieselbe `app-data.json` wieder. `store.js` trägt zusätzlich
-ein `schemaVersion`-Feld pro Datei für den Fall künftiger Formatänderungen.
+Startet mit der zuletzt verwendeten Größe (Standard 1280×860, Mindestgröße
+960×640, `window_manager`). Ob das Fenster beim letzten Beenden maximiert
+war, wird ebenfalls gemerkt. Anders als bei Neutralino wird nur Größe +
+Maximiert-Status gespeichert, nicht die Bildschirmposition — das vermeidet,
+dass das Fenster nach einem Monitor-/Auflösungswechsel außerhalb des
+sichtbaren Bereichs landet.
+
+## In-App-Menü statt nativer Menüleiste
+
+Flutters `PlatformMenuBar` unterstützt aktuell nur macOS — unter Linux und
+Windows gibt es keine native App-Menüleiste. Statt einer Neutralino-typischen
+`Neutralino.window.setMainMenu()`-Leiste hat die App deshalb einen
+"Datei"-Menüpunkt direkt im eigenen Fensterkopf (Backup exportieren/
+importieren, Beenden), plattformübergreifend identisch. Tastenkürzel
+(<kbd>Strg</kbd>+<kbd>E</kbd>/<kbd>I</kbd>/<kbd>Q</kbd>, unter macOS
+<kbd>Cmd</kbd>) funktionieren global im Fenster, unabhängig vom Menü.
+
+## Migration von der bisherigen Neutralino-/PWA-Version
+
+Bestehende `app-data.json` wird unverändert eingelesen — das Schema ist
+identisch geblieben (gleiche Feldnamen, gleiches Datenverzeichnis). Einfach
+diese Version starten, es ist kein manueller Import nötig. Für einen
+Rechnerwechsel oder als zusätzliche Sicherheit weiterhin: über
+*Einstellungen → Backup exportieren…* ein Backup ziehen und auf dem neuen
+Rechner über *Backup importieren…* einlesen.
+
+Eine Inkonsistenz der alten Version wurde dabei behoben: Import stellte
+Fixposten und das Standard-Fixposten-Intervall bisher nicht wieder her,
+obwohl der Export sie enthielt. Das ist jetzt symmetrisch — ein
+Backup-Restore bringt wirklich *alle* exportierten Daten zurück.
+
+## Bekannte Einschränkungen
+
+- **Kein In-App-Auto-Updater.** Ein Update bedeutet: neues Release-Zip aus
+  GitHub Releases laden, altes Bundle ersetzen (bzw. `install.sh` erneut
+  laufen lassen). Das Datenverzeichnis hängt nur vom Datenpfad ab, nicht vom
+  Bundle-Speicherort — bestehende Nutzerdaten bleiben unberührt.
+- **Erster Start auf einem "fremden" Mac/Windows-Rechner:** Ohne
+  Code-Signierung zeigen macOS Gatekeeper ("nicht verifizierter
+  Entwickler") und Windows SmartScreen ("unbekannter Herausgeber") eine
+  Warnung. Auf dem Mac einmalig per Rechtsklick → *Öffnen* bestätigen, unter
+  Windows über "Weitere Informationen" → "Trotzdem ausführen". Ein
+  kostenpflichtiges Signierzertifikat würde das vollständig beheben.
+  `flutter build macos` signiert das Bundle bereits ad-hoc (`codesign --sign -`),
+  das reicht für den eigenen Rechner, aber nicht für Fremdverteilung ohne
+  Warnung.
+
+## Updates veröffentlichen
 
 1. Bei jedem neuen Release:
-   - Version in `neutralino.config.json` (`"version"`) hochzählen und committen
+   - Version in `pubspec.yaml` (`version:`) hochzählen und committen
    - Tag pushen, z. B.: `git tag v1.1.0 && git push origin v1.1.0`
-2. Nutzer laden die neue Binary manuell vom GitHub-Release herunter und
-   ersetzen die alte Datei.
-
-**CI-Unterstützung:** `.github/workflows/release.yml` baut bei jedem
-gepushten Tag (`vX.Y.Z`) automatisch alle Plattform-Binaries (mit
-`--embed-resources`) plus das macOS-App-Bundle und hängt sie als Assets ans
-passende GitHub-Release. Nimmt aus obiger Liste den manuellen Build-/
-Upload-Schritt ab — `version` in `neutralino.config.json` muss weiterhin
-von Hand aktualisiert und committet werden, bevor der Tag gepusht wird.
-
-## Native Menüleiste
-
-*Datei* → Backup exportieren (⌘E), Backup importieren, Beenden (⌘Q) —
-vollständig nativ über `Neutralino.window.setMainMenu()`, nicht Teil des
-HTML/CSS.
-
-## Fenstergröße
-
-Startet maximiert (`"maximize": true`), bleibt aber frei skalierbar
-(`"resizable": true`, Mindestgröße 960×640). `"useSavedState": true`
-merkt sich Größe/Position zwischen den Starts. Charts rendern sich bei
-Fenstergrößenänderung automatisch neu (siehe Resize-Listener in `main.js`).
-
-## Migration von der bisherigen PWA-Version
-
-Falls vorher die PWA-Version genutzt wurde: einmal über deren
-Export-Funktion ein Backup ziehen, hier über *Backup importieren…*
-einlesen — das Datenformat ist identisch, keine Konvertierung nötig.
+2. `.github/workflows/release.yml` baut auf drei nativen Runnern
+   (ubuntu/macos/windows-latest) je ein Plattform-Bundle und hängt es als
+   Zip ans GitHub-Release.
+3. Nutzer laden das passende Zip herunter, entpacken es und ersetzen die
+   alte Ordnerkopie (Linux: `./packaging/linux/install.sh <entpackter-Ordner>`
+   erledigt das inkl. Startmenü-Eintrag).
 
 ## Troubleshooting
 
-**Weißer Bereich / "The URL can't be shown" beim Start (Linux):** Trat mit
-`"enableServer": false` (load-dir-res-Modus) auf WebKitGTK auf — die
-Custom-URI-Auflösung ohne lokalen HTTP-Server ist auf dieser Kombination
-instabil. Die Config steht deshalb auf `"enableServer": true` (lokaler
-Server auf `127.0.0.1`, zufälliger Port via `"port": 0`).
+**`flutter doctor` zeigt "Linux toolchain" mit ✗ / `clang++` fehlt:**
+`sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev`
+nachholen (siehe "Einmalig einrichten" oben).
 
-**App startet, aber Navigation/Views reagieren nicht:** `main.js` registriert
-`Neutralino.events.on("ready", init)`, aber das `ready`-Event feuert nur,
-nachdem `Neutralino.init()` explizit aufgerufen wurde (öffnet die
-WebSocket-Verbindung zum nativen Prozess). Ohne diesen Aufruf bleibt die App
-optisch da, aber komplett unreaktiv — kein Klick-Handler wird je registriert.
-Fix steht in `startApp()` in `resources/js/main.js`.
+**App startet, zeigt aber kein Icon in der Taskleiste:** Erwartet bei einem
+direkt aus `build/` gestarteten Bundle, siehe "Als Desktop-Anwendung
+installieren" oben — `./packaging/linux/install.sh` ausführen.
 
-**Nur eine Quelle für App-Dateien:** `index.html`, `css/`, `js/` und `icons/`
-liegen ausschließlich unter `resources/` (Ausnahme: `icons/` bleibt zusätzlich
-im Projekt-Root, weil `neu build` das native Fenster-Icon relativ zum
-Projekt-Root auflöst, nicht relativ zu `resources/`). Es gab früher eine
-zweite, identische Kopie von `index.html`/`css`/`js` im Projekt-Root — die
-wurde nie ausgeliefert (`documentRoot` zeigt auf `/resources`), Änderungen
-daran hatten also nie einen sichtbaren Effekt. Immer nur in `resources/`
-editieren.
-
-**`neu version` zeigt "Project: undefined":** `cli.binaryName` hat in
-`neutralino.config.json` gefehlt (Build-Output landete dann in
-`dist/undefined/` statt `dist/finanzgecko/`).
+**Wechselkurs-Abfrage schlägt fehl / "offline":** Beim Erfassen eines
+Kontostands oder Fixpostens in einer Fremdwährung fragt die App bei
+fehlendem Netzwerkzugriff (Frankfurter.app-API nicht erreichbar und kein
+gecachter Kurs vorhanden) nach einem manuell eingegebenen Kurs. Das ist kein
+Fehler, sondern der bewusste Offline-Fallback.
