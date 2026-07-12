@@ -85,6 +85,10 @@ Zum Ausprobieren direkt aus dem Bundle heraus:
 ./build/linux/x64/release/bundle/finanzgecko
 ```
 
+Das baut nur die Linux-Executable. Für **alle drei Plattformen auf einmal**
+siehe "macOS / Windows" unten — dafür reicht dieser Rechner allein nicht,
+das läuft über CI.
+
 ### Als Desktop-Anwendung installieren (Startmenü- & Taskleisten-Icon)
 
 Ein direkt gestartetes Bundle zeigt in der Taskleiste unter Wayland/X11 ein
@@ -109,7 +113,9 @@ hicolor-Theme an. App danach über das Startmenü starten, nicht mehr direkt
 ## macOS / Windows
 
 Flutter-Desktop-Builds sind **nicht cross-kompilierbar** — ein macOS-Build
-muss auf einem Mac laufen, ein Windows-Build unter Windows:
+muss auf einem Mac laufen, ein Windows-Build unter Windows. Von diesem
+Linux-Rechner aus lässt sich also kein macOS- oder Windows-Executable
+erzeugen:
 
 ```bash
 flutter build macos --release     # auf einem Mac
@@ -126,6 +132,28 @@ komplett verteilt werden muss — auch hier keine Einzeldatei mehr.
 Erster Start auf einem "fremden" Mac/Windows-Rechner zeigt ohne
 Code-Signierung weiterhin Gatekeeper-/SmartScreen-Warnungen (siehe
 "Bekannte Einschränkungen" unten).
+
+### Alle drei Plattformen auf einmal bauen
+
+Weil lokal immer nur die eigene Plattform baubar ist, läuft "Linux + macOS +
+Windows gleichzeitig" ausschließlich über `.github/workflows/release.yml` —
+GitHub Actions stellt dafür einen nativen Runner pro Ziel-OS bereit
+(ubuntu/macos/windows-latest), jeder baut sein eigenes Bundle, alle drei
+landen gezippt am selben Lauf. Zwei Wege, den Workflow anzustoßen:
+
+- **Offizielles Release** (Tag pushen, siehe "Updates veröffentlichen"
+  unten): `git tag v1.1.0 && git push origin v1.1.0` baut alle drei Zips und
+  hängt sie automatisch ans GitHub-Release.
+- **Ad-hoc-Test ohne Tag/Release:** im GitHub-Repo unter *Actions →
+  Release → Run workflow* manuell starten (funktioniert auf jedem Branch).
+  Die drei Zips (`finanzgecko-linux-x64`, `FinanzGecko-mac`,
+  `finanzgecko-windows-x64`) stehen danach als Workflow-Artifacts auf der
+  Summary-Seite des Laufs zum Download bereit — es wird dabei kein
+  GitHub-Release erzeugt.
+
+Ohne eigenen Mac/Windows-Rechner oder GitHub-Zugriff auf diesen Workflow
+gibt es keine Möglichkeit, alle drei Plattformen aus diesem Repo heraus zu
+bauen.
 
 ## Architektur
 

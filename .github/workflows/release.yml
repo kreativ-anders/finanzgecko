@@ -19,6 +19,12 @@ name: Release
 #   2. Tag pushen, z. B.: git tag v1.1.0 && git push origin v1.1.0
 #   3. Dieser Workflow lädt alle drei Plattform-Zips automatisch als
 #      Release-Assets hoch.
+#
+# Ad-hoc-Builds für alle drei Plattformen ohne Tag/Release (z. B. um einen
+# Branch vorab zu testen): im Actions-Tab diesen Workflow manuell über
+# "Run workflow" (workflow_dispatch) starten. Die drei Zips landen dann
+# nur als Workflow-Artifacts am Run (Reiter "Summary"), es wird kein
+# GitHub-Release angelegt.
 
 on:
   push:
@@ -52,7 +58,13 @@ jobs:
         working-directory: build/linux/x64/release/bundle
         run: zip -r ../../../../../finanzgecko-linux-x64.zip .
 
-      - uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finanzgecko-linux-x64
+          path: finanzgecko-linux-x64.zip
+
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
           files: finanzgecko-linux-x64.zip
 
@@ -75,7 +87,13 @@ jobs:
         working-directory: build/macos/Build/Products/Release
         run: ditto -c -k --sequesterRsrc --keepParent FinanzGecko.app ../../../../../FinanzGecko-mac.app.zip
 
-      - uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FinanzGecko-mac
+          path: FinanzGecko-mac.app.zip
+
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
           files: FinanzGecko-mac.app.zip
 
@@ -95,6 +113,12 @@ jobs:
       - name: Bundle zippen
         run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath finanzgecko-windows-x64.zip
 
-      - uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finanzgecko-windows-x64
+          path: finanzgecko-windows-x64.zip
+
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
           files: finanzgecko-windows-x64.zip

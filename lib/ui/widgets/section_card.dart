@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
 class SectionCard extends StatelessWidget {
-  const SectionCard({super.key, this.title, required this.child});
+  const SectionCard({super.key, this.title, required this.child, this.expandChild = false});
 
   final String? title;
   final Widget child;
+
+  /// When true, lets [child] grow to fill the card's remaining height —
+  /// used so cards of equal height (see [cardGap] usage in `_SummaryRow`)
+  /// can pin content like a trailing button to the bottom.
+  final bool expandChild;
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +23,7 @@ class SectionCard extends StatelessWidget {
               Text(title!, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 14),
             ],
-            child,
+            expandChild ? Expanded(child: child) : child,
           ],
         ),
       ),

@@ -14,7 +14,6 @@ import 'views/accounts_view.dart';
 import 'views/assets_view.dart';
 import 'views/dashboard_view.dart';
 import 'views/entries_view.dart';
-import 'views/entry_view.dart';
 import 'views/settings_view.dart';
 import 'views/subscriptions_view.dart';
 
@@ -106,14 +105,7 @@ class _AppShellState extends State<AppShell> {
         child: Scaffold(
           body: Column(
             children: [
-              _TopBar(
-                current: _view,
-                isMac: isMac,
-                onNavigate: _navigate,
-                onExport: _handleExport,
-                onImport: _handleImport,
-                onQuit: _handleQuit,
-              ),
+              _TopBar(current: _view, onNavigate: _navigate),
               Expanded(
                 child: Center(
                   child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1100), child: _content()),
@@ -131,8 +123,6 @@ class _AppShellState extends State<AppShell> {
     switch (_view) {
       case AppView.dashboard:
         return DashboardView(onNavigate: _navigate);
-      case AppView.entry:
-        return EntryView(onNavigate: _navigate);
       case AppView.entries:
         return EntriesView(onNavigate: _navigate);
       case AppView.accounts:
@@ -148,21 +138,10 @@ class _AppShellState extends State<AppShell> {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.current,
-    required this.isMac,
-    required this.onNavigate,
-    required this.onExport,
-    required this.onImport,
-    required this.onQuit,
-  });
+  const _TopBar({required this.current, required this.onNavigate});
 
   final AppView current;
-  final bool isMac;
   final ValueChanged<AppView> onNavigate;
-  final VoidCallback onExport;
-  final VoidCallback onImport;
-  final VoidCallback onQuit;
 
   @override
   Widget build(BuildContext context) {
@@ -174,39 +153,7 @@ class _TopBar extends StatelessWidget {
         alignment: WrapAlignment.spaceBetween,
         runSpacing: 8,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              MenuAnchor(
-                menuChildren: [
-                  MenuItemButton(
-                    onPressed: onExport,
-                    shortcut: SingleActivator(LogicalKeyboardKey.keyE, control: !isMac, meta: isMac),
-                    child: const Text('Backup exportieren…'),
-                  ),
-                  MenuItemButton(
-                    onPressed: onImport,
-                    shortcut: SingleActivator(LogicalKeyboardKey.keyI, control: !isMac, meta: isMac),
-                    child: const Text('Backup importieren…'),
-                  ),
-                  const Divider(height: 1),
-                  MenuItemButton(
-                    onPressed: onQuit,
-                    shortcut: SingleActivator(LogicalKeyboardKey.keyQ, control: !isMac, meta: isMac),
-                    child: const Text('Beenden'),
-                  ),
-                ],
-                builder: (context, controller, child) {
-                  return TextButton(
-                    onPressed: () => controller.isOpen ? controller.close() : controller.open(),
-                    child: const Text('Datei'),
-                  );
-                },
-              ),
-              const SizedBox(width: 12),
-              const Text('🦎 FinanzGecko', style: TextStyle(fontWeight: FontWeight.w700, color: kPrimary, fontSize: 16)),
-            ],
-          ),
+          const Text('🦎 FinanzGecko', style: TextStyle(fontWeight: FontWeight.w700, color: kPrimary, fontSize: 16)),
           Wrap(
             spacing: 2,
             children: [for (final view in AppView.values) _NavButton(view: view, active: view == current, onTap: () => onNavigate(view))],

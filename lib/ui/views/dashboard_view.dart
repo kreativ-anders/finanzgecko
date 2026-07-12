@@ -44,14 +44,30 @@ class DashboardView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ...banners,
-          if (periods.isEmpty)
-            _EmptyDashboard(onNavigate: onNavigate)
-          else
-            _PopulatedDashboard(periods: periods, app: app),
-          cardGap,
-          _AssetsSection(app: app, onNavigate: onNavigate),
-          cardGap,
-          _SubscriptionsSection(totals: totals, app: app, onNavigate: onNavigate),
+          if (periods.isEmpty) ...[
+            _EmptyDashboard(onNavigate: onNavigate),
+            cardGap,
+            _SummaryRow(
+              children: [
+                _SubscriptionsSection(totals: totals, app: app, onNavigate: onNavigate),
+                _AssetsSection(app: app, onNavigate: onNavigate),
+              ],
+            ),
+          ] else ...[
+            _TotalsOverview(periods: periods, app: app),
+            cardGap,
+            _SummaryRow(
+              children: [
+                _DistributionSection(app: app, latestPeriod: periods.last),
+                _SubscriptionsSection(totals: totals, app: app, onNavigate: onNavigate),
+                _AssetsSection(app: app, onNavigate: onNavigate),
+              ],
+            ),
+            cardGap,
+            Text('Konten', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            _AccountCards(app: app),
+          ],
         ],
       ),
     );
@@ -80,8 +96,8 @@ class _EmptyDashboard extends StatelessWidget {
   }
 }
 
-class _PopulatedDashboard extends StatelessWidget {
-  const _PopulatedDashboard({required this.periods, required this.app});
+class _TotalsOverview extends StatelessWidget {
+  const _TotalsOverview({required this.periods, required this.app});
 
   final List<String> periods;
   final AppState app;
@@ -100,17 +116,6 @@ class _PopulatedDashboard extends StatelessWidget {
     final entriesInLatest = app.balancesInPeriod(latestPeriod).length;
 
     final totalChartData = [for (final p in periods) ChartPoint(periodLabel(p), _totalForPeriod(p))];
-
-    final byTag = <String, double>{};
-    for (final b in app.balancesInPeriod(latestPeriod)) {
-      final matches = app.accounts.where((a) => a.id == b.accountId);
-      if (matches.isEmpty) continue;
-      final acc = matches.first;
-      byTag[acc.tag] = (byTag[acc.tag] ?? 0) + b.amountBase;
-    }
-    final donutSegments = [
-      for (final entry in byTag.entries) DonutSegment(label: entry.key, value: entry.value, color: colorFromHex(tagColorHex(entry.key))),
-    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,13 +151,62 @@ class _PopulatedDashboard extends StatelessWidget {
         ),
         cardGap,
         SectionCard(title: 'Verlauf', child: AppLineChart(points: totalChartData, color: kPrimary)),
-        cardGap,
-        SectionCard(title: 'Verteilung nach Kontotyp', child: AppDonutChart(segments: donutSegments)),
-        cardGap,
-        Text('Konten', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
-        _AccountCards(app: app),
       ],
+    );
+  }
+}
+
+class _DistributionSection extends StatelessWidget {
+  const _DistributionSection({required this.app, required this.latestPeriod});
+
+  final AppState app;
+  final String latestPeriod;
+
+  @override
+  Widget build(BuildContext context) {
+    final byTag = <String, double>{};
+    for (final b in app.balancesInPeriod(latestPeriod)) {
+      final matches = app.accounts.where((a) => a.id == b.accountId);
+      if (matches.isEmpty) continue;
+      final acc = matches.first;
+      byTag[acc.tag] = (byTag[acc.tag] ?? 0) + b.amountBase;
+    }
+    final donutSegments = [
+      for (final entry in byTag.entries) DonutSegment(label: entry.key, value: entry.value, color: colorFromHex(tagColorHex(entry.key))),
+    ];
+    return SectionCard(title: 'Verteilung nach Kontotyp', child: AppDonutChart(segments: donutSegments));
+  }
+}
+
+/// Lays summary cards out side by side once there's enough width, falling
+/// back to a stack on narrower windows so nothing gets squeezed unreadably.
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 640) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [for (final child in children) ...[child, cardGap]]..removeLast(),
+          );
+        }
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                Expanded(child: children[i]),
+                if (i < children.length - 1) const SizedBox(width: 20),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -232,6 +286,7 @@ class _AssetsSection extends StatelessWidget {
     final total = app.assets.fold<double>(0, (sum, a) => sum + a.value);
     return SectionCard(
       title: 'Vermögenswerte',
+      expandChild: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -241,8 +296,12 @@ class _AssetsSection extends StatelessWidget {
             Text(fmtMoney(total, app.baseCurrency), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             Text('${app.assets.length} Gegenstände erfasst', style: const TextStyle(color: kMuted, fontSize: 13)),
           ],
+          const Spacer(),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: () => onNavigate(AppView.assets), child: const Text('Vermögenswerte verwalten')),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(onPressed: () => onNavigate(AppView.assets), child: const Text('Vermögenswerte verwalten')),
+          ),
         ],
       ),
     );
@@ -260,6 +319,7 @@ class _SubscriptionsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       title: 'Fixposten',
+      expandChild: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -279,8 +339,12 @@ class _SubscriptionsSection extends StatelessWidget {
                 ),
               ],
             ),
+          const Spacer(),
           const SizedBox(height: 12),
-          OutlinedButton(onPressed: () => onNavigate(AppView.subscriptions), child: const Text('Fixposten verwalten')),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(onPressed: () => onNavigate(AppView.subscriptions), child: const Text('Fixposten verwalten')),
+          ),
         ],
       ),
     );

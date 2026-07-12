@@ -158,6 +158,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           initialValue: _interval,
+                          isExpanded: true,
                           decoration: const InputDecoration(labelText: 'Intervall'),
                           items: [for (final i in kSubscriptionIntervals) DropdownMenuItem(value: i.value, child: Text(i.label))],
                           onChanged: (v) => setState(() => _interval = v ?? _interval),
@@ -170,18 +171,21 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      SignToggle(isExpense: _isExpense, onChanged: (v) => setState(() => _isExpense = v)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _magnitudeCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(labelText: 'Betrag', hintText: '0,00'),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SignToggle(isExpense: _isExpense, onChanged: (v) => setState(() => _isExpense = v)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _magnitudeCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: 'Betrag', hintText: '0,00'),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 6),
                   const Text('Standard ist Ausgabe (−). Für eine Einnahme wie Gehalt auf + umschalten.', style: TextStyle(color: kMuted, fontSize: 12)),
@@ -307,61 +311,79 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
     final monthly = widget.app.monthlyEquivalent(widget.sub).abs();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 10,
-        runSpacing: 8,
-        children: [
-          SizedBox(
-            width: 180,
-            child: TextField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Name'),
-              onTapOutside: (_) => _save(),
-              onSubmitted: (_) => _save(),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+                onTapOutside: (_) => _save(),
+                onSubmitted: (_) => _save(),
+              ),
             ),
-          ),
-          SizedBox(
-            width: 150,
-            child: DropdownButtonFormField<String>(
-              initialValue: _interval,
-              decoration: const InputDecoration(labelText: 'Intervall'),
-              items: [for (final i in kSubscriptionIntervals) DropdownMenuItem(value: i.value, child: Text(i.label))],
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: DropdownButtonFormField<String>(
+                initialValue: _interval,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Intervall'),
+                items: [for (final i in kSubscriptionIntervals) DropdownMenuItem(value: i.value, child: Text(i.label))],
+                onChanged: (v) {
+                  setState(() => _interval = v ?? _interval);
+                  _save();
+                },
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _currencyCtrl,
+                decoration: const InputDecoration(labelText: 'Währung'),
+                onTapOutside: (_) => _save(),
+                onSubmitted: (_) => _save(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            SignToggle(
+              isExpense: _isExpense,
               onChanged: (v) {
-                setState(() => _interval = v ?? _interval);
+                setState(() => _isExpense = v);
                 _save();
               },
             ),
-          ),
-          SizedBox(
-            width: 80,
-            child: TextField(
-              controller: _currencyCtrl,
-              decoration: const InputDecoration(labelText: 'Währung'),
-              onTapOutside: (_) => _save(),
-              onSubmitted: (_) => _save(),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _magnitudeCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Betrag'),
+                onTapOutside: (_) => _save(),
+                onSubmitted: (_) => _save(),
+              ),
             ),
-          ),
-          SignToggle(
-            isExpense: _isExpense,
-            onChanged: (v) {
-              setState(() => _isExpense = v);
-              _save();
-            },
-          ),
-          SizedBox(
-            width: 110,
-            child: TextField(
-              controller: _magnitudeCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Betrag'),
-              onTapOutside: (_) => _save(),
-              onSubmitted: (_) => _save(),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: 110,
+              child: Center(
+                child: Text(
+                  '≈ ${fmtMoney(monthly, widget.app.baseCurrency)}/Monat',
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: kMuted, fontSize: 12),
+                ),
+              ),
             ),
-          ),
-          Text('≈ ${fmtMoney(monthly, widget.app.baseCurrency)}/Monat', style: const TextStyle(color: kMuted, fontSize: 12)),
-          OutlinedButton(onPressed: _delete, child: const Text('Löschen')),
-        ],
+            const SizedBox(width: 10),
+            Center(child: OutlinedButton(onPressed: _delete, child: const Text('Löschen'))),
+          ],
+        ),
       ),
     );
   }

@@ -20,6 +20,103 @@ Future<void> _openSuggestionMail() async {
   await launchUrl(uri);
 }
 
+/// Bank text field with a color preview (matching the account's future
+/// accent color) and a colored swatch per suggestion in the dropdown —
+/// reusing the same [kBanks] brand colors the account list already shows.
+class _BankField extends StatefulWidget {
+  const _BankField({required this.controller, required this.fallbackColorHex});
+
+  final TextEditingController controller;
+  final String fallbackColorHex;
+
+  @override
+  State<_BankField> createState() => _BankFieldState();
+}
+
+class _BankFieldState extends State<_BankField> {
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleControllerChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleControllerChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  // Repaints the color swatch and "Bank fehlt?" hint as the user types —
+  // needed because we hand our controller straight to Autocomplete below
+  // instead of shadowing it with a second, manually-synced one.
+  void _handleControllerChanged() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedColor = colorFromHex(bankColorHex(widget.controller.text) ?? widget.fallbackColorHex);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Autocomplete<String>(
+          textEditingController: widget.controller,
+          focusNode: _focusNode,
+          optionsBuilder: (v) {
+            if (v.text.isEmpty) return const Iterable<String>.empty();
+            return kBanks.map((b) => b.name).where((n) => n.toLowerCase().contains(v.text.toLowerCase()));
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            final matches = options.toList();
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 240, maxWidth: 320),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: matches.length,
+                    itemBuilder: (context, index) {
+                      final name = matches[index];
+                      final hex = bankColorHex(name) ?? widget.fallbackColorHex;
+                      return ListTile(
+                        dense: true,
+                        leading: Container(width: 12, height: 12, decoration: BoxDecoration(color: colorFromHex(hex), shape: BoxShape.circle)),
+                        title: Text(name),
+                        onTap: () => onSelected(name),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+          fieldViewBuilder: (context, controller, focusNode, onSubmit) {
+            return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                labelText: 'Bank',
+                hintText: 'z.B. DKB',
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Container(width: 12, height: 12, decoration: BoxDecoration(color: resolvedColor, shape: BoxShape.circle)),
+                ),
+              ),
+            );
+          },
+        ),
+        _BankSuggestionHint(typedBank: () => widget.controller.text),
+      ],
+    );
+  }
+}
+
 class _BankSuggestionHint extends StatelessWidget {
   const _BankSuggestionHint({required this.typedBank});
 
@@ -129,29 +226,13 @@ class _AccountsViewState extends State<AccountsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _BankField(controller: _bankCtrl, fallbackColorHex: tagColorHex(_tag)),
+                  const SizedBox(height: 14),
                   TextFormField(
                     controller: _nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Name', hintText: 'z.B. DKB Girokonto'),
+                    decoration: const InputDecoration(labelText: 'Name', hintText: 'z.B. Gehaltskonto, Trading'),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Pflichtfeld' : null,
                   ),
-                  const SizedBox(height: 14),
-                  Autocomplete<String>(
-                    optionsBuilder: (v) {
-                      if (v.text.isEmpty) return const Iterable<String>.empty();
-                      return kBanks.map((b) => b.name).where((n) => n.toLowerCase().contains(v.text.toLowerCase()));
-                    },
-                    onSelected: (v) => _bankCtrl.text = v,
-                    fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-                      controller.text = _bankCtrl.text;
-                      controller.addListener(() => _bankCtrl.text = controller.text);
-                      return TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        decoration: const InputDecoration(labelText: 'Bank', hintText: 'z.B. DKB'),
-                      );
-                    },
-                  ),
-                  _BankSuggestionHint(typedBank: () => _bankCtrl.text),
                   const SizedBox(height: 14),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,10 +255,10 @@ class _AccountsViewState extends State<AccountsView> {
                           onSelected: (v) => _currencyCtrl.text = v,
                           fieldViewBuilder: (context, controller, focusNode, onSubmit) {
                             controller.text = _currencyCtrl.text;
-                            controller.addListener(() => _currencyCtrl.text = controller.text);
                             return TextFormField(
                               controller: controller,
                               focusNode: focusNode,
+                              onChanged: (v) => _currencyCtrl.text = v,
                               decoration: const InputDecoration(labelText: 'Währung'),
                             );
                           },
@@ -303,10 +384,12 @@ class _AccountEditFormState extends State<_AccountEditForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextFormField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+            _BankField(controller: _bankCtrl, fallbackColorHex: widget.account.color),
             const SizedBox(height: 12),
-            TextFormField(controller: _bankCtrl, decoration: const InputDecoration(labelText: 'Bank')),
-            _BankSuggestionHint(typedBank: () => _bankCtrl.text),
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(labelText: 'Name', hintText: 'z.B. Gehaltskonto, Trading'),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [

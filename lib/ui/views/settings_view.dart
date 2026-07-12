@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -16,11 +18,12 @@ class SettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final lastExport = app.store.lastExportAt;
+    final modKeyLabel = Platform.isMacOS ? '⌘' : 'Strg';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionCard(
             title: 'Basiswährung',
@@ -29,12 +32,16 @@ class SettingsView extends StatelessWidget {
               children: [
                 const Text('Alle Beträge werden für Dashboard-Ansichten in diese Währung umgerechnet.', style: TextStyle(color: kMuted)),
                 const SizedBox(height: 12),
-                DropdownButton<String>(
-                  value: app.baseCurrency,
-                  items: [for (final c in kCurrencies) DropdownMenuItem(value: c, child: Text(c))],
-                  onChanged: (v) {
-                    if (v != null) context.read<AppState>().setBaseCurrency(v);
-                  },
+                SizedBox(
+                  width: 280,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: app.baseCurrency,
+                    isExpanded: true,
+                    items: [for (final c in kCurrencies) DropdownMenuItem(value: c, child: Text(c))],
+                    onChanged: (v) {
+                      if (v != null) context.read<AppState>().setBaseCurrency(v);
+                    },
+                  ),
                 ),
               ],
             ),
@@ -51,12 +58,16 @@ class SettingsView extends StatelessWidget {
                   style: TextStyle(color: kMuted),
                 ),
                 const SizedBox(height: 12),
-                DropdownButton<String>(
-                  value: app.defaultSubscriptionInterval,
-                  items: [for (final i in kSubscriptionIntervals) DropdownMenuItem(value: i.value, child: Text(i.label))],
-                  onChanged: (v) {
-                    if (v != null) context.read<AppState>().setDefaultSubscriptionInterval(v);
-                  },
+                SizedBox(
+                  width: 280,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: app.defaultSubscriptionInterval,
+                    isExpanded: true,
+                    items: [for (final i in kSubscriptionIntervals) DropdownMenuItem(value: i.value, child: Text(i.label))],
+                    onChanged: (v) {
+                      if (v != null) context.read<AppState>().setDefaultSubscriptionInterval(v);
+                    },
+                  ),
                 ),
               ],
             ),
@@ -74,7 +85,14 @@ class SettingsView extends StatelessWidget {
                   style: const TextStyle(color: kMuted, fontSize: 13),
                 ),
                 const SizedBox(height: 14),
-                ElevatedButton(onPressed: onExport, child: const Text('Backup exportieren…')),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(onPressed: onExport, child: const Text('Backup exportieren…')),
+                    const SizedBox(width: 10),
+                    Text('$modKeyLabel+E', style: const TextStyle(color: kMuted, fontSize: 12)),
+                  ],
+                ),
               ],
             ),
           ),
@@ -94,7 +112,14 @@ class SettingsView extends StatelessWidget {
                   style: TextStyle(color: kMuted),
                 ),
                 const SizedBox(height: 14),
-                OutlinedButton(onPressed: onImport, child: const Text('Backup importieren…')),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton(onPressed: onImport, child: const Text('Backup importieren…')),
+                    const SizedBox(width: 10),
+                    Text('$modKeyLabel+I', style: const TextStyle(color: kMuted, fontSize: 12)),
+                  ],
+                ),
               ],
             ),
           ),
