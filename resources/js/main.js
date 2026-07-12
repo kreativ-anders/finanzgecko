@@ -73,6 +73,12 @@ function lastDayOfMonthISO(period) {
   return d.toISOString().slice(0, 10);
 }
 
+function exchangeRateDateISOForPeriod(period) {
+  const periodEnd = lastDayOfMonthISO(period);
+  const todayISO = new Date().toISOString().slice(0, 10);
+  return periodEnd > todayISO ? todayISO : periodEnd;
+}
+
 function currentPeriod() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -769,7 +775,7 @@ async function renderEntry() {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const period = form.querySelector('input[name="period"]').value;
-    const dateISO = lastDayOfMonthISO(period);
+    const dateISO = exchangeRateDateISOForPeriod(period);
     const rateCache = new Map(); // currency -> rateResult|null, damit gleiche Währungen nur einmal abgefragt werden
 
     let saved = 0;
