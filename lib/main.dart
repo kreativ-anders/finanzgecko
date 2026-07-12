@@ -87,8 +87,7 @@ class FinanzGeckoApp extends StatelessWidget {
         title: 'FinanzGecko',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
-        builder: (context, child) => SelectionArea(child: child!),
-        home: const SplashScreen(child: AppShell()),
+        home: const SelectionArea(child: SplashScreen(child: AppShell())),
       ),
     );
   }
