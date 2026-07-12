@@ -7,6 +7,7 @@ import '../../state/app_state.dart';
 import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/manual_rate_dialog.dart';
 import '../widgets/month_picker_field.dart';
 import '../widgets/section_card.dart';
@@ -208,6 +209,7 @@ class _EntriesViewState extends State<EntriesView> {
                             app: app,
                             period: _period,
                             existing: balanceByAccount[acc.id],
+                            onNavigate: widget.onNavigate,
                           ),
                       const SizedBox(height: 8),
                       if (_notice.isNotEmpty) Text(_notice, style: const TextStyle(color: kMuted)),
@@ -218,7 +220,7 @@ class _EntriesViewState extends State<EntriesView> {
                 ),
                 if (orphanBalances.isNotEmpty) ...[
                   cardGap,
-                  _OrphanEntriesSection(balances: orphanBalances),
+                  _OrphanEntriesSection(balances: orphanBalances, onNavigate: widget.onNavigate),
                 ],
               ],
             ),
@@ -230,13 +232,21 @@ class _EntriesViewState extends State<EntriesView> {
 }
 
 class _EntryRow extends StatelessWidget {
-  const _EntryRow({required this.account, required this.controller, required this.app, required this.period, required this.existing});
+  const _EntryRow({
+    required this.account,
+    required this.controller,
+    required this.app,
+    required this.period,
+    required this.existing,
+    required this.onNavigate,
+  });
 
   final Account account;
   final TextEditingController controller;
   final AppState app;
   final String period;
   final Balance? existing;
+  final ValueChanged<AppView> onNavigate;
 
   Future<void> _delete(BuildContext context) async {
     final bal = existing;
@@ -256,6 +266,8 @@ class _EntryRow extends StatelessWidget {
     if (!context.mounted) return;
     await context.read<AppState>().deleteBalance(bal.id);
     controller.clear();
+    if (!context.mounted) return;
+    showSavedSnackBar(context, onNavigate, message: 'Gelöscht.');
   }
 
   @override
@@ -315,9 +327,10 @@ class _EntryRow extends StatelessWidget {
 /// deleted — kept correctable here since they no longer surface anywhere
 /// else in the app.
 class _OrphanEntriesSection extends StatefulWidget {
-  const _OrphanEntriesSection({required this.balances});
+  const _OrphanEntriesSection({required this.balances, required this.onNavigate});
 
   final List<Balance> balances;
+  final ValueChanged<AppView> onNavigate;
 
   @override
   State<_OrphanEntriesSection> createState() => _OrphanEntriesSectionState();
@@ -341,8 +354,8 @@ class _OrphanEntriesSectionState extends State<_OrphanEntriesSection> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: bal.id == _editingId
-                  ? _EditRow(balance: bal, onDone: () => setState(() => _editingId = null))
-                  : _DisplayRow(balance: bal, onEdit: () => setState(() => _editingId = bal.id)),
+                  ? _EditRow(balance: bal, onDone: () => setState(() => _editingId = null), onNavigate: widget.onNavigate)
+                  : _DisplayRow(balance: bal, onEdit: () => setState(() => _editingId = bal.id), onNavigate: widget.onNavigate),
             ),
         ],
       ),
@@ -351,10 +364,11 @@ class _OrphanEntriesSectionState extends State<_OrphanEntriesSection> {
 }
 
 class _DisplayRow extends StatelessWidget {
-  const _DisplayRow({required this.balance, required this.onEdit});
+  const _DisplayRow({required this.balance, required this.onEdit, required this.onNavigate});
 
   final Balance balance;
   final VoidCallback onEdit;
+  final ValueChanged<AppView> onNavigate;
 
   Future<void> _delete(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -371,6 +385,8 @@ class _DisplayRow extends StatelessWidget {
     if (confirmed == true) {
       if (!context.mounted) return;
       await context.read<AppState>().deleteBalance(balance.id);
+      if (!context.mounted) return;
+      showSavedSnackBar(context, onNavigate, message: 'Gelöscht.');
     }
   }
 
@@ -389,10 +405,11 @@ class _DisplayRow extends StatelessWidget {
 }
 
 class _EditRow extends StatefulWidget {
-  const _EditRow({required this.balance, required this.onDone});
+  const _EditRow({required this.balance, required this.onDone, required this.onNavigate});
 
   final Balance balance;
   final VoidCallback onDone;
+  final ValueChanged<AppView> onNavigate;
 
   @override
   State<_EditRow> createState() => _EditRowState();
@@ -410,16 +427,18 @@ class _EditRowState extends State<_EditRow> {
   Future<void> _save() async {
     final amount = double.tryParse(_ctrl.text.replaceAll(',', '.'));
     if (amount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte einen gültigen Betrag eingeben.')));
+      showErrorSnackBar(context, 'Bitte einen gültigen Betrag eingeben.');
       return;
     }
     try {
       final amountBase = amount * widget.balance.rate;
       await context.read<AppState>().updateBalance(widget.balance.id, amountOriginal: amount, amountBase: amountBase);
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate);
       widget.onDone();
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Speichern: $err')));
+      showErrorSnackBar(context, 'Fehler beim Speichern: $err');
     }
   }
 

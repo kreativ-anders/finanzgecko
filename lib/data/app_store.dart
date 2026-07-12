@@ -508,16 +508,10 @@ class AppStore {
   // ---------- Settings ----------
 
   String get baseCurrency => _requireData.baseCurrency;
-  String get defaultSubscriptionInterval => _requireData.defaultSubscriptionInterval;
   DateTime? get lastExportAt => _requireData.lastExportAt;
 
   Future<void> setBaseCurrency(String value) async {
     _requireData.baseCurrency = value;
-    await _persist();
-  }
-
-  Future<void> setDefaultSubscriptionInterval(String value) async {
-    _requireData.defaultSubscriptionInterval = value;
     await _persist();
   }
 
@@ -598,9 +592,6 @@ class AppStore {
     data.assets = assets;
     data.subscriptions = subscriptions;
     if (imported['baseCurrency'] is String) data.baseCurrency = imported['baseCurrency'] as String;
-    if (imported['defaultSubscriptionInterval'] is String) {
-      data.defaultSubscriptionInterval = imported['defaultSubscriptionInterval'] as String;
-    }
     data.nextAccountId = [data.nextAccountId, maxId(accounts.map((a) => a.id)) + 1].reduce((a, b) => a > b ? a : b);
     data.nextBalanceId = [data.nextBalanceId, maxId(balances.map((b) => b.id)) + 1].reduce((a, b) => a > b ? a : b);
     data.nextAssetId = [data.nextAssetId, maxId(assets.map((a) => a.id)) + 1].reduce((a, b) => a > b ? a : b);

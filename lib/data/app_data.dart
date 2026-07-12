@@ -30,7 +30,6 @@ class WindowPrefs {
 class AppData {
   int schemaVersion;
   String baseCurrency;
-  String defaultSubscriptionInterval;
   List<Account> accounts;
   List<Balance> balances;
   List<Asset> assets;
@@ -46,7 +45,6 @@ class AppData {
   AppData({
     required this.schemaVersion,
     required this.baseCurrency,
-    required this.defaultSubscriptionInterval,
     required this.accounts,
     required this.balances,
     required this.assets,
@@ -63,7 +61,6 @@ class AppData {
   factory AppData.defaults() => AppData(
     schemaVersion: currentSchemaVersion,
     baseCurrency: 'EUR',
-    defaultSubscriptionInterval: 'monthly',
     accounts: [],
     balances: [],
     assets: [],
@@ -123,9 +120,6 @@ class AppData {
     return AppData(
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? currentSchemaVersion,
       baseCurrency: json['baseCurrency'] is String ? json['baseCurrency'] as String : 'EUR',
-      defaultSubscriptionInterval: json['defaultSubscriptionInterval'] is String
-          ? json['defaultSubscriptionInterval'] as String
-          : 'monthly',
       accounts: parseList('accounts', Account.fromJson),
       balances: parseList('balances', Balance.fromJson),
       assets: parseList('assets', Asset.fromJson),
@@ -143,7 +137,6 @@ class AppData {
   Map<String, dynamic> toJson() => {
     'schemaVersion': schemaVersion,
     'baseCurrency': baseCurrency,
-    'defaultSubscriptionInterval': defaultSubscriptionInterval,
     'accounts': accounts.map((a) => a.toJson()).toList(),
     'balances': balances.map((b) => b.toJson()).toList(),
     'assets': assets.map((a) => a.toJson()).toList(),
@@ -165,7 +158,6 @@ class AppData {
     'schemaVersion': schemaVersion,
     'exportedAt': DateTime.now().toIso8601String(),
     'baseCurrency': baseCurrency,
-    'defaultSubscriptionInterval': defaultSubscriptionInterval,
     'accounts': accounts.map((a) => a.toJson()).toList(),
     'balances': balances.map((b) => b.toJson()).toList(),
     'assets': assets.map((a) => a.toJson()).toList(),

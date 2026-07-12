@@ -121,6 +121,10 @@ class _TotalsOverview extends StatelessWidget {
     final delta = prevTotal != null ? currentTotal - prevTotal : null;
     final pct = (delta != null && prevTotal != null && prevTotal != 0) ? (delta / prevTotal) * 100 : null;
     final entriesInLatest = app.balancesInPeriod(latestPeriod).length;
+    final hasForeignCurrencyInTotal = app.balancesInPeriod(latestPeriod).any((b) {
+      final matches = app.accounts.where((a) => a.id == b.accountId);
+      return matches.isNotEmpty && matches.first.currency != app.baseCurrency;
+    });
 
     final totalChartData = [for (final p in periods) ChartPoint(periodLabel(p), _totalForPeriod(p))];
 
@@ -155,6 +159,23 @@ class _TotalsOverview extends StatelessWidget {
                 'Basiert auf $entriesInLatest von ${app.accounts.length} aktiven Konten mit Eintrag für diesen Monat.',
                 style: const TextStyle(color: kMuted, fontSize: 13),
               ),
+              if (hasForeignCurrencyInTotal) ...[
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, size: 13, color: kMuted),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text(
+                        'Enthält Konten in Fremdwährung: Die Summe kann durch Rundung beim Wechselkurs um wenige Cent von der '
+                        'Summe der einzeln angezeigten Kontostände abweichen.',
+                        style: TextStyle(color: kMuted, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -415,11 +436,22 @@ class _SubscriptionsSection extends StatelessWidget {
               spacing: 32,
               runSpacing: 12,
               children: [
-                _SummaryItem(label: 'Einnahmen/Monat', value: fmtMoney(totals.totalIncome, app.baseCurrency), color: kPrimary),
-                _SummaryItem(label: 'Ausgaben/Monat', value: fmtMoney(totals.totalExpense, app.baseCurrency), color: kDanger),
+                _SummaryItem(
+                  label: 'Einnahmen/Monat',
+                  value: fmtMoney(totals.totalIncome, app.baseCurrency),
+                  subValue: '${fmtMoney(totals.totalIncome * 12, app.baseCurrency)}/Jahr',
+                  color: kPrimary,
+                ),
+                _SummaryItem(
+                  label: 'Ausgaben/Monat',
+                  value: fmtMoney(totals.totalExpense, app.baseCurrency),
+                  subValue: '${fmtMoney(totals.totalExpense * 12, app.baseCurrency)}/Jahr',
+                  color: kDanger,
+                ),
                 _SummaryItem(
                   label: 'Differenz',
                   value: '${totals.net >= 0 ? '+' : ''}${fmtMoney(totals.net, app.baseCurrency)}',
+                  subValue: '${totals.net >= 0 ? '+' : ''}${fmtMoney(totals.net * 12, app.baseCurrency)}/Jahr',
                   color: totals.net >= 0 ? kPrimary : kDanger,
                 ),
               ],
@@ -437,10 +469,11 @@ class _SubscriptionsSection extends StatelessWidget {
 }
 
 class _SummaryItem extends StatelessWidget {
-  const _SummaryItem({required this.label, required this.value, required this.color});
+  const _SummaryItem({required this.label, required this.value, this.subValue, required this.color});
 
   final String label;
   final String value;
+  final String? subValue;
   final Color color;
 
   @override
@@ -451,6 +484,7 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
         Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
+        if (subValue != null) Text(subValue!, style: const TextStyle(color: kMuted, fontSize: 12)),
       ],
     );
   }

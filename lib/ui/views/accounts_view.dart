@@ -6,7 +6,9 @@ import '../../constants.dart';
 import '../../models/account.dart';
 import '../../state/app_state.dart';
 import '../../utils/formatting.dart';
+import '../app_view.dart';
 import '../theme.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/section_card.dart';
 
 Future<void> _openBankSuggestion(String typed) async {
@@ -168,7 +170,9 @@ class _BankSuggestionHint extends StatelessWidget {
 }
 
 class AccountsView extends StatefulWidget {
-  const AccountsView({super.key});
+  const AccountsView({super.key, required this.onNavigate});
+
+  final ValueChanged<AppView> onNavigate;
 
   @override
   State<AccountsView> createState() => _AccountsViewState();
@@ -207,9 +211,11 @@ class _AccountsViewState extends State<AccountsView> {
         _tag = kTags.first;
         _currency = 'EUR';
       });
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate, message: 'Angelegt.');
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Anlegen des Kontos: $err')));
+      showErrorSnackBar(context, 'Fehler beim Anlegen des Kontos: $err');
     }
   }
 
@@ -235,10 +241,12 @@ class _AccountsViewState extends State<AccountsView> {
                               ? _AccountEditForm(
                                   account: acc,
                                   onDone: () => setState(() => _editingId = null),
+                                  onNavigate: widget.onNavigate,
                                 )
                               : _AccountRow(
                                   account: acc,
                                   onEdit: () => setState(() => _editingId = acc.id),
+                                  onNavigate: widget.onNavigate,
                                 ),
                         ),
                     ],
@@ -296,10 +304,11 @@ class _AccountsViewState extends State<AccountsView> {
 }
 
 class _AccountRow extends StatelessWidget {
-  const _AccountRow({required this.account, required this.onEdit});
+  const _AccountRow({required this.account, required this.onEdit, required this.onNavigate});
 
   final Account account;
   final VoidCallback onEdit;
+  final ValueChanged<AppView> onNavigate;
 
   Future<void> _archive(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -316,6 +325,8 @@ class _AccountRow extends StatelessWidget {
     if (confirmed == true) {
       if (!context.mounted) return;
       await context.read<AppState>().archiveAccount(account.id);
+      if (!context.mounted) return;
+      showSavedSnackBar(context, onNavigate, message: 'Archiviert.');
     }
   }
 
@@ -351,10 +362,11 @@ class _AccountRow extends StatelessWidget {
 }
 
 class _AccountEditForm extends StatefulWidget {
-  const _AccountEditForm({required this.account, required this.onDone});
+  const _AccountEditForm({required this.account, required this.onDone, required this.onNavigate});
 
   final Account account;
   final VoidCallback onDone;
+  final ValueChanged<AppView> onNavigate;
 
   @override
   State<_AccountEditForm> createState() => _AccountEditFormState();
@@ -375,12 +387,12 @@ class _AccountEditFormState extends State<_AccountEditForm> {
 
   Future<void> _save() async {
     if (_nameCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte einen Namen eingeben.')));
+      showErrorSnackBar(context, 'Bitte einen Namen eingeben.');
       return;
     }
     final bank = _bankCtrl.text.trim();
     if (!isKnownBank(bank)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte eine Bank aus der Liste auswählen.')));
+      showErrorSnackBar(context, 'Bitte eine Bank aus der Liste auswählen.');
       return;
     }
     try {
@@ -392,10 +404,12 @@ class _AccountEditFormState extends State<_AccountEditForm> {
         currency: _currency,
         color: bankColorHex(bank) ?? widget.account.color,
       );
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate);
       widget.onDone();
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Speichern: $err')));
+      showErrorSnackBar(context, 'Fehler beim Speichern: $err');
     }
   }
 

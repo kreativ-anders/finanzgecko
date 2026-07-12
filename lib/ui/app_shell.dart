@@ -16,6 +16,7 @@ import 'views/dashboard_view.dart';
 import 'views/entries_view.dart';
 import 'views/settings_view.dart';
 import 'views/subscriptions_view.dart';
+import 'widgets/app_snackbar.dart';
 
 const _backupTypeGroups = [XTypeGroup(label: 'JSON-Backup', extensions: ['json'])];
 
@@ -44,10 +45,10 @@ class _AppShellState extends State<AppShell> {
       await File(location.path).writeAsString(jsonStr);
       await appState.markExported();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backup exportiert.')));
+      showSavedSnackBar(context, _navigate, message: 'Backup exportiert.');
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export fehlgeschlagen: $err')));
+      showErrorSnackBar(context, 'Export fehlgeschlagen: $err');
     }
   }
 
@@ -75,13 +76,11 @@ class _AppShellState extends State<AppShell> {
       final imported = jsonDecode(raw) as Map<String, dynamic>;
       await appState.importAllData(imported);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Import abgeschlossen.')));
       setState(() => _view = AppView.dashboard);
+      showSavedSnackBar(context, _navigate, message: 'Import abgeschlossen.');
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Import fehlgeschlagen: Datei ist kein gültiges Backup.\n$err')));
+      showErrorSnackBar(context, 'Import fehlgeschlagen: Datei ist kein gültiges Backup.\n$err');
     }
   }
 
@@ -126,13 +125,13 @@ class _AppShellState extends State<AppShell> {
       case AppView.entries:
         return EntriesView(onNavigate: _navigate);
       case AppView.accounts:
-        return const AccountsView();
+        return AccountsView(onNavigate: _navigate);
       case AppView.assets:
-        return const AssetsView();
+        return AssetsView(onNavigate: _navigate);
       case AppView.subscriptions:
-        return const SubscriptionsView();
+        return SubscriptionsView(onNavigate: _navigate);
       case AppView.settings:
-        return SettingsView(onExport: _handleExport, onImport: _handleImport);
+        return SettingsView(onExport: _handleExport, onImport: _handleImport, onNavigate: _navigate);
     }
   }
 }

@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/asset.dart';
 import '../../state/app_state.dart';
+import '../app_view.dart';
 import '../theme.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/banners.dart';
 import '../widgets/section_card.dart';
 
 class AssetsView extends StatefulWidget {
-  const AssetsView({super.key});
+  const AssetsView({super.key, required this.onNavigate});
+
+  final ValueChanged<AppView> onNavigate;
 
   @override
   State<AssetsView> createState() => _AssetsViewState();
@@ -34,9 +40,11 @@ class _AssetsViewState extends State<AssetsView> {
       await app.addAsset(name: _nameCtrl.text.trim(), value: value);
       _nameCtrl.clear();
       _valueCtrl.clear();
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate, message: 'Angelegt.');
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Anlegen: $err')));
+      showErrorSnackBar(context, 'Fehler beim Anlegen: $err');
     }
   }
 
@@ -66,7 +74,7 @@ class _AssetsViewState extends State<AssetsView> {
                 if (assets.isEmpty)
                   const EmptyHint('Noch keine Vermögenswerte angelegt.')
                 else
-                  for (final asset in assets) _AssetRow(asset: asset, app: app),
+                  for (final asset in assets) _AssetRow(asset: asset, app: app, onNavigate: widget.onNavigate),
               ],
             ),
           ),
@@ -103,10 +111,11 @@ class _AssetsViewState extends State<AssetsView> {
 }
 
 class _AssetRow extends StatefulWidget {
-  const _AssetRow({required this.asset, required this.app});
+  const _AssetRow({required this.asset, required this.app, required this.onNavigate});
 
   final Asset asset;
   final AppState app;
+  final ValueChanged<AppView> onNavigate;
 
   @override
   State<_AssetRow> createState() => _AssetRowState();
@@ -114,6 +123,7 @@ class _AssetRow extends StatefulWidget {
 
 class _AssetRowState extends State<_AssetRow> {
   late final TextEditingController _valueCtrl = TextEditingController(text: _fmt(widget.asset.value));
+  Timer? _debounce;
 
   String _fmt(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
@@ -127,11 +137,18 @@ class _AssetRowState extends State<_AssetRow> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _valueCtrl.dispose();
     super.dispose();
   }
 
+  void _scheduleSave() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 600), _saveValue);
+  }
+
   Future<void> _saveValue() async {
+    _debounce?.cancel();
     final newValue = double.tryParse(_valueCtrl.text.replaceAll(',', '.'));
     if (newValue == null) {
       _valueCtrl.text = _fmt(widget.asset.value);
@@ -139,9 +156,11 @@ class _AssetRowState extends State<_AssetRow> {
     }
     try {
       await widget.app.updateAsset(widget.asset.id, value: newValue);
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate);
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Speichern: $err')));
+      showErrorSnackBar(context, 'Fehler beim Speichern: $err');
       _valueCtrl.text = _fmt(widget.asset.value);
     }
   }
@@ -160,6 +179,8 @@ class _AssetRowState extends State<_AssetRow> {
     );
     if (confirmed == true) {
       await widget.app.deleteAsset(widget.asset.id);
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate, message: 'Gelöscht.');
     }
   }
 
@@ -199,6 +220,7 @@ class _AssetRowState extends State<_AssetRow> {
               controller: _valueCtrl,
               textAlign: TextAlign.right,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => _scheduleSave(),
               onSubmitted: (_) => _saveValue(),
               onTapOutside: (_) => _saveValue(),
             ),

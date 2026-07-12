@@ -41,7 +41,6 @@ class AppState extends ChangeNotifier {
   List<Asset> assets = [];
   List<Subscription> subscriptions = [];
   String baseCurrency = 'EUR';
-  String defaultSubscriptionInterval = 'monthly';
 
   Future<void> init() async {
     await store.ensureInitialized();
@@ -56,7 +55,6 @@ class AppState extends ChangeNotifier {
     assets = store.getAssets();
     subscriptions = store.getSubscriptions();
     baseCurrency = store.baseCurrency;
-    defaultSubscriptionInterval = store.defaultSubscriptionInterval;
   }
 
   Future<void> _reloadAndNotify() async {
@@ -252,11 +250,6 @@ class AppState extends ChangeNotifier {
 
   Future<void> setBaseCurrency(String value) async {
     await store.setBaseCurrency(value);
-    await _reloadAndNotify();
-  }
-
-  Future<void> setDefaultSubscriptionInterval(String value) async {
-    await store.setDefaultSubscriptionInterval(value);
     await _reloadAndNotify();
   }
 

@@ -29,7 +29,7 @@ Future<bool> confirmReset(BuildContext context) async {
             children: [
               const Text(
                 'Alle Konten, Kontostände, Vermögenswerte und Fixposten werden unwiderruflich gelöscht. '
-                'Basiswährung und Standardintervall werden auf ihre Standardwerte zurückgesetzt.',
+                'Die Basiswährung wird auf ihren Standardwert zurückgesetzt.',
               ),
               const SizedBox(height: 14),
               Text.rich(

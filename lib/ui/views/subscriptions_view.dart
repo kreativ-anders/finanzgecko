@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,13 +7,17 @@ import '../../constants.dart';
 import '../../models/subscription.dart';
 import '../../state/app_state.dart';
 import '../../utils/formatting.dart';
+import '../app_view.dart';
 import '../theme.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/manual_rate_dialog.dart';
 import '../widgets/section_card.dart';
 import '../widgets/sign_toggle.dart';
 
 class SubscriptionsView extends StatefulWidget {
-  const SubscriptionsView({super.key});
+  const SubscriptionsView({super.key, required this.onNavigate});
+
+  final ValueChanged<AppView> onNavigate;
 
   @override
   State<SubscriptionsView> createState() => _SubscriptionsViewState();
@@ -29,7 +35,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
   void initState() {
     super.initState();
     final app = context.read<AppState>();
-    _interval = app.defaultSubscriptionInterval;
+    _interval = 'monthly';
     _currencyCtrl = TextEditingController(text: app.baseCurrency);
   }
 
@@ -47,7 +53,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
     final currency = _currencyCtrl.text.trim().toUpperCase();
     final magnitude = double.tryParse(_magnitudeCtrl.text.replaceAll(',', '.'));
     if (name.isEmpty || magnitude == null || magnitude <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte Name und einen gültigen Betrag eingeben.')));
+      showErrorSnackBar(context, 'Bitte Name und einen gültigen Betrag eingeben.');
       return;
     }
 
@@ -59,7 +65,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
     }
     if (rate == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kein Wechselkurs verfügbar — Fixposten wurde nicht gespeichert.')));
+      showErrorSnackBar(context, 'Kein Wechselkurs verfügbar — Fixposten wurde nicht gespeichert.');
       return;
     }
 
@@ -78,20 +84,22 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
       setState(() {
         _isExpense = true;
         _currencyCtrl.text = app.baseCurrency;
-        _interval = app.defaultSubscriptionInterval;
+        _interval = 'monthly';
       });
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate, message: 'Angelegt.');
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Anlegen: $err')));
+      showErrorSnackBar(context, 'Fehler beim Anlegen: $err');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final totals = app.computeSubscriptionTotals();
     final income = app.subscriptions.where((s) => s.amountOriginal > 0).toList()..sort((a, b) => a.name.compareTo(b.name));
     final expense = app.subscriptions.where((s) => s.amountOriginal < 0).toList()..sort((a, b) => a.name.compareTo(b.name));
+    final entries = [...income, ...expense];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -109,35 +117,12 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                   style: TextStyle(color: kMuted),
                 ),
                 const SizedBox(height: 14),
-                Wrap(
-                  spacing: 32,
-                  runSpacing: 12,
-                  children: [
-                    _SummaryItem(label: 'Einnahmen/Monat', value: fmtMoney(totals.totalIncome, app.baseCurrency), color: kPrimary),
-                    _SummaryItem(label: 'Ausgaben/Monat', value: fmtMoney(totals.totalExpense, app.baseCurrency), color: kDanger),
-                    _SummaryItem(
-                      label: 'Differenz',
-                      value: '${totals.net >= 0 ? '+' : ''}${fmtMoney(totals.net, app.baseCurrency)}',
-                      color: totals.net >= 0 ? kPrimary : kDanger,
-                    ),
-                  ],
-                ),
+                if (entries.isEmpty)
+                  const EmptyHint('Noch keine Fixposten erfasst.')
+                else
+                  for (final s in entries) _SubscriptionRow(sub: s, app: app, onNavigate: widget.onNavigate),
               ],
             ),
-          ),
-          cardGap,
-          SectionCard(
-            title: 'Einnahmen',
-            child: income.isEmpty
-                ? const EmptyHint('Noch keine Einnahmen erfasst.')
-                : Column(children: [for (final s in income) _SubscriptionRow(sub: s, app: app)]),
-          ),
-          cardGap,
-          SectionCard(
-            title: 'Ausgaben',
-            child: expense.isEmpty
-                ? const EmptyHint('Noch keine Ausgaben erfasst.')
-                : Column(children: [for (final s in expense) _SubscriptionRow(sub: s, app: app)]),
           ),
           cardGap,
           SectionCard(
@@ -201,31 +186,12 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
   }
 }
 
-class _SummaryItem extends StatelessWidget {
-  const _SummaryItem({required this.label, required this.value, required this.color});
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
-        Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-}
-
 class _SubscriptionRow extends StatefulWidget {
-  const _SubscriptionRow({required this.sub, required this.app});
+  const _SubscriptionRow({required this.sub, required this.app, required this.onNavigate});
 
   final Subscription sub;
   final AppState app;
+  final ValueChanged<AppView> onNavigate;
 
   @override
   State<_SubscriptionRow> createState() => _SubscriptionRowState();
@@ -237,25 +203,39 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
   late final TextEditingController _magnitudeCtrl = TextEditingController(text: _fmt(widget.sub.amountOriginal.abs()));
   late String _interval = widget.sub.interval;
   late bool _isExpense = widget.sub.amountOriginal < 0;
+  Timer? _debounce;
 
   String _fmt(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _nameCtrl.dispose();
     _currencyCtrl.dispose();
     _magnitudeCtrl.dispose();
     super.dispose();
   }
 
+  void _scheduleSave() {
+    setState(() {}); // recompute the monthly preview immediately, save follows after debounce
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 600), _save);
+  }
+
+  double get _previewMonthly {
+    final magnitude = double.tryParse(_magnitudeCtrl.text.replaceAll(',', '.')) ?? widget.sub.amountOriginal.abs();
+    return (magnitude * widget.sub.rate * intervalMonthFactor(_interval)).abs();
+  }
+
   Future<void> _save() async {
+    _debounce?.cancel();
     final app = widget.app;
     final name = _nameCtrl.text.trim();
     final currency = _currencyCtrl.text.trim().toUpperCase();
     final magnitude = double.tryParse(_magnitudeCtrl.text.replaceAll(',', '.'));
 
     if (name.isEmpty || magnitude == null || magnitude < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte einen gültigen Namen und Betrag eingeben.')));
+      showErrorSnackBar(context, 'Bitte einen gültigen Namen und Betrag eingeben.');
       setState(() {}); // revert visible fields to widget.sub values on next build
       return;
     }
@@ -268,7 +248,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
     }
     if (rate == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kein Wechselkurs verfügbar — Änderung wurde nicht gespeichert.')));
+      showErrorSnackBar(context, 'Kein Wechselkurs verfügbar — Änderung wurde nicht gespeichert.');
       return;
     }
 
@@ -283,9 +263,11 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
         rate: rate,
         amountBase: sign * magnitude * rate,
       );
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate);
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Speichern: $err')));
+      showErrorSnackBar(context, 'Fehler beim Speichern: $err');
     }
   }
 
@@ -303,12 +285,14 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
     );
     if (confirmed == true) {
       await widget.app.deleteSubscription(widget.sub.id);
+      if (!mounted) return;
+      showSavedSnackBar(context, widget.onNavigate, message: 'Gelöscht.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final monthly = widget.app.monthlyEquivalent(widget.sub).abs();
+    final monthly = _previewMonthly;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: IntrinsicHeight(
@@ -320,6 +304,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
               child: TextField(
                 controller: _nameCtrl,
                 decoration: const InputDecoration(labelText: 'Name'),
+                onChanged: (_) => _scheduleSave(),
                 onTapOutside: (_) => _save(),
                 onSubmitted: (_) => _save(),
               ),
@@ -344,6 +329,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
               child: TextField(
                 controller: _currencyCtrl,
                 decoration: const InputDecoration(labelText: 'Währung'),
+                onChanged: (_) => _scheduleSave(),
                 onTapOutside: (_) => _save(),
                 onSubmitted: (_) => _save(),
               ),
@@ -363,6 +349,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
                 controller: _magnitudeCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: 'Betrag'),
+                onChanged: (_) => _scheduleSave(),
                 onTapOutside: (_) => _save(),
                 onSubmitted: (_) => _save(),
               ),
