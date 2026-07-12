@@ -126,8 +126,6 @@ class _TotalsOverview extends StatelessWidget {
       return matches.isNotEmpty && matches.first.currency != app.baseCurrency;
     });
 
-    final totalChartData = [for (final p in periods) ChartPoint(periodLabel(p), _totalForPeriod(p))];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -180,8 +178,126 @@ class _TotalsOverview extends StatelessWidget {
           ),
         ),
         cardGap,
-        SectionCard(title: 'Verlauf', child: AppLineChart(points: totalChartData, color: kPrimary, filled: true)),
+        _HistoryCard(periods: periods, totalForPeriod: _totalForPeriod, baseCurrency: app.baseCurrency),
       ],
+    );
+  }
+}
+
+enum _HistoryPreset { ytd, twelveMonths, lastYear, all }
+
+extension on _HistoryPreset {
+  String get label => switch (this) {
+        _HistoryPreset.ytd => 'Dieses Jahr',
+        _HistoryPreset.twelveMonths => '12 Monate',
+        _HistoryPreset.lastYear => 'Letztes Jahr',
+        _HistoryPreset.all => 'Alle',
+      };
+}
+
+/// The "Verlauf" card: total net worth over time, with a preset range
+/// filter. Kept as its own stateful widget so switching the range doesn't
+/// touch the headline figures above it, which always reflect the latest period.
+class _HistoryCard extends StatefulWidget {
+  const _HistoryCard({required this.periods, required this.totalForPeriod, required this.baseCurrency});
+
+  /// All periods with data, sorted ascending.
+  final List<String> periods;
+  final double Function(String period) totalForPeriod;
+  final String baseCurrency;
+
+  @override
+  State<_HistoryCard> createState() => _HistoryCardState();
+}
+
+class _HistoryCardState extends State<_HistoryCard> {
+  _HistoryPreset _preset = _HistoryPreset.ytd;
+
+  List<String> _filteredPeriods() {
+    final currentYear = DateTime.now().year;
+    int yearOf(String p) => int.parse(p.split('-')[0]);
+    switch (_preset) {
+      case _HistoryPreset.twelveMonths:
+        return widget.periods.length <= 12 ? widget.periods : widget.periods.sublist(widget.periods.length - 12);
+      case _HistoryPreset.ytd:
+        return widget.periods.where((p) => yearOf(p) == currentYear).toList();
+      case _HistoryPreset.lastYear:
+        return widget.periods.where((p) => yearOf(p) == currentYear - 1).toList();
+      case _HistoryPreset.all:
+        return widget.periods;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filteredPeriods();
+    final chartData = [for (final p in filtered) ChartPoint(periodLabel(p), widget.totalForPeriod(p))];
+
+    return SectionCard(
+      title: 'Verlauf',
+      trailing: _PresetSelector(selected: _preset, onChanged: (p) => setState(() => _preset = p)),
+      child: AppLineChart(
+        points: chartData,
+        color: kPrimary,
+        filled: true,
+        showMinMax: true,
+        showTrend: true,
+        showHover: true,
+        currency: widget.baseCurrency,
+      ),
+    );
+  }
+}
+
+class _PresetSelector extends StatelessWidget {
+  const _PresetSelector({required this.selected, required this.onChanged});
+
+  final _HistoryPreset selected;
+  final ValueChanged<_HistoryPreset> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final preset in _HistoryPreset.values)
+          _PresetChip(label: preset.label, selected: preset == selected, onTap: () => onChanged(preset)),
+      ],
+    );
+  }
+}
+
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? kPrimary : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? kPrimary : kBorder),
+        ),
+        child: noSelect(
+          Text(
+            label,
+            style: TextStyle(
+              color: selected ? const Color(0xFF04140D) : kMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

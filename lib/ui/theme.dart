@@ -10,6 +10,13 @@ const Color kMuted = Color(0xFF7C8A83);
 const Color kPrimary = Color(0xFF00C878);
 const Color kDanger = Color(0xFFFF6B6B);
 
+// Trend-line direction colors (see AppLineChart) — deliberately lighter/more
+// muted than kPrimary/kDanger so the dashed projection stays visually
+// secondary to the actual data line.
+const Color kTrendUp = Color(0xFF8FE3B3);
+const Color kTrendDown = Color(0xFFFFC98A);
+const Color kTrendNeutral = Color(0xFFA6B0A9);
+
 /// Excludes [child] from the app-wide [SelectionArea] (see main.dart) —
 /// for button labels and nav chrome, which aren't meant to be copyable.
 Widget noSelect(Widget child) => SelectionContainer.disabled(child: child);
