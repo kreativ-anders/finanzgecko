@@ -14,11 +14,15 @@ class ChartPoint {
 /// version: gaps (null values) are drawn as real gaps, not connected, and a
 /// dashed zero-line appears when values cross zero (e.g. credit accounts).
 class AppLineChart extends StatelessWidget {
-  const AppLineChart({super.key, required this.points, this.color = kPrimary, this.height = 140});
+  const AppLineChart({super.key, required this.points, this.color = kPrimary, this.height = 140, this.filled = false});
 
   final List<ChartPoint> points;
   final Color color;
   final double height;
+
+  /// Shades the area under the line — used for the dashboard hero chart so
+  /// the range reads as a trend rather than a bare line between two points.
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +78,14 @@ class AppLineChart extends StatelessWidget {
                       getDotPainter: (spot, percent, bar, index) =>
                           FlDotCirclePainter(radius: 3, color: color, strokeWidth: 0),
                     ),
-                    belowBarData: BarAreaData(show: false),
+                    belowBarData: BarAreaData(
+                      show: filled,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0.0)],
+                      ),
+                    ),
                   ),
                 ],
               ),

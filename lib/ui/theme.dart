@@ -10,6 +10,10 @@ const Color kMuted = Color(0xFF7C8A83);
 const Color kPrimary = Color(0xFF00C878);
 const Color kDanger = Color(0xFFFF6B6B);
 
+/// Excludes [child] from the app-wide [SelectionArea] (see main.dart) —
+/// for button labels and nav chrome, which aren't meant to be copyable.
+Widget noSelect(Widget child) => SelectionContainer.disabled(child: child);
+
 ThemeData buildAppTheme() {
   final colorScheme = ColorScheme.fromSeed(
     seedColor: kPrimary,

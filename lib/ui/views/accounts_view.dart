@@ -108,11 +108,34 @@ class _BankFieldState extends State<_BankField> {
                   child: Container(width: 12, height: 12, decoration: BoxDecoration(color: resolvedColor, shape: BoxShape.circle)),
                 ),
               ),
+              validator: (v) => isKnownBank(v) ? null : 'Bitte eine Bank aus der Liste auswählen',
             );
           },
         ),
         _BankSuggestionHint(typedBank: () => widget.controller.text),
       ],
+    );
+  }
+}
+
+/// Transparency note: shown whenever the currency differs from the base
+/// currency, since exchange rates then come from a third-party API, not offline data.
+class _CurrencyHint extends StatelessWidget {
+  const _CurrencyHint({required this.currency, required this.baseCurrency});
+
+  final String currency;
+  final String baseCurrency;
+
+  @override
+  Widget build(BuildContext context) {
+    if (currency == baseCurrency) return const SizedBox.shrink();
+
+    return const Padding(
+      padding: EdgeInsets.only(top: 6),
+      child: Text(
+        'Wechselkurse werden automatisch über die frankfurter.dev API (EZB-Referenzkurse) abgerufen und für den Offline-Betrieb zwischengespeichert.',
+        style: TextStyle(color: kMuted, fontSize: 12),
+      ),
     );
   }
 }
@@ -131,10 +154,13 @@ class _BankSuggestionHint extends StatelessWidget {
           const Text('Bank fehlt? ', style: TextStyle(color: kMuted, fontSize: 12)),
           InkWell(
             onTap: () => _openBankSuggestion(typedBank()),
-            child: const Text('Auf GitHub vorschlagen', style: TextStyle(color: kPrimary, fontSize: 12)),
+            child: noSelect(const Text('Auf GitHub vorschlagen', style: TextStyle(color: kPrimary, fontSize: 12))),
           ),
           const Text(' oder ', style: TextStyle(color: kMuted, fontSize: 12)),
-          InkWell(onTap: _openSuggestionMail, child: const Text('E-Mail schreiben', style: TextStyle(color: kPrimary, fontSize: 12))),
+          InkWell(
+            onTap: _openSuggestionMail,
+            child: noSelect(const Text('E-Mail schreiben', style: TextStyle(color: kPrimary, fontSize: 12))),
+          ),
         ],
       ),
     );
@@ -152,15 +178,14 @@ class _AccountsViewState extends State<AccountsView> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _bankCtrl = TextEditingController();
-  final _currencyCtrl = TextEditingController(text: 'EUR');
   String _tag = kTags.first;
+  String _currency = 'EUR';
   int? _editingId;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _bankCtrl.dispose();
-    _currencyCtrl.dispose();
     super.dispose();
   }
 
@@ -168,19 +193,20 @@ class _AccountsViewState extends State<AccountsView> {
     if (!_formKey.currentState!.validate()) return;
     final app = context.read<AppState>();
     final bank = _bankCtrl.text.trim();
-    final currency = _currencyCtrl.text.trim().isEmpty ? 'EUR' : _currencyCtrl.text.trim().toUpperCase();
     try {
       await app.addAccount(
         name: _nameCtrl.text.trim(),
         bank: bank,
         tag: _tag,
-        currency: currency,
+        currency: _currency,
         color: bankColorHex(bank) ?? tagColorHex(_tag),
       );
       _nameCtrl.clear();
       _bankCtrl.clear();
-      _currencyCtrl.text = 'EUR';
-      setState(() => _tag = kTags.first);
+      setState(() {
+        _tag = kTags.first;
+        _currency = 'EUR';
+      });
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Anlegen des Kontos: $err')));
@@ -247,27 +273,18 @@ class _AccountsViewState extends State<AccountsView> {
                       ),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: Autocomplete<String>(
-                          optionsBuilder: (v) {
-                            if (v.text.isEmpty) return kCurrencies;
-                            return kCurrencies.where((c) => c.toLowerCase().contains(v.text.toLowerCase()));
-                          },
-                          onSelected: (v) => _currencyCtrl.text = v,
-                          fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-                            controller.text = _currencyCtrl.text;
-                            return TextFormField(
-                              controller: controller,
-                              focusNode: focusNode,
-                              onChanged: (v) => _currencyCtrl.text = v,
-                              decoration: const InputDecoration(labelText: 'Währung'),
-                            );
-                          },
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _currency,
+                          decoration: const InputDecoration(labelText: 'Währung'),
+                          items: [for (final c in kCurrencies) DropdownMenuItem(value: c, child: Text(c))],
+                          onChanged: (v) => setState(() => _currency = v ?? _currency),
                         ),
                       ),
                     ],
                   ),
+                  _CurrencyHint(currency: _currency, baseCurrency: app.baseCurrency),
                   const SizedBox(height: 18),
-                  ElevatedButton(onPressed: _submitNew, child: const Text('Konto anlegen')),
+                  ElevatedButton(onPressed: _submitNew, child: noSelect(const Text('Konto anlegen'))),
                 ],
               ),
             ),
@@ -291,8 +308,8 @@ class _AccountRow extends StatelessWidget {
         title: const Text('Konto archivieren'),
         content: Text('"${account.name}" wirklich archivieren? Es verschwindet danach komplett aus allen Charts.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Archivieren')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Archivieren'))),
         ],
       ),
     );
@@ -323,9 +340,9 @@ class _AccountRow extends StatelessWidget {
                 ],
               ),
             ),
-            OutlinedButton(onPressed: onEdit, child: const Text('Bearbeiten')),
+            OutlinedButton(onPressed: onEdit, child: noSelect(const Text('Bearbeiten'))),
             const SizedBox(width: 8),
-            OutlinedButton(onPressed: () => _archive(context), child: const Text('Archivieren')),
+            OutlinedButton(onPressed: () => _archive(context), child: noSelect(const Text('Archivieren'))),
           ],
         ),
       ),
@@ -346,14 +363,13 @@ class _AccountEditForm extends StatefulWidget {
 class _AccountEditFormState extends State<_AccountEditForm> {
   late final TextEditingController _nameCtrl = TextEditingController(text: widget.account.name);
   late final TextEditingController _bankCtrl = TextEditingController(text: widget.account.bank);
-  late final TextEditingController _currencyCtrl = TextEditingController(text: widget.account.currency);
   late String _tag = widget.account.tag;
+  late String _currency = widget.account.currency;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _bankCtrl.dispose();
-    _currencyCtrl.dispose();
     super.dispose();
   }
 
@@ -363,13 +379,17 @@ class _AccountEditFormState extends State<_AccountEditForm> {
       return;
     }
     final bank = _bankCtrl.text.trim();
+    if (!isKnownBank(bank)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte eine Bank aus der Liste auswählen.')));
+      return;
+    }
     try {
       await context.read<AppState>().updateAccount(
         widget.account.id,
         name: _nameCtrl.text.trim(),
         bank: bank,
         tag: _tag,
-        currency: _currencyCtrl.text.trim().isEmpty ? 'EUR' : _currencyCtrl.text.trim().toUpperCase(),
+        currency: _currency,
         color: bankColorHex(bank) ?? widget.account.color,
       );
       widget.onDone();
@@ -400,20 +420,32 @@ class _AccountEditFormState extends State<_AccountEditForm> {
                   child: DropdownButtonFormField<String>(
                     initialValue: _tag,
                     decoration: const InputDecoration(labelText: 'Typ'),
-                    items: [for (final t in kTags) DropdownMenuItem(value: t, child: Text(t))],
+                    items: [
+                      for (final t in {...kTags, _tag}) DropdownMenuItem(value: t, child: Text(t)),
+                    ],
                     onChanged: (v) => setState(() => _tag = v ?? _tag),
                   ),
                 ),
                 const SizedBox(width: 14),
-                Expanded(child: TextFormField(controller: _currencyCtrl, decoration: const InputDecoration(labelText: 'Währung'))),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _currency,
+                    decoration: const InputDecoration(labelText: 'Währung'),
+                    items: [
+                      for (final c in {...kCurrencies, _currency}) DropdownMenuItem(value: c, child: Text(c)),
+                    ],
+                    onChanged: (v) => setState(() => _currency = v ?? _currency),
+                  ),
+                ),
               ],
             ),
+            _CurrencyHint(currency: _currency, baseCurrency: context.read<AppState>().baseCurrency),
             const SizedBox(height: 16),
             Row(
               children: [
-                ElevatedButton(onPressed: _save, child: const Text('Speichern')),
+                ElevatedButton(onPressed: _save, child: noSelect(const Text('Speichern'))),
                 const SizedBox(width: 10),
-                OutlinedButton(onPressed: widget.onDone, child: const Text('Abbrechen')),
+                OutlinedButton(onPressed: widget.onDone, child: noSelect(const Text('Abbrechen'))),
               ],
             ),
           ],

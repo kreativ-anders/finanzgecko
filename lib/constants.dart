@@ -1,13 +1,11 @@
-const List<String> kTags = ['Girokonto', 'Tagesgeld', 'Festgeld', 'Depot', 'Kredit', 'Bargeld', 'Krypto'];
+const List<String> kTags = ['Girokonto', 'Tagesgeld', 'Depot', 'Bargeld', 'Krypto'];
 
 /// Hex strings (not Color) — these are stored verbatim in account.color, so
 /// keeping them as strings avoids a lossy round-trip through Color objects.
 const Map<String, String> kTagColors = {
   'Girokonto': '#00c878',
   'Tagesgeld': '#2fd0a0',
-  'Festgeld': '#1fa370',
   'Depot': '#7ee6c0',
-  'Kredit': '#ff6b6b',
   'Bargeld': '#c9d6cf',
   'Krypto': '#f5a623',
 };
@@ -90,8 +88,17 @@ String? bankColorHex(String? bankName) {
   return null;
 }
 
+/// True if [bankName] matches an entry in [kBanks] (case-insensitive).
+/// Accounts must reference a known bank so the dashboard can rely on a
+/// resolved brand color/name instead of arbitrary free text.
+bool isKnownBank(String? bankName) => bankColorHex(bankName) != null;
+
 const int kBackupReminderDays = 30;
 const int kAssetReevaluationDays = 182; // ~6 Monate
+
+/// Share (of positive Kontotyp totals) above which the dashboard flags a
+/// concentration risk in "Verteilung nach Kontotyp".
+const double kConcentrationRiskThreshold = 0.65;
 
 const String kDangerHex = '#ff6b6b';
 const String kPrimaryHex = '#00c878';

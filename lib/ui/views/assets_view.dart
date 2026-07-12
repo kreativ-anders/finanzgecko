@@ -91,7 +91,7 @@ class _AssetsViewState extends State<AssetsView> {
                     validator: (v) => (double.tryParse((v ?? '').replaceAll(',', '.')) == null) ? 'Ungültiger Wert' : null,
                   ),
                   const SizedBox(height: 18),
-                  ElevatedButton(onPressed: () => _submit(app), child: const Text('Anlegen')),
+                  ElevatedButton(onPressed: () => _submit(app), child: noSelect(const Text('Anlegen'))),
                 ],
               ),
             ),
@@ -153,8 +153,8 @@ class _AssetRowState extends State<_AssetRow> {
         title: const Text('Vermögenswert löschen'),
         content: Text('"${widget.asset.name}" wirklich löschen?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Löschen')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Löschen'))),
         ],
       ),
     );
@@ -204,7 +204,7 @@ class _AssetRowState extends State<_AssetRow> {
             ),
           ),
           const SizedBox(width: 8),
-          OutlinedButton(onPressed: _delete, child: const Text('Löschen')),
+          OutlinedButton(onPressed: _delete, child: noSelect(const Text('Löschen'))),
         ],
       ),
     );

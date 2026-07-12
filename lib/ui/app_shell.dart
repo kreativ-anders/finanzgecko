@@ -63,8 +63,8 @@ class _AppShellState extends State<AppShell> {
         title: const Text('Backup importieren'),
         content: const Text('Import ersetzt ALLE aktuellen Daten. Fortfahren?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Importieren')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Importieren'))),
         ],
       ),
     );
@@ -145,20 +145,22 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kBorder))),
-      child: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        alignment: WrapAlignment.spaceBetween,
-        runSpacing: 8,
-        children: [
-          const Text('🦎 FinanzGecko', style: TextStyle(fontWeight: FontWeight.w700, color: kPrimary, fontSize: 16)),
-          Wrap(
-            spacing: 2,
-            children: [for (final view in AppView.values) _NavButton(view: view, active: view == current, onTap: () => onNavigate(view))],
-          ),
-        ],
+    return SelectionContainer.disabled(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kBorder))),
+        child: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
+          runSpacing: 8,
+          children: [
+            const Text('🦎 FinanzGecko', style: TextStyle(fontWeight: FontWeight.w700, color: kPrimary, fontSize: 16)),
+            Wrap(
+              spacing: 2,
+              children: [for (final view in AppView.values) _NavButton(view: view, active: view == current, onTap: () => onNavigate(view))],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -186,12 +188,14 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      alignment: Alignment.center,
-      child: const Text(
-        'Alle Daten bleiben lokal auf diesem Rechner. Kein Server, keine Cloud.',
-        style: TextStyle(color: kMuted, fontSize: 12),
+    return SelectionContainer.disabled(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        child: const Text(
+          'Alle Daten bleiben lokal auf diesem Rechner. Kein Server, keine Cloud.',
+          style: TextStyle(color: kMuted, fontSize: 12),
+        ),
       ),
     );
   }

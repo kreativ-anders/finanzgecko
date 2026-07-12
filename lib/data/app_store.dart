@@ -21,8 +21,9 @@ const String _storeFilename = 'app-data.json';
 ///  - Windows: %APPDATA%\de.finanzgecko.app\app-data.json
 ///
 /// The file is unencrypted; confidentiality against other local OS accounts
-/// is provided by filesystem permissions (0700 dir / 0600 file on
-/// Linux/macOS), not by encryption. Writes are atomic (temp file + rename).
+/// is provided by filesystem permissions — 0700 dir / 0600 file on
+/// Linux/macOS, an equivalent current-user-only ACL via icacls on Windows —
+/// not by encryption. Writes are atomic (temp file + rename).
 class AppStore {
   AppData? _data;
   String? _filePath;
@@ -74,6 +75,27 @@ class AppStore {
     }
   }
 
+  /// Windows counterpart to [_chmod] — NTFS has no chmod bits, but `icacls`
+  /// (built into every edition, no elevation needed on a folder/file you
+  /// own) gets the same "current user only" effect via ACLs. Applied to the
+  /// data directory with inheritable flags, so every file created inside it
+  /// afterwards — including the corrupt-file and pre-import backups written
+  /// later in this class — picks up the same restriction automatically,
+  /// without each call site needing to remember to lock its own file down.
+  Future<void> _restrictWindowsAccess(String path, {required bool isDirectory}) async {
+    if (!Platform.isWindows) return;
+    final user = Platform.environment['USERNAME'];
+    if (user == null || user.isEmpty) return;
+    final domain = Platform.environment['USERDOMAIN'];
+    final principal = (domain != null && domain.isNotEmpty) ? '$domain\\$user' : user;
+    final grant = isDirectory ? '$principal:(OI)(CI)F' : '$principal:F';
+    try {
+      await Process.run('icacls', [path, '/inheritance:r', '/grant:r', grant]);
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
+
   Future<void> ensureInitialized() async {
     if (_initialized) return;
 
@@ -82,6 +104,7 @@ class AppStore {
       await dir.create(recursive: true);
     }
     await _chmod(dir.path, '700');
+    await _restrictWindowsAccess(dir.path, isDirectory: true);
 
     _filePath = p.join(dir.path, _storeFilename);
     final file = File(_filePath!);
@@ -156,6 +179,7 @@ class AppStore {
       }
       await tmpFile.rename(path);
       await _chmod(path, '600');
+      await _restrictWindowsAccess(path, isDirectory: false);
     } finally {
       if (await tmpFile.exists()) {
         try {
@@ -432,6 +456,16 @@ class AppStore {
 
   Future<void> setLastExportAt(DateTime value) async {
     _requireData.lastExportAt = value;
+    await _persist();
+  }
+
+  /// Wipes everything back to a fresh install: all accounts, balances,
+  /// assets and subscriptions gone, settings back to their defaults. Window
+  /// geometry is deliberately preserved — it isn't a user-visible "setting"
+  /// and resetting it would just move/resize the window unexpectedly.
+  Future<void> resetAll() async {
+    final window = _requireData.window;
+    _data = AppData.defaults()..window = window;
     await _persist();
   }
 

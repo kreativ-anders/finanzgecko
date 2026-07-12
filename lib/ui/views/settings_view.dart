@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../constants.dart';
 import '../../state/app_state.dart';
 import '../theme.dart';
+import '../widgets/reset_confirm_dialog.dart';
 import '../widgets/section_card.dart';
 
 class SettingsView extends StatelessWidget {
@@ -88,7 +89,7 @@ class SettingsView extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ElevatedButton(onPressed: onExport, child: const Text('Backup exportieren…')),
+                    ElevatedButton(onPressed: onExport, child: noSelect(const Text('Backup exportieren…'))),
                     const SizedBox(width: 10),
                     Text('$modKeyLabel+E', style: const TextStyle(color: kMuted, fontSize: 12)),
                   ],
@@ -115,7 +116,7 @@ class SettingsView extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    OutlinedButton(onPressed: onImport, child: const Text('Backup importieren…')),
+                    OutlinedButton(onPressed: onImport, child: noSelect(const Text('Backup importieren…'))),
                     const SizedBox(width: 10),
                     Text('$modKeyLabel+I', style: const TextStyle(color: kMuted, fontSize: 12)),
                   ],
@@ -123,9 +124,56 @@ class SettingsView extends StatelessWidget {
               ],
             ),
           ),
+          cardGap,
+          Container(
+            decoration: BoxDecoration(
+              color: kSurface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kDanger.withValues(alpha: 0.4)),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: kDanger, size: 20),
+                    const SizedBox(width: 8),
+                    Text('Zurücksetzen', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: kDanger)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Setzt Basiswährung und Standardintervall auf ihre Standardwerte zurück und löscht ALLE Konten, '
+                  'Kontostände, Vermögenswerte und Fixposten unwiderruflich.',
+                  style: TextStyle(color: kMuted),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Erstelle vorher ggf. ein Backup über den Export oben — diese Aktion kann nicht rückgängig gemacht werden.',
+                  style: TextStyle(color: kMuted),
+                ),
+                const SizedBox(height: 14),
+                OutlinedButton(
+                  onPressed: () => _handleReset(context),
+                  style: OutlinedButton.styleFrom(foregroundColor: kDanger, side: const BorderSide(color: kDanger)),
+                  child: noSelect(const Text('App zurücksetzen…')),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleReset(BuildContext context) async {
+    final confirmed = await confirmReset(context);
+    if (!confirmed) return;
+    if (!context.mounted) return;
+    await context.read<AppState>().resetAllData();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App wurde auf Standardwerte zurückgesetzt.')));
   }
 }
 

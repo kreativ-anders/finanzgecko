@@ -140,7 +140,7 @@ class _EntriesViewState extends State<EntriesView> {
                 style: TextStyle(color: kMuted),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(onPressed: () => widget.onNavigate(AppView.accounts), child: const Text('Konto anlegen')),
+              ElevatedButton(onPressed: () => widget.onNavigate(AppView.accounts), child: noSelect(const Text('Konto anlegen'))),
             ],
           ),
         ),
@@ -212,7 +212,7 @@ class _EntriesViewState extends State<EntriesView> {
                       const SizedBox(height: 8),
                       if (_notice.isNotEmpty) Text(_notice, style: const TextStyle(color: kMuted)),
                       const SizedBox(height: 16),
-                      ElevatedButton(onPressed: () => _submit(app), child: const Text('Alle speichern')),
+                      ElevatedButton(onPressed: () => _submit(app), child: noSelect(const Text('Alle speichern'))),
                     ],
                   ),
                 ),
@@ -247,8 +247,8 @@ class _EntryRow extends StatelessWidget {
         title: const Text('Eintrag löschen'),
         content: Text('Eintrag für ${account.name} · ${periodLabel(bal.period)} wirklich löschen?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Löschen')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Löschen'))),
         ],
       ),
     );
@@ -363,8 +363,8 @@ class _DisplayRow extends StatelessWidget {
         title: const Text('Eintrag löschen'),
         content: Text('Eintrag für ${periodLabel(balance.period)} wirklich löschen?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Löschen')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Löschen'))),
         ],
       ),
     );
@@ -380,9 +380,9 @@ class _DisplayRow extends StatelessWidget {
       children: [
         SizedBox(width: 110, child: Text(periodLabel(balance.period))),
         Expanded(child: Text(fmtMoney(balance.amountOriginal, balance.currencyOriginal))),
-        OutlinedButton(onPressed: onEdit, child: const Text('Bearbeiten')),
+        OutlinedButton(onPressed: onEdit, child: noSelect(const Text('Bearbeiten'))),
         const SizedBox(width: 8),
-        OutlinedButton(onPressed: () => _delete(context), child: const Text('Löschen')),
+        OutlinedButton(onPressed: () => _delete(context), child: noSelect(const Text('Löschen'))),
       ],
     );
   }
@@ -444,9 +444,9 @@ class _EditRowState extends State<_EditRow> {
             ],
           ),
         ),
-        ElevatedButton(onPressed: _save, child: const Text('Speichern')),
+        ElevatedButton(onPressed: _save, child: noSelect(const Text('Speichern'))),
         const SizedBox(width: 8),
-        OutlinedButton(onPressed: widget.onDone, child: const Text('Abbrechen')),
+        OutlinedButton(onPressed: widget.onDone, child: noSelect(const Text('Abbrechen'))),
       ],
     );
   }

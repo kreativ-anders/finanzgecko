@@ -11,6 +11,10 @@ String fmtMoney(double value, String currency) {
   }
 }
 
+/// [value] is a plain percentage number (7.3, not 0.073); negative sign is
+/// added automatically, positive sign is left to the caller (matches fmtMoney).
+String fmtPercent(double value) => '${NumberFormat('#,##0.0', 'de_DE').format(value)}%';
+
 /// "2025-03" -> "Mär 2025"
 String periodLabel(String period) {
   final parts = period.split('-');

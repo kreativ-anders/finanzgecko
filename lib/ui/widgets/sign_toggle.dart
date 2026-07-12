@@ -36,7 +36,7 @@ class SignToggle extends StatelessWidget {
             child: InkWell(
               onTap: () => onChanged(!isExpense),
               child: Center(
-                child: Text(isExpense ? '−' : '+', style: textStyle),
+                child: noSelect(Text(isExpense ? '−' : '+', style: textStyle)),
               ),
             ),
           ),

@@ -58,13 +58,19 @@ class DashboardView extends StatelessWidget {
             cardGap,
             _SummaryRow(
               children: [
-                _DistributionSection(app: app, latestPeriod: periods.last),
+                _DistributionSection(app: app, latestPeriod: periods.last, onNavigate: onNavigate),
                 _SubscriptionsSection(totals: totals, app: app, onNavigate: onNavigate),
                 _AssetsSection(app: app, onNavigate: onNavigate),
               ],
             ),
             cardGap,
-            Text('Konten', style: Theme.of(context).textTheme.titleLarge),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Konten', style: Theme.of(context).textTheme.titleLarge),
+                OutlinedButton(onPressed: () => onNavigate(AppView.entries), child: noSelect(const Text('Einträge verwalten'))),
+              ],
+            ),
             const SizedBox(height: 12),
             _AccountCards(app: app),
           ],
@@ -89,7 +95,7 @@ class _EmptyDashboard extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('Leg zuerst ein Konto an und trag deinen ersten Kontostand ein.', style: TextStyle(color: kMuted)),
           const SizedBox(height: 20),
-          ElevatedButton(onPressed: () => onNavigate(AppView.accounts), child: const Text('Konto anlegen')),
+          ElevatedButton(onPressed: () => onNavigate(AppView.accounts), child: noSelect(const Text('Konto anlegen'))),
         ],
       ),
     );
@@ -113,6 +119,7 @@ class _TotalsOverview extends StatelessWidget {
     final currentTotal = _totalForPeriod(latestPeriod);
     final prevTotal = prevPeriod != null ? _totalForPeriod(prevPeriod) : null;
     final delta = prevTotal != null ? currentTotal - prevTotal : null;
+    final pct = (delta != null && prevTotal != null && prevTotal != 0) ? (delta / prevTotal) * 100 : null;
     final entriesInLatest = app.balancesInPeriod(latestPeriod).length;
 
     final totalChartData = [for (final p in periods) ChartPoint(periodLabel(p), _totalForPeriod(p))];
@@ -136,7 +143,9 @@ class _TotalsOverview extends StatelessWidget {
               ),
               if (delta != null)
                 Text(
-                  '${delta >= 0 ? '+' : ''}${fmtMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prevPeriod!)}',
+                  '${delta >= 0 ? '+' : ''}${fmtMoney(delta, app.baseCurrency)}'
+                  '${pct != null ? ' (${delta >= 0 ? '+' : ''}${fmtPercent(pct)})' : ''}'
+                  ' ggü. ${periodLabel(prevPeriod!)}',
                   style: TextStyle(color: delta >= 0 ? kPrimary : kDanger, fontWeight: FontWeight.w600),
                 )
               else
@@ -150,17 +159,18 @@ class _TotalsOverview extends StatelessWidget {
           ),
         ),
         cardGap,
-        SectionCard(title: 'Verlauf', child: AppLineChart(points: totalChartData, color: kPrimary)),
+        SectionCard(title: 'Verlauf', child: AppLineChart(points: totalChartData, color: kPrimary, filled: true)),
       ],
     );
   }
 }
 
 class _DistributionSection extends StatelessWidget {
-  const _DistributionSection({required this.app, required this.latestPeriod});
+  const _DistributionSection({required this.app, required this.latestPeriod, required this.onNavigate});
 
   final AppState app;
   final String latestPeriod;
+  final ValueChanged<AppView> onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +184,45 @@ class _DistributionSection extends StatelessWidget {
     final donutSegments = [
       for (final entry in byTag.entries) DonutSegment(label: entry.key, value: entry.value, color: colorFromHex(tagColorHex(entry.key))),
     ];
-    return SectionCard(title: 'Verteilung nach Kontotyp', child: AppDonutChart(segments: donutSegments));
+
+    final positiveTags = byTag.entries.where((e) => e.value > 0).toList();
+    final tagTotal = positiveTags.fold<double>(0, (sum, e) => sum + e.value);
+    final topEntry = positiveTags.isEmpty ? null : positiveTags.reduce((a, b) => a.value > b.value ? a : b);
+    final topShare = (topEntry != null && tagTotal > 0) ? topEntry.value / tagTotal : null;
+    final showConcentrationNote = positiveTags.length >= 2 && topShare != null && topShare >= kConcentrationRiskThreshold;
+
+    return SectionCard(
+      title: 'Verteilung nach Kontotyp',
+      expandChild: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppDonutChart(segments: donutSegments),
+          if (showConcentrationNote) ...[
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, size: 14, color: kDanger),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Hoher Anteil in einer Kategorie: ${topEntry!.key} macht ${fmtPercent(topShare * 100)} deines Vermögens aus.',
+                    style: const TextStyle(color: kDanger, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const Spacer(),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(onPressed: () => onNavigate(AppView.accounts), child: noSelect(const Text('Konten verwalten'))),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -216,14 +264,24 @@ class _AccountCards extends StatelessWidget {
 
   final AppState app;
 
+  static const double _spacing = 16;
+  static const double _minCardWidth = 220;
+  static const int _maxColumns = 4;
+
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
-      children: [
-        for (final acc in app.accounts) _AccountCard(acc: acc, app: app),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = ((constraints.maxWidth + _spacing) / (_minCardWidth + _spacing)).floor().clamp(1, _maxColumns);
+        final cardWidth = (constraints.maxWidth - _spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: _spacing,
+          runSpacing: _spacing,
+          children: [
+            for (final acc in app.accounts) SizedBox(width: cardWidth, child: _AccountCard(acc: acc, app: app)),
+          ],
+        );
+      },
     );
   }
 }
@@ -243,34 +301,52 @@ class _AccountCard extends StatelessWidget {
     ];
     final latest = app.latestBalanceForAccount(acc.id);
 
-    return SizedBox(
-      width: 240,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(width: 10, height: 10, decoration: BoxDecoration(color: colorFromHex(acc.color), shape: BoxShape.circle)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(acc.name, style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(acc.tag, style: const TextStyle(color: kMuted, fontSize: 12)),
-              const SizedBox(height: 8),
-              Text(
-                latest != null ? fmtMoney(latest.amountBase, app.baseCurrency) : '—',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              AppLineChart(points: points, color: colorFromHex(acc.color), height: 70),
-            ],
-          ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(width: 10, height: 10, decoration: BoxDecoration(color: colorFromHex(acc.color), shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(acc.name, style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                const SizedBox(width: 6),
+                _TagChip(tag: acc.tag),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(acc.bank, style: const TextStyle(color: kMuted, fontSize: 12), overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 8),
+            Text(
+              latest != null ? fmtMoney(latest.amountBase, app.baseCurrency) : '—',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            AppLineChart(points: points, color: colorFromHex(acc.color), height: 70),
+          ],
         ),
       ),
+    );
+  }
+}
+
+/// Small, low-emphasis label for the account's Kontotyp — the bank (shown
+/// as the card subtitle) is the primary identity now, since the type mostly
+/// only matters once, at account creation.
+class _TagChip extends StatelessWidget {
+  const _TagChip({required this.tag});
+
+  final String tag;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = colorFromHex(tagColorHex(tag));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
+      child: Text(tag, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -284,6 +360,7 @@ class _AssetsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = app.assets.fold<double>(0, (sum, a) => sum + a.value);
+    final overdue = app.assets.isNotEmpty && app.assets.any(app.isAssetOverdue);
     return SectionCard(
       title: 'Vermögenswerte',
       expandChild: true,
@@ -295,12 +372,20 @@ class _AssetsSection extends StatelessWidget {
           else ...[
             Text(fmtMoney(total, app.baseCurrency), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             Text('${app.assets.length} Gegenstände erfasst', style: const TextStyle(color: kMuted, fontSize: 13)),
+            const SizedBox(height: 4),
+            const Text(
+              'Nicht im Gesamtvermögen oben enthalten.',
+              style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
+            ),
           ],
           const Spacer(),
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
-            child: OutlinedButton(onPressed: () => onNavigate(AppView.assets), child: const Text('Vermögenswerte verwalten')),
+            child: OutlinedButton(
+              onPressed: () => onNavigate(AppView.assets),
+              child: noSelect(Text(overdue ? 'Vermögenswerte re-evaluieren' : 'Vermögenswerte verwalten')),
+            ),
           ),
         ],
       ),
@@ -343,7 +428,7 @@ class _SubscriptionsSection extends StatelessWidget {
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
-            child: OutlinedButton(onPressed: () => onNavigate(AppView.subscriptions), child: const Text('Fixposten verwalten')),
+            child: OutlinedButton(onPressed: () => onNavigate(AppView.subscriptions), child: noSelect(const Text('Fixposten aktualisieren'))),
           ),
         ],
       ),

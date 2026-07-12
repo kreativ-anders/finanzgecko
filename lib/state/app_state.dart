@@ -277,6 +277,11 @@ class AppState extends ChangeNotifier {
     return BackupReminder(overdue: false, message: 'Letztes Backup vor $days Tag${days == 1 ? '' : 'en'}.');
   }
 
+  Future<void> resetAllData() async {
+    await store.resetAll();
+    await _reloadAndNotify();
+  }
+
   // ---------- Export / Import ----------
 
   Map<String, dynamic> exportAllData() => store.exportAllData();

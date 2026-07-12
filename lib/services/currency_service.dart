@@ -19,7 +19,7 @@ class CurrencyService {
   CurrencyService(this._store);
 
   final AppStore _store;
-  static const _apiBase = 'https://api.frankfurter.app';
+  static const _apiBase = 'https://api.frankfurter.dev/v1';
 
   String _cacheKey(String from, String to, String dateStr) => '${from}_${to}_$dateStr';
 

@@ -26,7 +26,7 @@ class MonthPickerField extends StatelessWidget {
         alignment: Alignment.centerLeft,
         minimumSize: const Size(180, 48),
       ),
-      child: Text(periodLabel(value)),
+      child: noSelect(Text(periodLabel(value))),
     );
   }
 }
@@ -87,12 +87,12 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
                 final period = '$viewYear-${month.toString().padLeft(2, '0')}';
                 Navigator.of(context).pop(period);
               },
-              child: Text(kMonthLabels[i]),
+              child: noSelect(Text(kMonthLabels[i])),
             );
           }),
         ),
       ),
-      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Abbrechen'))],
+      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: noSelect(const Text('Abbrechen')))],
     );
   }
 }

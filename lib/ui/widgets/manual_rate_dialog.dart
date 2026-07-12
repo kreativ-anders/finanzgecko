@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme.dart';
+
 /// Asks the user for a manual "1 [from] = ? [to]" rate when neither the live
 /// API nor the local cache has one (e.g. offline on first use of a currency
 /// pair). Returns null if cancelled or the input isn't a valid positive number.
@@ -24,10 +26,10 @@ Future<double?> promptManualRate(BuildContext context, {required String from, re
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Abbrechen')),
+        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: noSelect(const Text('Abbrechen'))),
         ElevatedButton(
           onPressed: () => Navigator.of(ctx).pop(double.tryParse(ctrl.text.replaceAll(',', '.'))),
-          child: const Text('Übernehmen'),
+          child: noSelect(const Text('Übernehmen')),
         ),
       ],
     ),

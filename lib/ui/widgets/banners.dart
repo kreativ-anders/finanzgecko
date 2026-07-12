@@ -24,7 +24,7 @@ class InfoBanner extends StatelessWidget {
           Expanded(child: Text('⚠️ $message')),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(width: 12),
-            OutlinedButton(onPressed: onAction, child: Text(actionLabel!)),
+            OutlinedButton(onPressed: onAction, child: noSelect(Text(actionLabel!))),
           ],
         ],
       ),
@@ -63,7 +63,7 @@ class OverspendBanner extends StatelessWidget {
           ElevatedButton(
             onPressed: onCheck,
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2B0000), foregroundColor: const Color(0xFFFFE6E6)),
-            child: const Text('Fixposten prüfen'),
+            child: noSelect(const Text('Fixposten prüfen')),
           ),
         ],
       ),

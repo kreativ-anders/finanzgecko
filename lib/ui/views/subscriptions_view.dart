@@ -190,7 +190,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                   const SizedBox(height: 6),
                   const Text('Standard ist Ausgabe (−). Für eine Einnahme wie Gehalt auf + umschalten.', style: TextStyle(color: kMuted, fontSize: 12)),
                   const SizedBox(height: 18),
-                  ElevatedButton(onPressed: () => _submit(app), child: const Text('Anlegen')),
+                  ElevatedButton(onPressed: () => _submit(app), child: noSelect(const Text('Anlegen'))),
                 ],
               ),
             ),
@@ -296,8 +296,8 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
         title: const Text('Fixposten löschen'),
         content: Text('"${widget.sub.name}" wirklich löschen?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Abbrechen')),
-          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Löschen')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Löschen'))),
         ],
       ),
     );
@@ -381,7 +381,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
               ),
             ),
             const SizedBox(width: 10),
-            Center(child: OutlinedButton(onPressed: _delete, child: const Text('Löschen'))),
+            Center(child: OutlinedButton(onPressed: _delete, child: noSelect(const Text('Löschen')))),
           ],
         ),
       ),
