@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:path/path.dart' as p;
 
 import '../models/account.dart';
@@ -8,26 +9,43 @@ import '../models/asset.dart';
 import '../models/balance.dart';
 import '../models/subscription.dart';
 import 'app_data.dart';
+import 'secure_key_store.dart';
 
 const String _applicationId = 'de.finanzgecko.app';
 const String _storeFilename = 'app-data.json';
+const int _envelopeVersion = 1;
 
 /// Persists the entire app database as a single JSON file in the OS-native
-/// per-user data directory — same location and schema the previous
-/// Neutralino build used, so existing installs migrate without conversion:
+/// per-user data directory — same location the previous Neutralino build
+/// used, so existing installs migrate without conversion:
 ///
 ///  - Linux:   ~/.local/share/de.finanzgecko.app/app-data.json
 ///  - macOS:   ~/Library/Application Support/de.finanzgecko.app/app-data.json
 ///  - Windows: %APPDATA%\de.finanzgecko.app\app-data.json
 ///
-/// The file is unencrypted; confidentiality against other local OS accounts
-/// is provided by filesystem permissions — 0700 dir / 0600 file on
-/// Linux/macOS, an equivalent current-user-only ACL via icacls on Windows —
-/// not by encryption. Writes are atomic (temp file + rename).
+/// The file content is AES-256-GCM encrypted (an "envelope" of
+/// nonce/cipherText/mac around the real JSON), with the key held in the
+/// OS-native credential store (Windows Credential Locker, macOS Keychain,
+/// Linux libsecret/kwallet) via [SecureKeyStore] — so the file is useless
+/// without that specific OS user's keychain unlock, not just filesystem
+/// permissions. A legacy unencrypted file from before this change is
+/// detected on read and transparently re-written as an encrypted envelope
+/// on the next save. Filesystem permissions (0700 dir / 0600 file on
+/// Linux/macOS, an equivalent current-user-only ACL via icacls on Windows)
+/// remain as defense in depth. Writes are atomic (temp file + rename).
 class AppStore {
+  /// [dataDirectory] overrides the OS-resolved data directory — used by
+  /// tests to point the store at a temp folder instead of the real
+  /// per-user app-data location. Production code should always use the
+  /// default (unnamed) constructor.
+  AppStore({Directory? dataDirectory}) : _dataDirectoryOverride = dataDirectory;
+
+  final Directory? _dataDirectoryOverride;
   AppData? _data;
   String? _filePath;
   bool _initialized = false;
+  final AesGcm _cipher = AesGcm.with256bits();
+  SecretKey? _key;
 
   bool get isInitialized => _initialized;
 
@@ -45,6 +63,41 @@ class AppStore {
       throw StateError('Store not initialized. Call ensureInitialized() first.');
     }
     return data;
+  }
+
+  SecretKey get _requireKey {
+    final key = _key;
+    if (key == null) {
+      throw StateError('Store not initialized. Call ensureInitialized() first.');
+    }
+    return key;
+  }
+
+  static bool _isEnvelope(dynamic decoded) =>
+      decoded is Map &&
+      decoded['v'] == _envelopeVersion &&
+      decoded['nonce'] is String &&
+      decoded['cipherText'] is String &&
+      decoded['mac'] is String;
+
+  Future<String> _decryptEnvelope(Map decoded) async {
+    final box = SecretBox(
+      base64Decode(decoded['cipherText'] as String),
+      nonce: base64Decode(decoded['nonce'] as String),
+      mac: Mac(base64Decode(decoded['mac'] as String)),
+    );
+    final clearBytes = await _cipher.decrypt(box, secretKey: _requireKey);
+    return utf8.decode(clearBytes);
+  }
+
+  Future<String> _encryptToEnvelope(String plaintext) async {
+    final box = await _cipher.encrypt(utf8.encode(plaintext), secretKey: _requireKey);
+    return jsonEncode({
+      'v': _envelopeVersion,
+      'nonce': base64Encode(box.nonce),
+      'cipherText': base64Encode(box.cipherText),
+      'mac': base64Encode(box.mac.bytes),
+    });
   }
 
   static String _home() => Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '.';
@@ -99,7 +152,9 @@ class AppStore {
   Future<void> ensureInitialized() async {
     if (_initialized) return;
 
-    final dir = resolveDataDirectory();
+    _key = await const SecureKeyStore().getOrCreateKey();
+
+    final dir = _dataDirectoryOverride ?? resolveDataDirectory();
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -120,10 +175,20 @@ class AppStore {
     final fileExisted = await file.exists();
     try {
       final raw = await file.readAsString();
-      final parsed = jsonDecode(raw);
+      final decoded = jsonDecode(raw);
+      final isEnvelope = _isEnvelope(decoded);
+      // Envelope -> decrypt to get the real JSON. Otherwise this is a
+      // pre-encryption plaintext file (or first run) — parse it directly,
+      // then let it fall through to the migration write below.
+      final parsed = isEnvelope ? jsonDecode(await _decryptEnvelope(decoded as Map)) : decoded;
       final validated = AppData.fromDynamic(parsed);
       if (validated != null) {
         _data = validated;
+        if (!isEnvelope) {
+          // One-time transparent migration: rewrite the legacy plaintext
+          // file as an encrypted envelope now that it's been read once.
+          await _persist();
+        }
       } else {
         await _quarantineUnreadable(file);
         _data = AppData.defaults();
@@ -131,10 +196,10 @@ class AppStore {
       }
     } catch (_) {
       // File missing (first run) -> start fresh, nothing to lose. File
-      // present but unreadable (corrupt JSON, wrong shape, ...) -> preserve
-      // it under a new name first, since the next line would otherwise
-      // silently overwrite the user's only copy of their data with empty
-      // defaults.
+      // present but unreadable (corrupt JSON, wrong shape, tampered/failed
+      // envelope decryption, ...) -> preserve it under a new name first,
+      // since the next line would otherwise silently overwrite the user's
+      // only copy of their data with empty defaults.
       if (fileExisted) await _quarantineUnreadable(file);
       _data = AppData.defaults();
       await _persist();
@@ -160,7 +225,8 @@ class AppStore {
       final ts = DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
       final backupFile = File(p.join(File(filePath).parent.path, 'pre-import-backup-$ts.json'));
       final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
-      await backupFile.writeAsString(jsonStr, flush: true);
+      final envelopeJson = await _encryptToEnvelope(jsonStr);
+      await backupFile.writeAsString(envelopeJson, flush: true);
     } catch (_) {}
   }
 
@@ -169,9 +235,10 @@ class AppStore {
     final file = File(path);
     final tmpFile = File('$path.tmp');
     final jsonStr = const JsonEncoder.withIndent('  ').convert(_requireData.toJson());
+    final envelopeJson = await _encryptToEnvelope(jsonStr);
 
     try {
-      await tmpFile.writeAsString(jsonStr, flush: true);
+      await tmpFile.writeAsString(envelopeJson, flush: true);
       if (await file.exists()) {
         try {
           await file.delete();
