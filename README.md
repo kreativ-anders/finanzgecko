@@ -12,7 +12,9 @@ lauffähig auf Linux, macOS und Windows.
 > Bestehende `app-data.json`-Dateien der alten Version werden unverändert
 > weiterverwendet (siehe unten).
 
-## Einmalig einrichten (Linux, z. B. TUXEDO OS)
+## Einmalig einrichten
+
+### Linux (z. B. TUXEDO OS)
 
 TUXEDO OS ist Ubuntu-basiert — die folgenden Schritte funktionieren auf jeder
 Ubuntu/Debian-Ableitung.
@@ -50,6 +52,75 @@ flutter doctor
 `flutter doctor` sollte unter "Linux toolchain" ein ✓ zeigen. Fehlt
 `clang++`, wurde Schritt 1 übersprungen oder `libgtk-3-dev` fehlt noch.
 
+### Windows
+
+**1. Flutter SDK installieren:**
+
+```powershell
+git clone https://github.com/flutter/flutter.git -b stable C:\src\flutter
+setx PATH "%PATH%;C:\src\flutter\bin"
+```
+
+`C:\src\flutter` statt eines Pfads unterm Nutzerprofil, weil Flutter mit
+Leerzeichen oder synchronisierten Ordnern (OneDrive-`Dokumente` u. Ä.) im
+Pfad Probleme bekommt. Nach `setx` ein neues Terminal öffnen, damit die
+PATH-Änderung wirkt.
+
+**2. Visual Studio Build Tools mit C++-Workload:**
+
+`flutter build windows` kompiliert den nativen Runner über MSBuild/CMake —
+dafür wird die Workload "Desktop development with C++" benötigt (die
+schlanken Build Tools reichen, die volle Visual Studio IDE ist nicht nötig):
+
+```powershell
+winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+```
+
+Alternativ über den [Visual Studio
+Installer](https://visualstudio.microsoft.com/downloads/): Workload "Desktop
+development with C++" ankreuzen.
+
+**3. Windows-Desktop-Unterstützung aktivieren und prüfen:**
+
+```powershell
+flutter config --enable-windows-desktop
+flutter doctor
+```
+
+`flutter doctor` sollte unter "Visual Studio" ein ✓ zeigen.
+
+### macOS
+
+**1. Xcode:**
+
+Volles [Xcode](https://apps.apple.com/app/xcode/id497799835) aus dem App
+Store installieren (nicht nur die Command Line Tools — `flutter build macos`
+braucht die volle IDE für Codesigning/Bundling) und die Lizenz einmalig
+akzeptieren:
+
+```bash
+sudo xcodebuild -license accept
+```
+
+**2. Flutter SDK installieren** (eine der beiden Varianten):
+
+```bash
+# Variante A: per Homebrew
+brew install --cask flutter
+
+# Variante B: manuell, z. B. nach ~/development
+git clone https://github.com/flutter/flutter.git -b stable ~/development/flutter
+echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**3. macOS-Desktop-Unterstützung aktivieren und prüfen:**
+
+```bash
+flutter config --enable-macos-desktop
+flutter doctor
+```
+
 **Datenverzeichnis** (unverändert gegenüber der Neutralino-Version):
 - **Linux:** `~/.local/share/de.finanzgecko.app/`
 - **macOS:** `~/Library/Application Support/de.finanzgecko.app/`
@@ -59,15 +130,17 @@ flutter doctor
 
 ```bash
 flutter pub get
-flutter run -d linux
+flutter run -d windows   # oder: -d linux / -d macos
 ```
 
 Startet die App mit Hot Reload (`r` im Terminal drücken, oder im
-IDE-Plugin). `-d linux` wählt explizit das Linux-Desktop-Target — nötig,
-sobald mehr als ein Gerät verfügbar ist (z. B. ein angeschlossenes Android-
-Handy oder Chrome für Web).
+IDE-Plugin). Der `-d`-Flag wählt explizit das Desktop-Target der jeweiligen
+Plattform — nötig, sobald mehr als ein Gerät verfügbar ist (z. B. ein
+angeschlossenes Android-Handy oder Chrome für Web).
 
 ## Bauen (Release)
+
+### Linux
 
 ```bash
 flutter build linux --release
@@ -86,10 +159,10 @@ Zum Ausprobieren direkt aus dem Bundle heraus:
 ```
 
 Das baut nur die Linux-Executable. Für **alle drei Plattformen auf einmal**
-siehe "macOS / Windows" unten — dafür reicht dieser Rechner allein nicht,
-das läuft über CI.
+siehe "macOS / Windows" unten und "Alle drei Plattformen auf einmal bauen" —
+dafür reicht dieser Rechner allein nicht, das läuft über CI.
 
-### Als Desktop-Anwendung installieren (Startmenü- & Taskleisten-Icon)
+#### Als Desktop-Anwendung installieren (Startmenü- & Taskleisten-Icon)
 
 Ein direkt gestartetes Bundle zeigt in der Taskleiste unter Wayland/X11 ein
 generisches Icon statt des App-Icons und taucht nicht im Startmenü auf —
@@ -110,10 +183,10 @@ benannten Symlink (`~/.local/bin/finanzgecko`), einen Startmenü-Eintrag
 hicolor-Theme an. App danach über das Startmenü starten, nicht mehr direkt
 über `build/`.
 
-## macOS / Windows
+### macOS / Windows
 
 Flutter-Desktop-Builds sind **nicht cross-kompilierbar** — ein macOS-Build
-muss auf einem Mac laufen, ein Windows-Build unter Windows. Von diesem
+muss auf einem Mac laufen, ein Windows-Build unter Windows. Von einem
 Linux-Rechner aus lässt sich also kein macOS- oder Windows-Executable
 erzeugen:
 
@@ -127,13 +200,18 @@ mit Info.plist, Icon und Ad-hoc-Signatur — anders als bei Neutralino ist
 dafür kein zusätzliches `packaging/macos/build-app.sh` mehr nötig, Flutter
 übernimmt das Bundling selbst. `flutter build windows` erzeugt einen Ordner
 unter `build/windows/x64/runner/Release/` (Executable + `data/` + DLLs), der
-komplett verteilt werden muss — auch hier keine Einzeldatei mehr.
+komplett verteilt werden muss — auch hier keine Einzeldatei mehr. Zum
+Ausprobieren direkt aus dem Bundle heraus:
+
+```powershell
+.\build\windows\x64\runner\Release\finanzgecko.exe
+```
 
 Erster Start auf einem "fremden" Mac/Windows-Rechner zeigt ohne
 Code-Signierung weiterhin Gatekeeper-/SmartScreen-Warnungen (siehe
 "Bekannte Einschränkungen" unten).
 
-### Alle drei Plattformen auf einmal bauen
+### Alle drei Plattformen auf einmal (CI)
 
 Weil lokal immer nur die eigene Plattform baubar ist, läuft "Linux + macOS +
 Windows gleichzeitig" ausschließlich über `.github/workflows/release.yml` —
@@ -264,6 +342,20 @@ nachholen (siehe "Einmalig einrichten" oben).
 **App startet, zeigt aber kein Icon in der Taskleiste:** Erwartet bei einem
 direkt aus `build/` gestarteten Bundle, siehe "Als Desktop-Anwendung
 installieren" oben — `./packaging/linux/install.sh` ausführen.
+
+**`flutter build windows` bricht mit einem CMake-/MSBuild-Fehler ab:** Die
+Visual-Studio-Workload "Desktop development with C++" fehlt — siehe
+"Einmalig einrichten → Windows" oben. Ein `flutter doctor` sollte danach bei
+"Visual Studio" ein ✓ zeigen.
+
+**`flutter doctor` bricht unter Windows mit `PathNotFoundException` an
+einem Pfad wie `...\AppData\Local\Google\AndroidStudioXXXX.X\.home` ab:**
+Bekanntes Flutter-Verhalten bei einer verwaisten AppData-Restspur einer
+deinstallierten/aktualisierten Android-Studio-Version (die `.home`-Datei
+fehlt, der Ordner selbst aber noch da). Für diese App irrelevant, da kein
+Android-Target gebaut wird — entweder den verwaisten Ordner unter
+`%LOCALAPPDATA%\Google\` löschen oder den Fehler ignorieren; `flutter pub
+get` / `flutter build windows` laufen davon unbeeinflusst durch.
 
 **Wechselkurs-Abfrage schlägt fehl / "offline":** Beim Erfassen eines
 Kontostands oder Fixpostens in einer Fremdwährung fragt die App bei

@@ -67,7 +67,13 @@ ThemeData buildAppTheme() {
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
-        return states.contains(WidgetState.selected) ? kPrimary : kMuted;
+        return states.contains(WidgetState.selected) ? const Color(0xFF04140D) : kMuted;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        return states.contains(WidgetState.selected) ? kPrimary : kSurface;
+      }),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+        return states.contains(WidgetState.selected) ? Colors.transparent : kBorder;
       }),
     ),
     scrollbarTheme: const ScrollbarThemeData(),

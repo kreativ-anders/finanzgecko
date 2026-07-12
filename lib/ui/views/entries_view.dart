@@ -66,7 +66,11 @@ class _EntriesViewState extends State<EntriesView> {
   }
 
   Future<void> _submit(AppState app) async {
-    final dateISO = lastDayOfMonthISO(_period);
+    // The current month isn't over yet, so its last day is a future date
+    // with no published rate (Frankfurter 404s). Use today instead — the
+    // API itself falls back to the latest published business day. Closed
+    // months keep their own last-day rate for historical accuracy.
+    final dateISO = _period == currentPeriod() ? todayISO() : lastDayOfMonthISO(_period);
     final rateCache = <String, double?>{};
     var saved = 0;
     var failed = 0;
