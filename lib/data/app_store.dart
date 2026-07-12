@@ -12,16 +12,21 @@ import 'app_data.dart';
 import 'secure_key_store.dart';
 
 const String _applicationId = 'de.finanzgecko.app';
-const String _storeFilename = 'app-data.json';
+const String _storeFilename = 'finanzgecko-data.json';
+// TODO(major version): remove _legacyStoreFilename and _migrateLegacyFilename
+// (added 2026-07 for the app-data.json -> finanzgecko-data.json rebrand
+// rename) once it's safe to assume every install has already run this
+// once — it's a one-time fixup, not something that needs to run forever.
+const String _legacyStoreFilename = 'app-data.json';
 const int _envelopeVersion = 1;
 
 /// Persists the entire app database as a single JSON file in the OS-native
 /// per-user data directory — same location the previous Neutralino build
 /// used, so existing installs migrate without conversion:
 ///
-///  - Linux:   ~/.local/share/de.finanzgecko.app/app-data.json
-///  - macOS:   ~/Library/Application Support/de.finanzgecko.app/app-data.json
-///  - Windows: %APPDATA%\de.finanzgecko.app\app-data.json
+///  - Linux:   ~/.local/share/de.finanzgecko.app/finanzgecko-data.json
+///  - macOS:   ~/Library/Application Support/de.finanzgecko.app/finanzgecko-data.json
+///  - Windows: %APPDATA%\de.finanzgecko.app\finanzgecko-data.json
 ///
 /// The file content is AES-256-GCM encrypted (an "envelope" of
 /// nonce/cipherText/mac around the real JSON), with the key held in the
@@ -30,7 +35,9 @@ const int _envelopeVersion = 1;
 /// without that specific OS user's keychain unlock, not just filesystem
 /// permissions. A legacy unencrypted file from before this change is
 /// detected on read and transparently re-written as an encrypted envelope
-/// on the next save. Filesystem permissions (0700 dir / 0600 file on
+/// on the next save (TODO(major version): drop once installs have caught
+/// up — see the TODO by [_isEnvelope]'s call site). Filesystem permissions
+/// (0700 dir / 0600 file on
 /// Linux/macOS, an equivalent current-user-only ACL via icacls on Windows)
 /// remain as defense in depth. Writes are atomic (temp file + rename).
 class AppStore {
@@ -163,6 +170,9 @@ class AppStore {
 
     _filePath = p.join(dir.path, _storeFilename);
     final file = File(_filePath!);
+    // TODO(major version): drop this call once every install has migrated —
+    // see the TODO on _legacyStoreFilename.
+    await _migrateLegacyFilename(dir, file);
     final tmpFile = File('${file.path}.tmp');
 
     // Clean up any leftover temp file from a previous crash.
@@ -176,6 +186,11 @@ class AppStore {
     try {
       final raw = await file.readAsString();
       final decoded = jsonDecode(raw);
+      // TODO(major version): once every install has re-persisted at least
+      // once since encryption was added (2026-07), every on-disk file will
+      // be an envelope — collapse this to a plain _isEnvelope-less decrypt
+      // and delete the plaintext branch below plus _isEnvelope's non-envelope
+      // callers.
       final isEnvelope = _isEnvelope(decoded);
       // Envelope -> decrypt to get the real JSON. Otherwise this is a
       // pre-encryption plaintext file (or first run) — parse it directly,
@@ -206,6 +221,23 @@ class AppStore {
     }
 
     _initialized = true;
+  }
+
+  /// One-time rename of the pre-rebrand `app-data.json` to [_storeFilename],
+  /// so existing installs keep their data without the user having to
+  /// export/re-import anything. Only fires when the new filename doesn't
+  /// exist yet, so it can't clobber a file from a second run of this code.
+  Future<void> _migrateLegacyFilename(Directory dir, File newFile) async {
+    if (await newFile.exists()) return;
+    final legacyFile = File(p.join(dir.path, _legacyStoreFilename));
+    if (!await legacyFile.exists()) return;
+    try {
+      await legacyFile.rename(newFile.path);
+    } catch (_) {
+      // Best-effort only — if this fails (e.g. cross-device), fall through
+      // and let the normal first-run path start fresh rather than block
+      // startup.
+    }
   }
 
   /// Best-effort copy of a store file that failed to parse, so a corrupt or
@@ -322,6 +354,14 @@ class AppStore {
     final idx = data.accounts.indexWhere((a) => a.id == id);
     if (idx == -1) throw Exception('Konto nicht gefunden');
     data.accounts[idx] = data.accounts[idx].copyWith(archived: true);
+    await _persist();
+  }
+
+  Future<void> restoreAccount(int id) async {
+    final data = _requireData;
+    final idx = data.accounts.indexWhere((a) => a.id == id);
+    if (idx == -1) throw Exception('Konto nicht gefunden');
+    data.accounts[idx] = data.accounts[idx].copyWith(archived: false);
     await _persist();
   }
 

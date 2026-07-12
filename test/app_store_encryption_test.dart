@@ -59,7 +59,8 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
-  File storeFile() => File('${tempDir.path}/app-data.json');
+  File storeFile() => File('${tempDir.path}/finanzgecko-data.json');
+  File legacyStoreFile() => File('${tempDir.path}/app-data.json');
 
   test('persisted store file is an encrypted envelope, not plaintext JSON', () async {
     final keychain = <String, String>{};
@@ -129,6 +130,44 @@ void main() {
     final onDisk = jsonDecode(await storeFile().readAsString());
     expect(onDisk['nonce'], isA<String>());
     expect(onDisk['cipherText'], isA<String>());
+  });
+
+  test('pre-rebrand app-data.json is renamed to finanzgecko-data.json on first run', () async {
+    final keychain = <String, String>{};
+    _FakeSecureStorage(keychain).install();
+
+    tempDir.createSync(recursive: true);
+    await legacyStoreFile().writeAsString(
+      jsonEncode({
+        'schemaVersion': 1,
+        'baseCurrency': 'EUR',
+        'defaultSubscriptionInterval': 'monthly',
+        'accounts': [
+          {
+            'id': 1,
+            'name': 'Altes Konto',
+            'bank': '',
+            'tag': 'giro',
+            'currency': 'EUR',
+            'color': '#00c878',
+            'archived': false,
+            'createdAt': DateTime.now().toIso8601String(),
+          },
+        ],
+        'balances': [],
+        'assets': [],
+        'subscriptions': [],
+        'ratesCache': {},
+        'meta': {'nextAccountId': 2, 'nextBalanceId': 1, 'nextAssetId': 1, 'nextSubscriptionId': 1},
+      }),
+    );
+
+    final store = AppStore(dataDirectory: tempDir);
+    await store.ensureInitialized();
+
+    expect(store.getAccounts().map((a) => a.name), contains('Altes Konto'));
+    expect(await legacyStoreFile().exists(), isFalse);
+    expect(await storeFile().exists(), isTrue);
   });
 
   test('a tampered envelope is quarantined and the store falls back to defaults', () async {

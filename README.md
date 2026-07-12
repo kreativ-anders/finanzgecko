@@ -9,8 +9,8 @@ lauffähig auf Linux, macOS und Windows.
 > bisherigen [Neutralinojs](https://neutralino.js.org/)-App. Die
 > Geschäftslogik (Kontostände, Wechselkurse, Fixposten, Backup/Restore) ist
 > 1:1 übernommen, die UI ist nativ in Dart/Flutter statt HTML/CSS/JS gebaut.
-> Bestehende `app-data.json`-Dateien der alten Version werden unverändert
-> weiterverwendet (siehe unten).
+> Bestehende `app-data.json`-Dateien der alten Version werden beim ersten
+> Start automatisch in `finanzgecko-data.json` umbenannt (siehe unten).
 
 ## Einmalig einrichten
 
@@ -294,9 +294,9 @@ Kontostände) ist "ganze Datei einlesen/schreiben" völlig ausreichend und
 hält den Code einfach.
 
 **Dateipfad:**
-- **Linux:** `~/.local/share/de.finanzgecko.app/app-data.json`
-- **macOS:** `~/Library/Application Support/de.finanzgecko.app/app-data.json`
-- **Windows:** `%APPDATA%\de.finanzgecko.app\app-data.json`
+- **Linux:** `~/.local/share/de.finanzgecko.app/finanzgecko-data.json`
+- **macOS:** `~/Library/Application Support/de.finanzgecko.app/finanzgecko-data.json`
+- **Windows:** `%APPDATA%\de.finanzgecko.app\finanzgecko-data.json`
 
 Die Datei ist unverschlüsselt. Vertraulichkeit gegenüber anderen lokalen
 OS-Accounts wird über Dateirechte hergestellt (`chmod 0700` fürs
@@ -328,7 +328,8 @@ importieren, Beenden), plattformübergreifend identisch. Tastenkürzel
 
 ## Migration von der bisherigen Neutralino-/PWA-Version
 
-Bestehende `app-data.json` wird unverändert eingelesen — das Schema ist
+Bestehende `app-data.json` wird beim ersten Start automatisch zu
+`finanzgecko-data.json` im selben Datenverzeichnis umbenannt — das Schema ist
 identisch geblieben (gleiche Feldnamen, gleiches Datenverzeichnis). Einfach
 diese Version starten, es ist kein manueller Import nötig. Für einen
 Rechnerwechsel oder als zusätzliche Sicherheit weiterhin: über
