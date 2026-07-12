@@ -94,6 +94,7 @@ class AppStore {
       } catch (_) {}
     }
 
+    final fileExisted = await file.exists();
     try {
       final raw = await file.readAsString();
       final parsed = jsonDecode(raw);
@@ -101,16 +102,43 @@ class AppStore {
       if (validated != null) {
         _data = validated;
       } else {
+        await _quarantineUnreadable(file);
         _data = AppData.defaults();
         await _persist();
       }
     } catch (_) {
-      // File missing (first run) or corrupt -> start fresh.
+      // File missing (first run) -> start fresh, nothing to lose. File
+      // present but unreadable (corrupt JSON, wrong shape, ...) -> preserve
+      // it under a new name first, since the next line would otherwise
+      // silently overwrite the user's only copy of their data with empty
+      // defaults.
+      if (fileExisted) await _quarantineUnreadable(file);
       _data = AppData.defaults();
       await _persist();
     }
 
     _initialized = true;
+  }
+
+  /// Best-effort copy of a store file that failed to parse, so a corrupt or
+  /// unexpectedly-shaped file never gets silently destroyed by [_persist]
+  /// writing fresh defaults over it. A failed backup must not block startup.
+  Future<void> _quarantineUnreadable(File file) async {
+    try {
+      final ts = DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
+      await file.copy('${file.path}.unreadable-$ts');
+    } catch (_) {}
+  }
+
+  /// Best-effort snapshot of the pre-import state, written alongside the
+  /// main store file. Must never throw or block the import it precedes.
+  Future<void> _backupBeforeImport(Map<String, dynamic> snapshot) async {
+    try {
+      final ts = DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
+      final backupFile = File(p.join(File(filePath).parent.path, 'pre-import-backup-$ts.json'));
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
+      await backupFile.writeAsString(jsonStr, flush: true);
+    } catch (_) {}
   }
 
   Future<void> _persist() async {
@@ -430,15 +458,31 @@ class AppStore {
   Map<String, dynamic> exportAllData() => _requireData.toExportJson();
 
   /// Replaces ALL data with the contents of an imported backup. Returns a
-  /// snapshot of the previous state (useful for a future undo).
+  /// snapshot of the previous state (useful for a future undo). The same
+  /// snapshot is also written to disk first (best-effort) so an accidental
+  /// import of the wrong file — confirmed by the user, but still a one-way
+  /// door in the UI today — leaves a recovery copy behind.
   Future<Map<String, dynamic>> importAllData(Map<String, dynamic> imported) async {
     final data = _requireData;
     final snapshot = exportAllData();
+    await _backupBeforeImport(snapshot);
 
+    // Mirrors AppData.fromDynamic's per-entry recovery: one malformed row in
+    // an otherwise-valid backup (e.g. from a slightly different schema
+    // version) should be skipped, not abort the whole import.
     List<T> parseList<T>(String key, T Function(Map<String, dynamic>) fromJson) {
       final raw = imported[key];
       if (raw is! List) return <T>[];
-      return raw.whereType<Map>().map((m) => fromJson(Map<String, dynamic>.from(m))).toList();
+      final result = <T>[];
+      for (final item in raw) {
+        if (item is! Map) continue;
+        try {
+          result.add(fromJson(Map<String, dynamic>.from(item)));
+        } catch (_) {
+          // Skip malformed entry, keep the rest of the import usable.
+        }
+      }
+      return result;
     }
 
     final accounts = parseList('accounts', Account.fromJson);

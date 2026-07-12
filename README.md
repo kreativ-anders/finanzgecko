@@ -249,6 +249,41 @@ bauen.
 | `lib/ui/widgets/` | Wiederverwendbare Bausteine: Linienchart/Donut (`fl_chart`), Monatsauswahl, Vorzeichen-Umschalter, Banner |
 | `packaging/linux/` | `.desktop`-Datei + `install.sh` für Startmenü-/Taskleisten-Icon unter Wayland/X11 |
 | `.github/workflows/release.yml` | CI: baut bei jedem Tag-Push die drei Plattform-Bundles (je ein nativer Runner pro OS) und hängt sie ans GitHub-Release |
+| `assets/icon/icon.png` | App-Icon-Master (1024×1024), Quelle für alle Plattform-Icons (siehe "App-Icon aktualisieren") |
+| `tool/generate_icons.dart` | Einziger Befehl für die komplette Icon-Pipeline: macOS/Windows via `flutter_launcher_icons`, Linux-Hicolor-Icons per Skalierung aus dem Master |
+
+## App-Icon aktualisieren
+
+Jede Plattform bringt ihr eigenes Icon-Format mit (macOS ein `.appiconset` mit
+mehreren PNG-Größen, Windows eine mehrschichtige `.ico`, Linux einzelne PNGs
+im Hicolor-Theme). Statt diese Kopien einzeln zu pflegen, gibt es einen
+Master, aus dem alles generiert wird:
+
+- **Master:** `assets/icon/icon.png`, 1024×1024 PNG. Beim Ersetzen auf
+  quadratisch und mindestens 1024×1024 achten (macOS' größte Variante braucht
+  genau diese Auflösung, kleineres Ausgangsbild würde hochskaliert und
+  unscharf).
+- **Ein Befehl für alle drei Plattformen:**
+
+  ```bash
+  dart run tool/generate_icons.dart
+  ```
+
+  Ruft intern
+  [`flutter_launcher_icons`](https://pub.dev/packages/flutter_launcher_icons)
+  auf (Konfiguration am Ende von `pubspec.yaml`) und schreibt direkt nach
+  `macos/Runner/Assets.xcassets/AppIcon.appiconset/` und
+  `windows/runner/resources/app_icon.ico`. Skaliert denselben Master
+  anschließend zusätzlich auf die Linux-Hicolor-Größen
+  (`icons/icon-512.png`, `icons/icon-192.png`) — dafür gibt es in
+  `flutter_launcher_icons` kein eigenes Target, das Taskleisten-/
+  Startmenü-Icon läuft dort stattdessen über `packaging/linux/install.sh`
+  (siehe "Als Desktop-Anwendung installieren" oben), das die generierten
+  PNGs beim nächsten Lauf installiert.
+
+Nach jedem Austausch von `assets/icon/icon.png` einmal ausführen und die
+generierten Dateien mit committen — sie werden nicht automatisch im Build
+erzeugt.
 
 ## Warum weiterhin keine Datenbank-Engine
 

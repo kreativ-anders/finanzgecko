@@ -16,9 +16,9 @@ class WindowPrefs {
   factory WindowPrefs.defaults() => const WindowPrefs(width: 1280, height: 860, maximized: true);
 
   factory WindowPrefs.fromJson(Map<String, dynamic> json) => WindowPrefs(
-    width: (json['width'] as num?)?.toDouble() ?? 1280,
-    height: (json['height'] as num?)?.toDouble() ?? 860,
-    maximized: json['maximized'] as bool? ?? true,
+    width: json['width'] is num ? (json['width'] as num).toDouble() : 1280,
+    height: json['height'] is num ? (json['height'] as num).toDouble() : 860,
+    maximized: json['maximized'] is bool ? json['maximized'] as bool : true,
   );
 
   Map<String, dynamic> toJson() => {'width': width, 'height': height, 'maximized': maximized};
@@ -108,20 +108,34 @@ class AppData {
     final windowRaw = (json['window'] is Map) ? Map<String, dynamic>.from(json['window'] as Map) : null;
     final ratesRaw = (json['ratesCache'] is Map) ? Map<String, dynamic>.from(json['ratesCache'] as Map) : <String, dynamic>{};
 
+    // Cached rates are just an optimization (re-fetchable from the API), so a
+    // single malformed entry here must never cost the caller its accounts,
+    // balances, assets and subscriptions — skip the bad entry instead of
+    // throwing, which would otherwise abort parsing of the whole file.
+    final ratesCache = <String, double>{};
+    for (final entry in ratesRaw.entries) {
+      final v = entry.value;
+      if (v is num) ratesCache[entry.key] = v.toDouble();
+    }
+
+    final lastExportAtRaw = meta['lastExportAt'];
+
     return AppData(
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? currentSchemaVersion,
-      baseCurrency: json['baseCurrency'] as String? ?? 'EUR',
-      defaultSubscriptionInterval: json['defaultSubscriptionInterval'] as String? ?? 'monthly',
+      baseCurrency: json['baseCurrency'] is String ? json['baseCurrency'] as String : 'EUR',
+      defaultSubscriptionInterval: json['defaultSubscriptionInterval'] is String
+          ? json['defaultSubscriptionInterval'] as String
+          : 'monthly',
       accounts: parseList('accounts', Account.fromJson),
       balances: parseList('balances', Balance.fromJson),
       assets: parseList('assets', Asset.fromJson),
       subscriptions: parseList('subscriptions', Subscription.fromJson),
-      ratesCache: ratesRaw.map((k, v) => MapEntry(k, (v as num).toDouble())),
+      ratesCache: ratesCache,
       nextAccountId: (meta['nextAccountId'] as num?)?.toInt() ?? 1,
       nextBalanceId: (meta['nextBalanceId'] as num?)?.toInt() ?? 1,
       nextAssetId: (meta['nextAssetId'] as num?)?.toInt() ?? 1,
       nextSubscriptionId: (meta['nextSubscriptionId'] as num?)?.toInt() ?? 1,
-      lastExportAt: meta['lastExportAt'] != null ? DateTime.tryParse(meta['lastExportAt'] as String) : null,
+      lastExportAt: lastExportAtRaw is String ? DateTime.tryParse(lastExportAtRaw) : null,
       window: windowRaw != null ? WindowPrefs.fromJson(windowRaw) : WindowPrefs.defaults(),
     );
   }

@@ -358,7 +358,10 @@ class _AccountEditFormState extends State<_AccountEditForm> {
   }
 
   Future<void> _save() async {
-    if (_nameCtrl.text.trim().isEmpty) return;
+    if (_nameCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte einen Namen eingeben.')));
+      return;
+    }
     final bank = _bankCtrl.text.trim();
     try {
       await context.read<AppState>().updateAccount(

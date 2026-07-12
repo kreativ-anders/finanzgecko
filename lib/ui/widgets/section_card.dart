@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme.dart';
+
 class SectionCard extends StatelessWidget {
   const SectionCard({super.key, this.title, required this.child, this.expandChild = false});
 
@@ -41,6 +43,6 @@ class EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: const TextStyle(color: Color(0xFF7C8A83), fontStyle: FontStyle.italic));
+    return Text(text, style: const TextStyle(color: kMuted, fontStyle: FontStyle.italic));
   }
 }

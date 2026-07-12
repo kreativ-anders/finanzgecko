@@ -8,6 +8,7 @@ import 'data/app_data.dart';
 import 'data/app_store.dart';
 import 'state/app_state.dart';
 import 'ui/app_shell.dart';
+import 'ui/splash_screen.dart';
 import 'ui/theme.dart';
 
 /// Persists window size + maximized state (best-effort, debounced) so the
@@ -86,7 +87,7 @@ class FinanzGeckoApp extends StatelessWidget {
         title: 'FinanzGecko',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
-        home: const AppShell(),
+        home: const SplashScreen(child: AppShell()),
       ),
     );
   }

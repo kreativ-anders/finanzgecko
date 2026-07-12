@@ -74,6 +74,7 @@ class _EntriesViewState extends State<EntriesView> {
     final rateCache = <String, double?>{};
     var saved = 0;
     var failed = 0;
+    var invalid = 0;
 
     setState(() => _notice = 'Wird gespeichert …');
 
@@ -82,7 +83,10 @@ class _EntriesViewState extends State<EntriesView> {
       final raw = ctrl?.text.trim() ?? '';
       if (raw.isEmpty) continue;
       final amount = double.tryParse(raw.replaceAll(',', '.'));
-      if (amount == null) continue;
+      if (amount == null) {
+        invalid++;
+        continue;
+      }
 
       if (!rateCache.containsKey(acc.currency)) {
         var rate = (await app.currencyService.getExchangeRate(acc.currency, app.baseCurrency, dateISO))?.rate;
@@ -114,6 +118,7 @@ class _EntriesViewState extends State<EntriesView> {
     _syncControllers(app);
     final parts = ['$saved ${saved == 1 ? 'Konto' : 'Konten'} gespeichert.'];
     if (failed > 0) parts.add('$failed ohne Kurs übersprungen.');
+    if (invalid > 0) parts.add('$invalid mit ungültigem Betrag übersprungen.');
     setState(() => _notice = parts.join(' '));
   }
 
