@@ -298,11 +298,38 @@ hält den Code einfach.
 - **macOS:** `~/Library/Application Support/de.finanzgecko.app/finanzgecko-data.json`
 - **Windows:** `%APPDATA%\de.finanzgecko.app\finanzgecko-data.json`
 
-Die Datei ist unverschlüsselt. Vertraulichkeit gegenüber anderen lokalen
-OS-Accounts wird über Dateirechte hergestellt (`chmod 0700` fürs
-Datenverzeichnis, `0600` für die Datei, unter Linux/macOS) — nicht über
-Verschlüsselung. Unter Windows ist das (mangels POSIX-Rechten) nicht
-anwendbar; dort schützt allein das Benutzerprofil-ACL des Betriebssystems.
+Die Datei ist AES-256-GCM-verschlüsselt (`lib/data/app_store.dart`,
+`lib/data/secure_key_store.dart`): Der Schlüssel liegt nicht in der Datei
+selbst, sondern im OS-eigenen Credential-Speicher (Windows Credential
+Locker, macOS Keychain, Linux libsecret/kwallet) und wird beim ersten
+Start pro Installation erzeugt. Eine alte, unverschlüsselte Datei aus
+einer Version vor diesem Wechsel wird beim nächsten Start automatisch
+gelesen und als verschlüsselte Envelope neu geschrieben — kein manueller
+Migrationsschritt nötig. Dateirechte (`chmod 0700` fürs Datenverzeichnis,
+`0600` für die Datei, unter Linux/macOS; ACL via `icacls` unter Windows)
+bleiben zusätzlich als Verteidigungsebene bestehen.
+
+**macOS:** `SecureKeyStore` (`lib/data/secure_key_store.dart`) übergibt
+`MacOsOptions(useDataProtectionKeyChain: false)` an `FlutterSecureStorage`.
+Der Plugin-Default (`true`) nutzt die "Data Protection"-Keychain-Variante,
+die den Schlüssel-Eintrag an die Team-ID der Code-Signatur bindet — bei
+einem unsigniert/ad-hoc-signierten, über GitHub Releases verteilten Build
+(kein Apple-Developer-Team) bricht das beim ersten Schlüssel-Zugriff mit
+`PlatformException(..., -34018, "A required entitlement isn't
+present.")` ab. Die klassische Keychain-Variante (`false`) braucht keine
+Team-ID und funktioniert dadurch auch ohne Code-Signing-Zertifikat.
+
+**macOS: App-Sandbox bewusst deaktiviert**
+(`com.apple.security.app-sandbox = false` in beiden
+`macos/Runner/*.entitlements`) — nicht wegen des Keychain-Fehlers oben,
+sondern wegen des Datenverzeichnisses selbst: Mit aktiver Sandbox
+virtualisiert macOS `$HOME` für den Prozess auf einen Container-Pfad
+(`~/Library/Containers/de.finanzgecko.app/Data/...`), sodass
+`resolveDataDirectory()` in `app_store.dart` nicht mehr im oben
+dokumentierten, mit der alten Neutralino-Version geteilten Pfad landet —
+die automatische Migration bestehender Installationen würde damit
+stillschweigend ins Leere laufen. Ohne Sandbox schreibt die App direkt in
+den echten, dokumentierten Pfad.
 
 Export/Import laufen über native Save/Open-Dialoge (`file_selector`), nicht
 über Browser-Downloads.
@@ -392,6 +419,13 @@ fehlt, der Ordner selbst aber noch da). Für diese App irrelevant, da kein
 Android-Target gebaut wird — entweder den verwaisten Ordner unter
 `%LOCALAPPDATA%\Google\` löschen oder den Fehler ignorieren; `flutter pub
 get` / `flutter build windows` laufen davon unbeeinflusst durch.
+
+**macOS: App stürzt beim ersten Start mit `PlatformException(...,
+-34018, "A required entitlement isn't present.")` ab:** Siehe "Warum
+weiterhin keine Datenbank-Engine" oben — Fix steht bereits in
+`lib/data/secure_key_store.dart` (`useDataProtectionKeyChain: false`).
+Tritt nur auf, falls dieser Parameter in einem künftigen Refactoring
+versehentlich entfernt wird.
 
 **Wechselkurs-Abfrage schlägt fehl / "offline":** Beim Erfassen eines
 Kontostands oder Fixpostens in einer Fremdwährung fragt die App bei

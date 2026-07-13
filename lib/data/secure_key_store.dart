@@ -14,7 +14,15 @@ const String _keyName = 'finanzgecko_dek';
 class SecureKeyStore {
   const SecureKeyStore();
 
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  // useDataProtectionKeyChain defaults to true, but that keychain variant
+  // ties the item to the app's Team-ID-derived access group. This app is
+  // built ad-hoc/unsigned (no Apple Developer Team, distributed via GitHub
+  // releases), which has no Team ID — SecItemAdd then fails with
+  // errSecMissingEntitlement (-34018). Falling back to the legacy
+  // (non-data-protection) keychain avoids that requirement.
+  static const FlutterSecureStorage _storage = FlutterSecureStorage(
+    mOptions: MacOsOptions(useDataProtectionKeyChain: false),
+  );
 
   Future<SecretKey> getOrCreateKey() async {
     final existing = await _storage.read(key: _keyName);
