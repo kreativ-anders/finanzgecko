@@ -214,11 +214,14 @@ class _HistoryCardState extends State<_HistoryCard> {
   _HistoryPreset _preset = _HistoryPreset.ytd;
 
   List<String> _filteredPeriods() {
-    final currentYear = DateTime.now().year;
+    final now = DateTime.now();
+    final currentYear = now.year;
     int yearOf(String p) => int.parse(p.split('-')[0]);
+    int monthOf(String p) => int.parse(p.split('-')[1]);
     switch (_preset) {
       case _HistoryPreset.twelveMonths:
-        return widget.periods.length <= 12 ? widget.periods : widget.periods.sublist(widget.periods.length - 12);
+        final cutoff = DateTime(now.year, now.month - 11);
+        return widget.periods.where((p) => !DateTime(yearOf(p), monthOf(p)).isBefore(cutoff)).toList();
       case _HistoryPreset.ytd:
         return widget.periods.where((p) => yearOf(p) == currentYear).toList();
       case _HistoryPreset.lastYear:
