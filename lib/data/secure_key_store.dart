@@ -21,7 +21,7 @@ class SecureKeyStore {
   // errSecMissingEntitlement (-34018). Falling back to the legacy
   // (non-data-protection) keychain avoids that requirement.
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
-    mOptions: MacOsOptions(useDataProtectionKeyChain: false),
+    mOptions: MacOsOptions(usesDataProtectionKeychain: false),
   );
 
   Future<SecretKey> getOrCreateKey() async {
