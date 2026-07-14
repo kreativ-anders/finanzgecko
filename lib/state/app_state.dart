@@ -186,6 +186,16 @@ class AppState extends ChangeNotifier {
     return '$n Vermögenswert${n == 1 ? '' : 'e'} seit über 6 Monaten nicht neu bewertet: $names';
   }
 
+  /// Nudge to keep the monthly ritual going: fires when there's history but no
+  /// balance entry for the current month yet. Null when up to date (or empty).
+  String? getUpdateReminder() {
+    if (balances.isEmpty) return null;
+    final latest = balances.map((b) => b.period).reduce((a, b) => a.compareTo(b) > 0 ? a : b);
+    final current = currentPeriod();
+    if (latest.compareTo(current) >= 0) return null;
+    return 'Letzte Erfassung: ${periodLabel(latest)}. Kontostände für ${periodLabel(current)} aktualisieren?';
+  }
+
   // ---------- Fixposten ----------
 
   Future<void> addSubscription({

@@ -11,6 +11,20 @@ class ChartPoint {
   const ChartPoint(this.label, this.value);
 }
 
+/// A deterministic forward projection for [AppLineChart]: extend the line
+/// [months] steps past the last real point, each step adding [monthlyDelta]
+/// (e.g. the current Fixposten net per month). Unlike the least-squares
+/// [AppLineChart.showTrend] line, this doesn't fit past noise — it applies a
+/// known, explainable monthly rate. [endLabel] is the period shown at the
+/// projected endpoint. Takes precedence over [showTrend] when set.
+class ChartForecast {
+  final double monthlyDelta;
+  final int months;
+  final String endLabel;
+
+  const ChartForecast({required this.monthlyDelta, required this.months, this.endLabel = ''});
+}
+
 /// Small, non-interactive line chart mirroring the previous hand-rolled SVG
 /// version: gaps (null values) are drawn as real gaps, not connected, and a
 /// dashed zero-line appears when values cross zero (e.g. credit accounts).
@@ -24,6 +38,7 @@ class AppLineChart extends StatelessWidget {
     this.showMinMax = false,
     this.showTrend = false,
     this.showHover = false,
+    this.forecast,
     this.currency = '',
   });
 
@@ -40,8 +55,13 @@ class AppLineChart extends StatelessWidget {
   final bool showMinMax;
 
   /// Adds a dashed least-squares trend line, projected one period past the
-  /// last real point. Needs at least 2 points; a no-op otherwise.
+  /// last real point. Needs at least 2 points; a no-op otherwise. Ignored
+  /// when [forecast] is set.
   final bool showTrend;
+
+  /// A deterministic forward projection from a known monthly rate (the
+  /// Fixposten net). When set, replaces the [showTrend] regression line.
+  final ChartForecast? forecast;
 
   /// Adds a mouse-hover crosshair + tooltip showing the period and value.
   final bool showHover;
@@ -90,7 +110,7 @@ class AppLineChart extends StatelessWidget {
     // doesn't actually have.
     double? trendSlope;
     double? trendIntercept;
-    if (showTrend && values.length >= 2) {
+    if (showTrend && forecast == null && values.length >= 2) {
       final xs = <double>[];
       final ys = <double>[];
       for (var i = 0; i < points.length; i++) {
@@ -115,6 +135,22 @@ class AppLineChart extends StatelessWidget {
     }
 
     final lastIndex = points.length - 1;
+
+    // Deterministic forward projection from a known monthly rate (the
+    // Fixposten net), anchored at the last real value. Takes precedence over
+    // the regression trend, which is skipped entirely when a forecast is set.
+    final fc = forecast;
+    double? lastRealValue;
+    for (var i = points.length - 1; i >= 0; i--) {
+      if (points[i].value != null) {
+        lastRealValue = points[i].value;
+        break;
+      }
+    }
+    final useForecast = fc != null && fc.months > 0 && lastRealValue != null;
+    final forecastEndX = useForecast ? (lastIndex + fc.months).toDouble() : null;
+    final forecastEndValue = useForecast ? lastRealValue + fc.monthlyDelta * fc.months : null;
+
     final hasTrend = trendSlope != null && trendIntercept != null;
     final projectedX = (lastIndex + 1).toDouble();
     final projectedY = hasTrend ? trendIntercept + trendSlope * projectedX : null;
@@ -124,6 +160,10 @@ class AppLineChart extends StatelessWidget {
     if (projectedY != null) {
       if (projectedY < chartMin) chartMin = projectedY;
       if (projectedY > chartMax) chartMax = projectedY;
+    }
+    if (forecastEndValue != null) {
+      if (forecastEndValue < chartMin) chartMin = forecastEndValue;
+      if (forecastEndValue > chartMax) chartMax = forecastEndValue;
     }
     final range = (chartMax - chartMin) == 0 ? 1.0 : (chartMax - chartMin);
     // Min/max labels need real pixel headroom above/below the line, not just
@@ -179,7 +219,33 @@ class AppLineChart extends StatelessWidget {
           )
         : null;
 
-    final chartMaxX = (hasTrend ? projectedX : lastIndex.toDouble()).clamp(0.0, double.infinity);
+    // Dashed forward projection driven by the known monthly rate, anchored at
+    // the last real point. Direction color mirrors the regression trend logic.
+    final forecastColor = useForecast
+        ? () {
+            final totalChange = fc.monthlyDelta * fc.months;
+            final threshold = (max - min).abs() * 0.05;
+            if (totalChange.abs() <= threshold) return kTrendNeutral;
+            return totalChange > 0 ? kTrendUp : kTrendDown;
+          }()
+        : kTrendNeutral;
+    final forecastBar = useForecast
+        ? LineChartBarData(
+            spots: [FlSpot(lastIndex.toDouble(), lastRealValue), FlSpot(forecastEndX!, forecastEndValue!)],
+            isCurved: false,
+            color: forecastColor,
+            barWidth: 1.5,
+            dashArray: const [3, 4],
+            dotData: FlDotData(
+              checkToShowDot: (spot, bar) => spot.x == forecastEndX,
+              getDotPainter: (spot, percent, bar, index) =>
+                  FlDotCirclePainter(radius: 3, color: kSurface, strokeWidth: 1.5, strokeColor: forecastColor),
+            ),
+          )
+        : null;
+
+    final chartMaxX = (useForecast ? forecastEndX! : (hasTrend ? projectedX : lastIndex.toDouble()))
+        .clamp(0.0, double.infinity);
     final axisMinY = chartMin - padY;
     final axisMaxY = chartMax + padY;
 
@@ -202,7 +268,7 @@ class AppLineChart extends StatelessWidget {
                 ],
               )
             : const ExtraLinesData(),
-        lineBarsData: [mainBar, ?trendBar],
+        lineBarsData: [mainBar, ?trendBar, ?forecastBar],
       ),
     );
 
@@ -255,6 +321,32 @@ class AppLineChart extends StatelessWidget {
                           Positioned.fill(child: lineChart),
                           if (showMinMax) label(maxIndex, true),
                           if (showMinMax && minIndex != maxIndex) label(minIndex, false),
+                          // Value at the projected endpoint — the "where do I
+                          // land" figure — in the forecast color so it reads as
+                          // a projection, not a recorded value. Anchored to the
+                          // right edge since the endpoint sits at maxX.
+                          if (useForecast)
+                            () {
+                              final value = forecastEndValue!;
+                              final text = _fmtValue(value);
+                              final yFraction = (axisMaxY - value) / (axisMaxY - axisMinY);
+                              const gap = 8.0;
+                              const blockHeight = 16.0;
+                              final estWidth = text.length * 6.8 + 6;
+                              final left = (w - estWidth).clamp(0.0, w);
+                              final maxTop = (h - blockHeight).clamp(0.0, h);
+                              final rawTop = yFraction * h - gap - blockHeight;
+                              return Positioned(
+                                left: left,
+                                top: rawTop.clamp(0.0, maxTop),
+                                child: IgnorePointer(
+                                  child: Text(
+                                    text,
+                                    style: TextStyle(color: forecastColor, fontSize: 11, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              );
+                            }(),
                           // Painted last so its crosshair/tooltip sit above
                           // everything, including the min/max labels.
                           if (showHover)
@@ -276,7 +368,18 @@ class AppLineChart extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 4),
-          if (hasTrend)
+          if (useForecast)
+            Row(
+              children: [
+                Text(points.first.label, style: const TextStyle(color: kMuted, fontSize: 11)),
+                Expanded(flex: lastIndex > 0 ? lastIndex : 1, child: const SizedBox()),
+                Text(
+                  fc.endLabel.isEmpty ? 'Prognose' : '${fc.endLabel} (Prognose)',
+                  style: const TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
+                ),
+              ],
+            )
+          else if (hasTrend)
             Row(
               children: [
                 Text(points.first.label, style: const TextStyle(color: kMuted, fontSize: 11)),

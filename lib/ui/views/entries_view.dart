@@ -29,11 +29,15 @@ class _EntriesViewState extends State<EntriesView> {
   bool _onlyMissing = false;
   String _notice = '';
   final Map<int, TextEditingController> _controllers = {};
+  final Map<int, FocusNode> _focusNodes = {};
 
   @override
   void dispose() {
     for (final c in _controllers.values) {
       c.dispose();
+    }
+    for (final n in _focusNodes.values) {
+      n.dispose();
     }
     super.dispose();
   }
@@ -45,6 +49,8 @@ class _EntriesViewState extends State<EntriesView> {
     _controllers[accountId] = ctrl;
     return ctrl;
   }
+
+  FocusNode _focusNodeFor(int accountId) => _focusNodes.putIfAbsent(accountId, FocusNode.new);
 
   void _syncControllers(AppState app) {
     for (final accountId in _controllers.keys) {
@@ -59,6 +65,44 @@ class _EntriesViewState extends State<EntriesView> {
       _notice = '';
       _syncControllers(app);
     });
+  }
+
+  /// Best-effort exchange rate for the live running total, without hitting the
+  /// network: 1 for base-currency accounts, otherwise the rate from this
+  /// account's last stored balance (or any recent balance in that currency).
+  /// Returns null when nothing is available to estimate with.
+  double? _rateEstimate(AppState app, Account acc) {
+    if (acc.currency == app.baseCurrency) return 1;
+    final prev = app.previousBalance(acc.id, _period);
+    if (prev != null && prev.currencyOriginal == acc.currency && prev.rate != 0) return prev.rate;
+    final sameCurrency = app.balances.where((b) => b.currencyOriginal == acc.currency && b.rate != 0).toList()
+      ..sort((a, b) => a.period.compareTo(b.period));
+    return sameCurrency.isEmpty ? null : sameCurrency.last.rate;
+  }
+
+  /// Running preview of what "Alle speichern" will produce, computed from the
+  /// text fields as the user types — no network, using [_rateEstimate].
+  _LiveTotals _computeLiveTotals(AppState app) {
+    var running = 0.0;
+    var baseline = 0.0;
+    var filled = 0;
+    var withoutRate = 0;
+    for (final acc in app.accounts) {
+      final raw = _controllers[acc.id]?.text.trim() ?? '';
+      if (raw.isEmpty) continue;
+      final amount = parseInputNumber(raw);
+      if (amount == null) continue;
+      final rate = _rateEstimate(app, acc);
+      if (rate == null) {
+        withoutRate++;
+        continue;
+      }
+      running += amount * rate;
+      filled++;
+      final prev = app.previousBalance(acc.id, _period);
+      if (prev != null) baseline += prev.amountBase;
+    }
+    return _LiveTotals(running: running, delta: running - baseline, filled: filled, withoutRate: withoutRate);
   }
 
   Future<void> _submit(AppState app) async {
@@ -136,10 +180,7 @@ class _EntriesViewState extends State<EntriesView> {
                 style: TextStyle(color: kMuted),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => widget.onNavigate(AppView.accounts),
-                child: noSelect(const Text('Konto anlegen')),
-              ),
+              ElevatedButton(onPressed: () => widget.onNavigate(AppView.accounts), child: noSelect(const Text('Konto anlegen'))),
             ],
           ),
         ),
@@ -150,9 +191,8 @@ class _EntriesViewState extends State<EntriesView> {
     final activeIds = app.accounts.map((a) => a.id).toSet();
     final balanceByAccount = {for (final b in periodBalances) b.accountId: b};
     final orphanBalances = periodBalances.where((b) => !activeIds.contains(b.accountId)).toList();
-    final visibleAccounts = app.accounts
-        .where((acc) => !(_onlyMissing && balanceByAccount.containsKey(acc.id)))
-        .toList();
+    final visibleAccounts = app.accounts.where((acc) => !(_onlyMissing && balanceByAccount.containsKey(acc.id))).toList();
+    final totals = _computeLiveTotals(app);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,29 +235,27 @@ class _EntriesViewState extends State<EntriesView> {
                     children: [
                       const Text(
                         'Auch rückwirkend möglich — einfach den passenden Monat wählen. Ein bestehender Eintrag für Konto + '
-                        'Monat wird überschrieben. Leere Felder werden übersprungen.',
+                        'Monat wird überschrieben. Leere Felder werden übersprungen. Enter springt zum nächsten Konto.',
                         style: TextStyle(color: kMuted),
                       ),
                       const SizedBox(height: 16),
                       if (visibleAccounts.isEmpty)
-                        Text(
-                          'Für ${periodLabel(_period)} sind bereits alle Konten erfasst.',
-                          style: const TextStyle(color: kMuted),
-                        )
+                        Text('Für ${periodLabel(_period)} sind bereits alle Konten erfasst.', style: const TextStyle(color: kMuted))
                       else
-                        for (final acc in visibleAccounts)
+                        for (var i = 0; i < visibleAccounts.length; i++)
                           _EntryRow(
-                            account: acc,
-                            controller: _controllerFor(acc.id, balanceByAccount[acc.id]),
+                            account: visibleAccounts[i],
+                            controller: _controllerFor(visibleAccounts[i].id, balanceByAccount[visibleAccounts[i].id]),
+                            focusNode: _focusNodeFor(visibleAccounts[i].id),
+                            nextFocusNode: i < visibleAccounts.length - 1 ? _focusNodeFor(visibleAccounts[i + 1].id) : null,
+                            autofocus: i == 0,
                             app: app,
                             period: _period,
-                            existing: balanceByAccount[acc.id],
+                            existing: balanceByAccount[visibleAccounts[i].id],
+                            onChanged: () => setState(() {}),
+                            onSubmitLast: () => _submit(app),
                             onNavigate: widget.onNavigate,
                           ),
-                      const SizedBox(height: 8),
-                      if (_notice.isNotEmpty) Text(_notice, style: const TextStyle(color: kMuted)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(onPressed: () => _submit(app), child: noSelect(const Text('Alle speichern'))),
                     ],
                   ),
                 ),
@@ -229,7 +267,92 @@ class _EntriesViewState extends State<EntriesView> {
             ),
           ),
         ),
+        _SaveFooter(
+          totals: totals,
+          notice: _notice,
+          baseCurrency: app.baseCurrency,
+          onSave: () => _submit(app),
+        ),
       ],
+    );
+  }
+}
+
+/// Immutable snapshot of the live preview shown in the footer.
+class _LiveTotals {
+  const _LiveTotals({required this.running, required this.delta, required this.filled, required this.withoutRate});
+
+  final double running;
+  final double delta;
+  final int filled;
+  final int withoutRate;
+}
+
+/// Sticky bottom bar: running net-worth preview + delta vs. the previous
+/// stored values, plus the single "Alle speichern" action — always reachable
+/// without scrolling, however long the account list gets.
+class _SaveFooter extends StatelessWidget {
+  const _SaveFooter({required this.totals, required this.notice, required this.baseCurrency, required this.onSave});
+
+  final _LiveTotals totals;
+  final String notice;
+  final String baseCurrency;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: kBorder)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (totals.filled == 0)
+                  const Text('Noch nichts eingegeben', style: TextStyle(color: kMuted))
+                else
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 10,
+                    children: [
+                      const Text('Zwischensumme', style: TextStyle(color: kMuted, fontSize: 13)),
+                      Text(
+                        fmtMoney(totals.running, baseCurrency),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${totals.delta >= 0 ? '+' : ''}${fmtMoney(totals.delta, baseCurrency)} ggü. vorherigem Stand',
+                        style: TextStyle(color: totals.delta >= 0 ? kPrimary : kDanger, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                if (totals.withoutRate > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '${totals.withoutRate} Konto${totals.withoutRate == 1 ? '' : 'en'} in Fremdwährung ohne Kursschätzung — '
+                      'Kurs wird beim Speichern abgefragt.',
+                      style: const TextStyle(color: kMuted, fontSize: 12),
+                    ),
+                  ),
+                if (notice.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(notice, style: const TextStyle(color: kMuted, fontSize: 12)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          ElevatedButton(onPressed: onSave, child: noSelect(const Text('Alle speichern'))),
+        ],
+      ),
     );
   }
 }
@@ -238,17 +361,27 @@ class _EntryRow extends StatelessWidget {
   const _EntryRow({
     required this.account,
     required this.controller,
+    required this.focusNode,
+    required this.nextFocusNode,
+    required this.autofocus,
     required this.app,
     required this.period,
     required this.existing,
+    required this.onChanged,
+    required this.onSubmitLast,
     required this.onNavigate,
   });
 
   final Account account;
   final TextEditingController controller;
+  final FocusNode focusNode;
+  final FocusNode? nextFocusNode;
+  final bool autofocus;
   final AppState app;
   final String period;
   final Balance? existing;
+  final VoidCallback onChanged;
+  final VoidCallback onSubmitLast;
   final ValueChanged<AppView> onNavigate;
 
   Future<void> _delete(BuildContext context) async {
@@ -276,55 +409,109 @@ class _EntryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final prev = app.previousBalance(account.id, period);
+
+    // Order-of-magnitude guard: a value 10x larger or smaller than this
+    // account's last balance is almost always a mistyped digit. Non-blocking —
+    // just a hint, since a genuine large move is still allowed to be saved.
+    final entered = parseInputNumber(controller.text.trim());
+    final prevAmount = prev?.amountOriginal;
+    String? anomaly;
+    if (entered != null && entered != 0 && prevAmount != null && prevAmount.abs() > 0) {
+      final ratio = entered.abs() / prevAmount.abs();
+      if (ratio >= 10 || ratio <= 0.1) {
+        anomaly = 'Ungewöhnlich: ${ratio >= 10 ? 'viel größer' : 'viel kleiner'} als zuletzt '
+            '(${fmtMoney(prevAmount, account.currency)}). Tippfehler?';
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text.rich(
-                  TextSpan(
-                    text: account.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                    children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
                       TextSpan(
-                        text: '  (${account.currency})',
-                        style: const TextStyle(color: kMuted, fontWeight: FontWeight.normal),
+                        text: account.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        children: [
+                          TextSpan(
+                            text: '  (${account.currency})',
+                            style: const TextStyle(color: kMuted, fontWeight: FontWeight.normal),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                    Text(
+                      prev != null ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})' : '',
+                      style: const TextStyle(color: kMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  autofocus: autofocus,
+                  onChanged: (_) => onChanged(),
+                  textInputAction: nextFocusNode != null ? TextInputAction.next : TextInputAction.done,
+                  onSubmitted: (_) {
+                    final next = nextFocusNode;
+                    if (next != null) {
+                      next.requestFocus();
+                    } else {
+                      onSubmitLast();
+                    }
+                  },
+                  textAlign: TextAlign.right,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  // Last month's value as an in-field ghost: most months the
+                  // user only nudges a digit instead of retyping from scratch.
+                  decoration: InputDecoration(
+                    labelText: 'Betrag',
+                    hintText: prev != null ? fmtInputNumber(prev.amountOriginal) : '0,00',
                   ),
                 ),
-                Text(
-                  prev != null
-                      ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})'
-                      : '',
-                  style: const TextStyle(color: kMuted, fontSize: 12),
-                ),
-              ],
-            ),
+              ),
+              SizedBox(
+                width: 40,
+                child: existing == null
+                    ? null
+                    : IconButton(
+                        tooltip: 'Eintrag löschen',
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        onPressed: () => _delete(context),
+                      ),
+              ),
+            ],
           ),
-          SizedBox(
-            width: 160,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.right,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-              decoration: const InputDecoration(labelText: 'Betrag', hintText: '0,00'),
-            ),
-          ),
-          SizedBox(
-            width: 40,
-            child: existing == null
-                ? null
-                : IconButton(
-                    tooltip: 'Eintrag löschen',
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    onPressed: () => _delete(context),
+          if (anomaly != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, right: 40),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 13, color: kTrendDown),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      anomaly,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(color: kTrendDown, fontSize: 12),
+                    ),
                   ),
-          ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -385,9 +572,7 @@ class _OrphanRow extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eintrag löschen'),
-        content: Text(
-          'Eintrag für ${account?.name ?? 'unbekanntes Konto'} · ${periodLabel(balance.period)} wirklich löschen?',
-        ),
+        content: Text('Eintrag für ${account?.name ?? 'unbekanntes Konto'} · ${periodLabel(balance.period)} wirklich löschen?'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
           ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Löschen'))),

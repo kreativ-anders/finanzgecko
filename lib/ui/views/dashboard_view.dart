@@ -25,7 +25,11 @@ class DashboardView extends StatelessWidget {
     final assetReminder = app.getAssetReminder();
     final totals = app.computeSubscriptionTotals();
 
+    final updateReminder = app.getUpdateReminder();
+
     final banners = <Widget>[
+      if (updateReminder != null)
+        InfoBanner(message: updateReminder, actionLabel: 'Jetzt erfassen', onAction: () => onNavigate(AppView.entries)),
       if (app.subscriptions.isNotEmpty && totals.net < 0)
         OverspendBanner(
           expenseText: fmtMoney(totals.totalExpense, app.baseCurrency),
@@ -109,6 +113,13 @@ class _EmptyDashboard extends StatelessWidget {
   }
 }
 
+/// Whole calendar months from period [a] to [b] (both "YYYY-MM").
+int _monthsBetween(String a, String b) {
+  final pa = a.split('-');
+  final pb = b.split('-');
+  return (int.parse(pb[0]) - int.parse(pa[0])) * 12 + (int.parse(pb[1]) - int.parse(pa[1]));
+}
+
 class _TotalsOverview extends StatelessWidget {
   const _TotalsOverview({required this.periods, required this.app});
 
@@ -158,6 +169,24 @@ class _TotalsOverview extends StatelessWidget {
                 )
               else
                 const Text('Noch kein Vergleichsmonat', style: TextStyle(color: kMuted)),
+              // Split the change into what you added vs. what the market did:
+              // contributions are estimated from the Fixposten net (scaled by
+              // the month gap), the rest is market/other movement. Estimate —
+              // shown only when there are Fixposten to base it on.
+              if (delta != null && prevPeriod != null && app.subscriptions.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Builder(builder: (context) {
+                  final gap = _monthsBetween(prevPeriod, latestPeriod);
+                  final contributions = app.computeSubscriptionTotals().net * gap;
+                  final market = delta - contributions;
+                  final cur = app.baseCurrency;
+                  String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
+                  return Text(
+                    'geschätzt: ~${signed(contributions)} eingezahlt · ~${signed(market)} Markt/Sonstiges',
+                    style: const TextStyle(color: kMuted, fontSize: 12),
+                  );
+                }),
+              ],
               const SizedBox(height: 4),
               Text(
                 'Basiert auf $entriesInLatest von ${app.accounts.length} aktiven Konten mit Eintrag für diesen Monat.',
@@ -184,7 +213,12 @@ class _TotalsOverview extends StatelessWidget {
           ),
         ),
         cardGap,
-        _HistoryCard(periods: periods, totalForPeriod: _totalForPeriod, baseCurrency: app.baseCurrency),
+        _HistoryCard(
+          periods: periods,
+          totalForPeriod: _totalForPeriod,
+          baseCurrency: app.baseCurrency,
+          monthlyNet: app.computeSubscriptionTotals().net,
+        ),
       ],
     );
   }
@@ -205,12 +239,20 @@ extension on _HistoryPreset {
 /// filter. Kept as its own stateful widget so switching the range doesn't
 /// touch the headline figures above it, which always reflect the latest period.
 class _HistoryCard extends StatefulWidget {
-  const _HistoryCard({required this.periods, required this.totalForPeriod, required this.baseCurrency});
+  const _HistoryCard({
+    required this.periods,
+    required this.totalForPeriod,
+    required this.baseCurrency,
+    required this.monthlyNet,
+  });
 
   /// All periods with data, sorted ascending.
   final List<String> periods;
   final double Function(String period) totalForPeriod;
   final String baseCurrency;
+
+  /// Current Fixposten net per month — drives the forward projection.
+  final double monthlyNet;
 
   @override
   State<_HistoryCard> createState() => _HistoryCardState();
@@ -246,22 +288,125 @@ class _HistoryCardState extends State<_HistoryCard> {
     }
   }
 
+  /// "YYYY-MM" [months] after [period] (DateTime handles year rollover).
+  String _periodPlus(String period, int months) {
+    final parts = period.split('-');
+    final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]) + months);
+    return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
+  }
+
+  /// Months from [period] to the end of its calendar year — so the projection
+  /// answers "where do I land this year?" and stays proportional to the
+  /// visible history instead of always running a full 12 months out. December
+  /// has nowhere to go, so it projects a full year ahead instead of nothing.
+  int _monthsToYearEnd(String period) {
+    final remaining = 12 - int.parse(period.split('-')[1]);
+    return remaining <= 0 ? 12 : remaining;
+  }
+
+  /// Least-squares slope (change per month) of the actual totals over
+  /// [periods] — the observed trend. Null with fewer than two points or a
+  /// degenerate fit.
+  double? _trendSlopePerMonth(List<String> periods) {
+    if (periods.length < 2) return null;
+    final n = periods.length;
+    var xMean = 0.0;
+    var yMean = 0.0;
+    for (var i = 0; i < n; i++) {
+      xMean += i;
+      yMean += widget.totalForPeriod(periods[i]);
+    }
+    xMean /= n;
+    yMean /= n;
+    var numerator = 0.0;
+    var denominator = 0.0;
+    for (var i = 0; i < n; i++) {
+      final dx = i - xMean;
+      numerator += dx * (widget.totalForPeriod(periods[i]) - yMean);
+      denominator += dx * dx;
+    }
+    return denominator == 0 ? null : numerator / denominator;
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredPeriods();
     final chartData = [for (final p in filtered) ChartPoint(periodLabel(p), widget.totalForPeriod(p))];
 
+    // The projection is primarily statistical: a least-squares trend of the
+    // actual net-worth history, which already reflects everything that really
+    // happened — including the variable, non-Fixposten spending that can swing
+    // month to month. The Fixposten net is NOT added to it (that would
+    // double-count the recurring part the trend already contains); it only
+    // serves as a stabilizing prior while there's little history, and its
+    // weight decays as months accumulate, so with enough data the projection
+    // is effectively pure statistics. Only shown when the visible range
+    // includes the latest actual entry — never projecting from a stale anchor.
+    final net = widget.monthlyNet;
+    final includesLatest = filtered.isNotEmpty && widget.periods.isNotEmpty && filtered.last == widget.periods.last;
+    final months = includesLatest ? _monthsToYearEnd(filtered.last) : 0;
+
+    final planRate = net != 0 ? net : null;
+    final trendRate = _trendSlopePerMonth(filtered);
+    final trendPoints = filtered.length;
+    // Months of "pseudo-history" the Fixposten prior is worth: with this many
+    // real data points the trend and the prior weigh equally; beyond it the
+    // statistics dominate.
+    const priorStrength = 3.0;
+    final double? projectionRate;
+    if (trendRate != null && planRate != null) {
+      final wTrend = trendPoints / (trendPoints + priorStrength);
+      projectionRate = wTrend * trendRate + (1 - wTrend) * planRate;
+    } else {
+      projectionRate = trendRate ?? planRate;
+    }
+
+    final forecast = (months > 0 && projectionRate != null)
+        ? ChartForecast(
+            monthlyDelta: projectionRate,
+            months: months,
+            endLabel: periodLabel(_periodPlus(filtered.last, months)),
+          )
+        : null;
+
     return SectionCard(
       title: 'Verlauf',
       trailing: _PresetSelector(selected: _preset, onChanged: (p) => setState(() => _preset = p)),
-      child: AppLineChart(
-        points: chartData,
-        color: kPrimary,
-        filled: true,
-        showMinMax: true,
-        showTrend: true,
-        showHover: true,
-        currency: widget.baseCurrency,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppLineChart(
+            points: chartData,
+            color: kPrimary,
+            filled: true,
+            showMinMax: true,
+            forecast: forecast,
+            showHover: true,
+            currency: widget.baseCurrency,
+          ),
+          if (forecast != null) ...[
+            const SizedBox(height: 8),
+            Builder(builder: (context) {
+              final rate = forecast.monthlyDelta;
+              final delta = rate * forecast.months;
+              final total = widget.totalForPeriod(filtered.last) + delta;
+              final cur = widget.baseCurrency;
+              String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
+              final String basis;
+              if (trendRate != null && planRate != null) {
+                basis = 'Statistische Prognose aus $trendPoints Monaten, durch Fixposten stabilisiert';
+              } else if (trendRate != null) {
+                basis = 'Statistische Prognose aus $trendPoints Monaten';
+              } else {
+                basis = 'Prognose aus Fixposten-Saldo (noch zu wenig Verlauf für Statistik)';
+              }
+              return Text(
+                '$basis: ${signed(rate)}/Monat → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${signed(delta)}).',
+                style: const TextStyle(color: kMuted, fontSize: 12),
+              );
+            }),
+          ],
+        ],
       ),
     );
   }
