@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../constants.dart';
 import '../../models/account.dart';
 import '../../state/app_state.dart';
+import '../../utils/analysis.dart';
 import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
@@ -11,20 +12,71 @@ import '../widgets/banners.dart';
 import '../widgets/donut_chart.dart';
 import '../widgets/line_chart.dart';
 import '../widgets/section_card.dart';
+import '../widgets/stacked_area_chart.dart';
 
-class DashboardView extends StatelessWidget {
+class DashboardView extends StatefulWidget {
   const DashboardView({super.key, required this.onNavigate});
 
   final ValueChanged<AppView> onNavigate;
 
   @override
+  State<DashboardView> createState() => _DashboardViewState();
+}
+
+class _DashboardViewState extends State<DashboardView> {
+  // Dashboard-wide time window. Affects the headline, the Verlauf chart and its
+  // projection, the composition chart, the distribution donut, and the
+  // Kennzahlen — everything time-based. Null until the user picks one; a
+  // sensible default ("Dieses Jahr" when available) is derived from the data.
+  _HistoryPreset? _preset;
+
+  _HistoryPreset _defaultPreset(List<_HistoryPreset> available) =>
+      available.contains(_HistoryPreset.ytd) ? _HistoryPreset.ytd : _HistoryPreset.all;
+
+  List<String> _periodsForPreset(List<String> all, _HistoryPreset preset) {
+    final now = DateTime.now();
+    final currentYear = now.year;
+    int yearOf(String p) => int.parse(p.split('-')[0]);
+    int monthOf(String p) => int.parse(p.split('-')[1]);
+    switch (preset) {
+      case _HistoryPreset.twelveMonths:
+        final cutoff = DateTime(now.year, now.month - 11);
+        return all.where((p) => !DateTime(yearOf(p), monthOf(p)).isBefore(cutoff)).toList();
+      case _HistoryPreset.ytd:
+        return all.where((p) => yearOf(p) == currentYear).toList();
+      case _HistoryPreset.lastYear:
+        return all.where((p) => yearOf(p) == currentYear - 1).toList();
+      case _HistoryPreset.all:
+        return all;
+    }
+  }
+
+  /// Only offer a preset when it yields a distinct, non-empty window. "Alle" is
+  /// always available; narrower presets appear only once history grows into
+  /// them (e.g. "12 Monate" stays hidden while it equals "Alle").
+  List<_HistoryPreset> _availablePresets(List<String> all) {
+    if (all.isEmpty) return const [_HistoryPreset.all];
+    String sig(List<String> r) => r.isEmpty ? '' : '${r.first}|${r.last}|${r.length}';
+    final allSig = sig(all);
+    final seen = <String>{};
+    final result = <_HistoryPreset>[];
+    for (final preset in const [_HistoryPreset.ytd, _HistoryPreset.twelveMonths, _HistoryPreset.lastYear]) {
+      final s = sig(_periodsForPreset(all, preset));
+      if (s.isEmpty || s == allSig || !seen.add(s)) continue;
+      result.add(preset);
+    }
+    result.add(_HistoryPreset.all);
+    return result;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final periods = app.allPeriodsSorted();
+    final onNavigate = widget.onNavigate;
+    final allPeriods = app.allPeriodsSorted();
     final backupReminder = app.getBackupReminder();
     final assetReminder = app.getAssetReminder();
     final totals = app.computeSubscriptionTotals();
-
     final updateReminder = app.getUpdateReminder();
 
     final banners = <Widget>[
@@ -46,13 +98,20 @@ class DashboardView extends StatelessWidget {
         InfoBanner(message: assetReminder, actionLabel: 'Jetzt prüfen', onAction: () => onNavigate(AppView.assets)),
     ];
 
+    // Resolve the active window once and thread it through every time-based
+    // card below, so the filter genuinely drives the whole dashboard.
+    final available = _availablePresets(allPeriods);
+    final preset = (_preset != null && available.contains(_preset)) ? _preset! : _defaultPreset(available);
+    final filtered = allPeriods.isEmpty ? <String>[] : _periodsForPreset(allPeriods, preset);
+    final includesLatest = filtered.isNotEmpty && filtered.last == allPeriods.last;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ...banners,
-          if (periods.isEmpty) ...[
+          if (allPeriods.isEmpty) ...[
             _EmptyDashboard(onNavigate: onNavigate),
             cardGap,
             _SummaryRow(
@@ -62,16 +121,28 @@ class DashboardView extends StatelessWidget {
               ],
             ),
           ] else ...[
-            _TotalsOverview(periods: periods, app: app),
+            if (available.length > 1) ...[
+              _FilterBar(options: available, selected: preset, onChanged: (p) => setState(() => _preset = p)),
+              const SizedBox(height: 16),
+            ],
+            _TotalsOverview(periods: filtered, app: app),
+            cardGap,
+            _HistoryCard(periods: filtered, app: app, includesLatest: includesLatest),
             cardGap,
             _SummaryRow(
               children: [
-                _DistributionSection(app: app, latestPeriod: periods.last, onNavigate: onNavigate),
+                _DistributionSection(app: app, latestPeriod: filtered.last, onNavigate: onNavigate),
                 _SubscriptionsSection(totals: totals, app: app, onNavigate: onNavigate),
                 _AssetsSection(app: app, onNavigate: onNavigate),
               ],
             ),
             cardGap,
+            if (filtered.length >= 2) ...[
+              _CompositionCard(app: app, periods: filtered),
+              cardGap,
+              _StatsCard(app: app, periods: filtered),
+              cardGap,
+            ],
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -87,6 +158,29 @@ class DashboardView extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The dashboard-wide time-range filter. Lives at the top because it drives
+/// every time-based card, not just the chart.
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.options, required this.selected, required this.onChanged});
+
+  final List<_HistoryPreset> options;
+  final _HistoryPreset selected;
+  final ValueChanged<_HistoryPreset> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
+      children: [
+        const Text('Zeitraum', style: TextStyle(color: kMuted, fontSize: 13)),
+        _PresetSelector(options: options, selected: selected, onChanged: onChanged),
+      ],
     );
   }
 }
@@ -113,23 +207,26 @@ class _EmptyDashboard extends StatelessWidget {
   }
 }
 
-/// Whole calendar months from period [a] to [b] (both "YYYY-MM").
-int _monthsBetween(String a, String b) {
-  final pa = a.split('-');
-  final pb = b.split('-');
-  return (int.parse(pb[0]) - int.parse(pa[0])) * 12 + (int.parse(pb[1]) - int.parse(pa[1]));
-}
-
-class _TotalsOverview extends StatelessWidget {
+class _TotalsOverview extends StatefulWidget {
   const _TotalsOverview({required this.periods, required this.app});
 
   final List<String> periods;
   final AppState app;
 
-  double _totalForPeriod(String period) => app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
+  @override
+  State<_TotalsOverview> createState() => _TotalsOverviewState();
+}
+
+class _TotalsOverviewState extends State<_TotalsOverview> {
+  bool _includeAssets = false;
+
+  double _totalForPeriod(String period) =>
+      widget.app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
 
   @override
   Widget build(BuildContext context) {
+    final app = widget.app;
+    final periods = widget.periods;
     final latestPeriod = periods.last;
     final prevPeriod = periods.length > 1 ? periods[periods.length - 2] : null;
 
@@ -143,6 +240,14 @@ class _TotalsOverview extends StatelessWidget {
       return matches.isNotEmpty && matches.first.currency != app.baseCurrency;
     });
 
+    // Vermögenswerte (Sachwerte) have no monthly history, so including them
+    // only adds a constant to the headline — the month-over-month delta and
+    // the contribution/market split (both account-based) are unaffected.
+    final assetsTotal = app.assets.fold<double>(0, (sum, a) => sum + a.value);
+    final hasAssets = app.assets.isNotEmpty;
+    final withAssets = _includeAssets && hasAssets;
+    final displayTotal = currentTotal + (withAssets ? assetsTotal : 0);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -151,13 +256,34 @@ class _TotalsOverview extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'GESAMTVERMÖGEN · STAND ${periodLabel(latestPeriod).toUpperCase()}',
-                style: const TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      withAssets
+                          ? 'GESAMTVERMÖGEN INKL. SACHWERTE · STAND ${periodLabel(latestPeriod).toUpperCase()}'
+                          : 'GESAMTVERMÖGEN · STAND ${periodLabel(latestPeriod).toUpperCase()}',
+                      style: const TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
+                    ),
+                  ),
+                  if (hasAssets) ...[
+                    _PresetChip(
+                      label: 'Konten',
+                      selected: !_includeAssets,
+                      onTap: () => setState(() => _includeAssets = false),
+                    ),
+                    const SizedBox(width: 6),
+                    _PresetChip(
+                      label: 'inkl. Sachwerte',
+                      selected: _includeAssets,
+                      onTap: () => setState(() => _includeAssets = true),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 4),
               Text(
-                fmtMoney(currentTotal, app.baseCurrency),
+                fmtMoney(displayTotal, app.baseCurrency),
                 style: const TextStyle(color: kPrimary, fontSize: 44, fontWeight: FontWeight.bold),
               ),
               if (delta != null)
@@ -176,20 +302,24 @@ class _TotalsOverview extends StatelessWidget {
               if (delta != null && prevPeriod != null && app.subscriptions.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Builder(builder: (context) {
-                  final gap = _monthsBetween(prevPeriod, latestPeriod);
-                  final contributions = app.computeSubscriptionTotals().net * gap;
-                  final market = delta - contributions;
+                  final split = contributionMarketSplit(
+                    delta: delta,
+                    monthlyNet: app.computeSubscriptionTotals().net,
+                    monthGap: monthsBetweenPeriods(prevPeriod, latestPeriod),
+                  );
                   final cur = app.baseCurrency;
                   String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
                   return Text(
-                    'geschätzt: ~${signed(contributions)} eingezahlt · ~${signed(market)} Markt/Sonstiges',
+                    'geschätzt: davon ~${signed(split.contributions)} eingezahlt · ~${signed(split.market)} Markt & Sonstiges',
                     style: const TextStyle(color: kMuted, fontSize: 12),
                   );
                 }),
               ],
               const SizedBox(height: 4),
               Text(
-                'Basiert auf $entriesInLatest von ${app.accounts.length} aktiven Konten mit Eintrag für diesen Monat.',
+                withAssets
+                    ? 'Für diesen Monat sind $entriesInLatest von ${app.accounts.length} Konten erfasst · plus ${fmtMoney(assetsTotal, app.baseCurrency)} Sachwerte.'
+                    : 'Für diesen Monat sind $entriesInLatest von ${app.accounts.length} Konten erfasst.',
                 style: const TextStyle(color: kMuted, fontSize: 13),
               ),
               if (hasForeignCurrencyInTotal) ...[
@@ -212,13 +342,6 @@ class _TotalsOverview extends StatelessWidget {
             ],
           ),
         ),
-        cardGap,
-        _HistoryCard(
-          periods: periods,
-          totalForPeriod: _totalForPeriod,
-          baseCurrency: app.baseCurrency,
-          monthlyNet: app.computeSubscriptionTotals().net,
-        ),
       ],
     );
   }
@@ -235,58 +358,19 @@ extension on _HistoryPreset {
   };
 }
 
-/// The "Verlauf" card: total net worth over time, with a preset range
-/// filter. Kept as its own stateful widget so switching the range doesn't
-/// touch the headline figures above it, which always reflect the latest period.
-class _HistoryCard extends StatefulWidget {
-  const _HistoryCard({
-    required this.periods,
-    required this.totalForPeriod,
-    required this.baseCurrency,
-    required this.monthlyNet,
-  });
+/// The "Verlauf" card: total net worth over the active window (set by the
+/// dashboard-wide filter), with a forward projection. Plots whatever [periods]
+/// window it's handed; [includesLatest] says whether that window reaches the
+/// most recent entry (only then is a projection drawn).
+class _HistoryCard extends StatelessWidget {
+  const _HistoryCard({required this.periods, required this.app, required this.includesLatest});
 
-  /// All periods with data, sorted ascending.
   final List<String> periods;
-  final double Function(String period) totalForPeriod;
-  final String baseCurrency;
+  final AppState app;
+  final bool includesLatest;
 
-  /// Current Fixposten net per month — drives the forward projection.
-  final double monthlyNet;
-
-  @override
-  State<_HistoryCard> createState() => _HistoryCardState();
-}
-
-class _HistoryCardState extends State<_HistoryCard> {
-  late _HistoryPreset _preset = _initialPreset();
-
-  /// Defaults to "Dieses Jahr", but falls back to "Alle" when the current
-  /// year has no data yet — otherwise the chart would open empty (e.g. early
-  /// in a new year, or when all entries predate it).
-  _HistoryPreset _initialPreset() {
-    final currentYear = DateTime.now().year;
-    final hasCurrentYear = widget.periods.any((p) => int.parse(p.split('-')[0]) == currentYear);
-    return hasCurrentYear ? _HistoryPreset.ytd : _HistoryPreset.all;
-  }
-
-  List<String> _filteredPeriods() {
-    final now = DateTime.now();
-    final currentYear = now.year;
-    int yearOf(String p) => int.parse(p.split('-')[0]);
-    int monthOf(String p) => int.parse(p.split('-')[1]);
-    switch (_preset) {
-      case _HistoryPreset.twelveMonths:
-        final cutoff = DateTime(now.year, now.month - 11);
-        return widget.periods.where((p) => !DateTime(yearOf(p), monthOf(p)).isBefore(cutoff)).toList();
-      case _HistoryPreset.ytd:
-        return widget.periods.where((p) => yearOf(p) == currentYear).toList();
-      case _HistoryPreset.lastYear:
-        return widget.periods.where((p) => yearOf(p) == currentYear - 1).toList();
-      case _HistoryPreset.all:
-        return widget.periods;
-    }
-  }
+  double _totalForPeriod(String period) =>
+      app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
 
   /// "YYYY-MM" [months] after [period] (DateTime handles year rollover).
   String _periodPlus(String period, int months) {
@@ -295,75 +379,29 @@ class _HistoryCardState extends State<_HistoryCard> {
     return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
   }
 
-  /// Months from [period] to the end of its calendar year — so the projection
-  /// answers "where do I land this year?" and stays proportional to the
-  /// visible history instead of always running a full 12 months out. December
-  /// has nowhere to go, so it projects a full year ahead instead of nothing.
-  int _monthsToYearEnd(String period) {
-    final remaining = 12 - int.parse(period.split('-')[1]);
-    return remaining <= 0 ? 12 : remaining;
-  }
-
-  /// Least-squares slope (change per month) of the actual totals over
-  /// [periods] — the observed trend. Null with fewer than two points or a
-  /// degenerate fit.
-  double? _trendSlopePerMonth(List<String> periods) {
-    if (periods.length < 2) return null;
-    final n = periods.length;
-    var xMean = 0.0;
-    var yMean = 0.0;
-    for (var i = 0; i < n; i++) {
-      xMean += i;
-      yMean += widget.totalForPeriod(periods[i]);
-    }
-    xMean /= n;
-    yMean /= n;
-    var numerator = 0.0;
-    var denominator = 0.0;
-    for (var i = 0; i < n; i++) {
-      final dx = i - xMean;
-      numerator += dx * (widget.totalForPeriod(periods[i]) - yMean);
-      denominator += dx * dx;
-    }
-    return denominator == 0 ? null : numerator / denominator;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredPeriods();
-    final chartData = [for (final p in filtered) ChartPoint(periodLabel(p), widget.totalForPeriod(p))];
+    final filtered = periods;
+    final chartData = [for (final p in filtered) ChartPoint(periodLabel(p), _totalForPeriod(p))];
+    final values = [for (final p in filtered) _totalForPeriod(p)];
 
     // The projection is primarily statistical: a least-squares trend of the
-    // actual net-worth history, which already reflects everything that really
-    // happened — including the variable, non-Fixposten spending that can swing
-    // month to month. The Fixposten net is NOT added to it (that would
-    // double-count the recurring part the trend already contains); it only
-    // serves as a stabilizing prior while there's little history, and its
-    // weight decays as months accumulate, so with enough data the projection
-    // is effectively pure statistics. Only shown when the visible range
-    // includes the latest actual entry — never projecting from a stale anchor.
-    final net = widget.monthlyNet;
-    final includesLatest = filtered.isNotEmpty && widget.periods.isNotEmpty && filtered.last == widget.periods.last;
-    final months = includesLatest ? _monthsToYearEnd(filtered.last) : 0;
+    // actual net-worth history (which already reflects the variable spending
+    // that swings month to month), stabilized by the Fixposten net as a prior
+    // whose weight decays as history accumulates. See utils/analysis.dart.
+    // Only drawn when the window reaches the latest entry — never from a stale
+    // anchor (so it disappears on "Letztes Jahr").
+    final net = app.computeSubscriptionTotals().net;
+    final months = (includesLatest && filtered.isNotEmpty) ? monthsToYearEnd(filtered.last) : 0;
 
     final planRate = net != 0 ? net : null;
-    final trendRate = _trendSlopePerMonth(filtered);
+    final trendRate = trendSlopePerMonth(values);
     final trendPoints = filtered.length;
-    // Months of "pseudo-history" the Fixposten prior is worth: with this many
-    // real data points the trend and the prior weigh equally; beyond it the
-    // statistics dominate.
-    const priorStrength = 3.0;
-    final double? projectionRate;
-    if (trendRate != null && planRate != null) {
-      final wTrend = trendPoints / (trendPoints + priorStrength);
-      projectionRate = wTrend * trendRate + (1 - wTrend) * planRate;
-    } else {
-      projectionRate = trendRate ?? planRate;
-    }
+    final rate = projectionRate(planRate: planRate, trendRate: trendRate, trendPoints: trendPoints);
 
-    final forecast = (months > 0 && projectionRate != null)
+    final forecast = (months > 0 && rate != null)
         ? ChartForecast(
-            monthlyDelta: projectionRate,
+            monthlyDelta: rate,
             months: months,
             endLabel: periodLabel(_periodPlus(filtered.last, months)),
           )
@@ -371,7 +409,6 @@ class _HistoryCardState extends State<_HistoryCard> {
 
     return SectionCard(
       title: 'Verlauf',
-      trailing: _PresetSelector(selected: _preset, onChanged: (p) => setState(() => _preset = p)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -382,23 +419,23 @@ class _HistoryCardState extends State<_HistoryCard> {
             showMinMax: true,
             forecast: forecast,
             showHover: true,
-            currency: widget.baseCurrency,
+            currency: app.baseCurrency,
           ),
           if (forecast != null) ...[
             const SizedBox(height: 8),
             Builder(builder: (context) {
               final rate = forecast.monthlyDelta;
               final delta = rate * forecast.months;
-              final total = widget.totalForPeriod(filtered.last) + delta;
-              final cur = widget.baseCurrency;
+              final total = _totalForPeriod(filtered.last) + delta;
+              final cur = app.baseCurrency;
               String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
               final String basis;
               if (trendRate != null && planRate != null) {
-                basis = 'Statistische Prognose aus $trendPoints Monaten, durch Fixposten stabilisiert';
+                basis = 'Prognose aus $trendPoints Monaten Verlauf, mit Fixposten geglättet';
               } else if (trendRate != null) {
-                basis = 'Statistische Prognose aus $trendPoints Monaten';
+                basis = 'Prognose aus $trendPoints Monaten Verlauf';
               } else {
-                basis = 'Prognose aus Fixposten-Saldo (noch zu wenig Verlauf für Statistik)';
+                basis = 'Prognose aus den Fixposten (noch wenig Verlauf)';
               }
               return Text(
                 '$basis: ${signed(rate)}/Monat → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${signed(delta)}).',
@@ -412,9 +449,132 @@ class _HistoryCardState extends State<_HistoryCard> {
   }
 }
 
-class _PresetSelector extends StatelessWidget {
-  const _PresetSelector({required this.selected, required this.onChanged});
+/// Net worth split by Kontotyp across every recorded month — a stacked area so
+/// allocation drift (e.g. a growing Depot share) is visible over time, which
+/// the single-month donut can't show.
+class _CompositionCard extends StatelessWidget {
+  const _CompositionCard({required this.app, required this.periods});
 
+  final AppState app;
+
+  /// All periods with data, sorted ascending.
+  final List<String> periods;
+
+  double _tagTotalInPeriod(String tag, String period) {
+    var sum = 0.0;
+    for (final b in app.balancesInPeriod(period)) {
+      final acc = app.findAccount(b.accountId);
+      if (acc != null && acc.tag == tag) sum += b.amountBase;
+    }
+    // Negative balances (e.g. an overdrawn account) can't stack sensibly, so
+    // the composition shows positive holdings only.
+    return sum < 0 ? 0 : sum;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Tags actually in use, ordered by the canonical kTags order, with any
+    // custom tags appended so nothing is dropped.
+    final used = app.accounts.map((a) => a.tag).toSet();
+    final orderedTags = <String>[
+      for (final t in kTags)
+        if (used.contains(t)) t,
+      for (final t in used)
+        if (!kTags.contains(t)) t,
+    ];
+
+    final series = [
+      for (final tag in orderedTags)
+        StackedSeries(
+          label: tag,
+          color: colorFromHex(tagColorHex(tag)),
+          values: [for (final p in periods) _tagTotalInPeriod(tag, p)],
+        ),
+    ];
+
+    return SectionCard(
+      title: 'Zusammensetzung über Zeit',
+      child: AppStackedAreaChart(
+        periodLabels: [for (final p in periods) periodLabel(p)],
+        series: series,
+        currency: app.baseCurrency,
+      ),
+    );
+  }
+}
+
+/// Compact stats over the full net-worth history: best/worst month, average
+/// monthly change, and how often it grew. Hidden with fewer than two months.
+class _StatsCard extends StatelessWidget {
+  const _StatsCard({required this.app, required this.periods});
+
+  final AppState app;
+
+  /// All periods with data, sorted ascending.
+  final List<String> periods;
+
+  double _totalForPeriod(String period) =>
+      app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
+
+  @override
+  Widget build(BuildContext context) {
+    final series = [for (final p in periods) (period: p, total: _totalForPeriod(p))];
+    final stats = computeNetWorthStats(series);
+    if (stats == null) return const SizedBox.shrink();
+    final cur = app.baseCurrency;
+    String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
+    return SectionCard(
+      title: 'Kennzahlen',
+      child: Wrap(
+        spacing: 32,
+        runSpacing: 12,
+        children: [
+          _SummaryItem(
+            label: 'Gesamtveränderung',
+            value: signed(stats.totalGrowth),
+            subValue: 'seit ${periodLabel(stats.startPeriod)}',
+            color: stats.totalGrowth >= 0 ? kPrimary : kDanger,
+          ),
+          _SummaryItem(
+            label: 'Bester Monat',
+            value: signed(stats.best.delta),
+            subValue: periodLabel(stats.best.period),
+            color: stats.best.delta >= 0 ? kPrimary : kDanger,
+          ),
+          _SummaryItem(
+            label: 'Schwächster Monat',
+            value: signed(stats.worst.delta),
+            subValue: periodLabel(stats.worst.period),
+            color: stats.worst.delta >= 0 ? kPrimary : kDanger,
+          ),
+          _SummaryItem(
+            label: 'Ø Veränderung/Monat',
+            value: signed(stats.averageChange),
+            subValue: '${stats.changeCount} Monate',
+            color: stats.averageChange >= 0 ? kPrimary : kDanger,
+          ),
+          _SummaryItem(
+            label: 'Monate im Plus',
+            value: '${stats.monthsUp}/${stats.changeCount}',
+            subValue: fmtPercent(stats.upShare * 100),
+            color: kPrimary,
+          ),
+          _SummaryItem(
+            label: 'Höchststand',
+            value: fmtMoney(stats.peak, cur),
+            subValue: periodLabel(stats.peakPeriod),
+            color: kPrimary,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PresetSelector extends StatelessWidget {
+  const _PresetSelector({required this.options, required this.selected, required this.onChanged});
+
+  final List<_HistoryPreset> options;
   final _HistoryPreset selected;
   final ValueChanged<_HistoryPreset> onChanged;
 
@@ -424,7 +584,7 @@ class _PresetSelector extends StatelessWidget {
       spacing: 6,
       runSpacing: 6,
       children: [
-        for (final preset in _HistoryPreset.values)
+        for (final preset in options)
           _PresetChip(label: preset.label, selected: preset == selected, onTap: () => onChanged(preset)),
       ],
     );
@@ -648,6 +808,25 @@ class _AccountCard extends StatelessWidget {
               latest != null ? fmtMoney(latest.amountBase, app.baseCurrency) : '—',
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
+            // Month-over-month change for this account, so each card shows
+            // direction at a glance, not just the current figure.
+            if (latest != null)
+              Builder(builder: (context) {
+                final prev = app.previousBalance(acc.id, latest.period);
+                if (prev == null) return const SizedBox.shrink();
+                final delta = latest.amountBase - prev.amountBase;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    '${delta >= 0 ? '+' : ''}${fmtMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
+                    style: TextStyle(
+                      color: delta >= 0 ? kPrimary : kDanger,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }),
             const SizedBox(height: 8),
             AppLineChart(points: points, color: colorFromHex(acc.color), height: 70),
           ],
@@ -702,7 +881,7 @@ class _AssetsSection extends StatelessWidget {
             Text('${app.assets.length} Gegenstände erfasst', style: const TextStyle(color: kMuted, fontSize: 13)),
             const SizedBox(height: 4),
             const Text(
-              'Nicht im Gesamtvermögen oben enthalten.',
+              'Standardmäßig nicht im Gesamtvermögen — oben zuschaltbar.',
               style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
             ),
           ],

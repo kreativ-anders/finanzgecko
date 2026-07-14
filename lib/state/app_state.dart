@@ -183,7 +183,7 @@ class AppState extends ChangeNotifier {
     if (overdue.isEmpty) return null;
     final names = overdue.map((a) => a.name).join(', ');
     final n = overdue.length;
-    return '$n Vermögenswert${n == 1 ? '' : 'e'} seit über 6 Monaten nicht neu bewertet: $names';
+    return '$n Vermögenswert${n == 1 ? '' : 'e'} seit über 6 Monaten nicht mehr neu bewertet: $names';
   }
 
   /// Nudge to keep the monthly ritual going: fires when there's history but no
@@ -277,7 +277,7 @@ class AppState extends ChangeNotifier {
     }
     final days = daysSince(lastExportAt);
     if (days >= kBackupReminderDays) {
-      return BackupReminder(overdue: true, message: 'Letztes Backup vor $days Tagen — Zeit für ein neues Export.');
+      return BackupReminder(overdue: true, message: 'Letztes Backup vor $days Tagen — Zeit für ein neues Backup.');
     }
     return BackupReminder(overdue: false, message: 'Letztes Backup vor $days Tag${days == 1 ? '' : 'en'}.');
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/account.dart';
 import '../../models/balance.dart';
 import '../../state/app_state.dart';
+import '../../utils/analysis.dart';
 import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
@@ -416,12 +417,9 @@ class _EntryRow extends StatelessWidget {
     final entered = parseInputNumber(controller.text.trim());
     final prevAmount = prev?.amountOriginal;
     String? anomaly;
-    if (entered != null && entered != 0 && prevAmount != null && prevAmount.abs() > 0) {
-      final ratio = entered.abs() / prevAmount.abs();
-      if (ratio >= 10 || ratio <= 0.1) {
-        anomaly = 'Ungewöhnlich: ${ratio >= 10 ? 'viel größer' : 'viel kleiner'} als zuletzt '
-            '(${fmtMoney(prevAmount, account.currency)}). Tippfehler?';
-      }
+    if (entered != null && prevAmount != null && isBalanceAnomaly(entered, prevAmount)) {
+      anomaly = 'Ungewöhnlich: ${entered.abs() > prevAmount.abs() ? 'viel größer' : 'viel kleiner'} als zuletzt '
+          '(${fmtMoney(prevAmount, account.currency)}). Tippfehler?';
     }
 
     return Padding(
