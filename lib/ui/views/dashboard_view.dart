@@ -121,11 +121,13 @@ class _DashboardViewState extends State<DashboardView> {
               ],
             ),
           ] else ...[
-            if (available.length > 1) ...[
-              _FilterBar(options: available, selected: preset, onChanged: (p) => setState(() => _preset = p)),
-              const SizedBox(height: 16),
-            ],
-            _TotalsOverview(periods: filtered, app: app),
+            _TotalsOverview(
+              periods: filtered,
+              app: app,
+              options: available,
+              selected: preset,
+              onRangeChanged: (p) => setState(() => _preset = p),
+            ),
             cardGap,
             _HistoryCard(periods: filtered, app: app, includesLatest: includesLatest),
             cardGap,
@@ -162,29 +164,6 @@ class _DashboardViewState extends State<DashboardView> {
   }
 }
 
-/// The dashboard-wide time-range filter. Lives at the top because it drives
-/// every time-based card, not just the chart.
-class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.options, required this.selected, required this.onChanged});
-
-  final List<_HistoryPreset> options;
-  final _HistoryPreset selected;
-  final ValueChanged<_HistoryPreset> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 12,
-      runSpacing: 8,
-      children: [
-        const Text('Zeitraum', style: TextStyle(color: kMuted, fontSize: 13)),
-        _PresetSelector(options: options, selected: selected, onChanged: onChanged),
-      ],
-    );
-  }
-}
-
 class _EmptyDashboard extends StatelessWidget {
   const _EmptyDashboard({required this.onNavigate});
 
@@ -208,10 +187,21 @@ class _EmptyDashboard extends StatelessWidget {
 }
 
 class _TotalsOverview extends StatefulWidget {
-  const _TotalsOverview({required this.periods, required this.app});
+  const _TotalsOverview({
+    required this.periods,
+    required this.app,
+    required this.options,
+    required this.selected,
+    required this.onRangeChanged,
+  });
 
   final List<String> periods;
   final AppState app;
+
+  /// The dashboard-wide range filter, rendered on the "erfasst" caption line.
+  final List<_HistoryPreset> options;
+  final _HistoryPreset selected;
+  final ValueChanged<_HistoryPreset> onRangeChanged;
 
   @override
   State<_TotalsOverview> createState() => _TotalsOverviewState();
@@ -256,27 +246,28 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Label row: caption with the "inkl. Sachwerte" switch right next
+              // to it — the switch changes the total, so it sits by the caption.
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
+                  Flexible(
                     child: Text(
                       withAssets
                           ? 'GESAMTVERMÖGEN INKL. SACHWERTE · STAND ${periodLabel(latestPeriod).toUpperCase()}'
                           : 'GESAMTVERMÖGEN · STAND ${periodLabel(latestPeriod).toUpperCase()}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
                     ),
                   ),
                   if (hasAssets) ...[
-                    _PresetChip(
-                      label: 'Konten',
-                      selected: !_includeAssets,
-                      onTap: () => setState(() => _includeAssets = false),
-                    ),
-                    const SizedBox(width: 6),
-                    _PresetChip(
-                      label: 'inkl. Sachwerte',
-                      selected: _includeAssets,
-                      onTap: () => setState(() => _includeAssets = true),
+                    const SizedBox(width: 12),
+                    const Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    Switch(
+                      value: _includeAssets,
+                      onChanged: (v) => setState(() => _includeAssets = v),
                     ),
                   ],
                 ],
@@ -284,6 +275,7 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
               const SizedBox(height: 4),
               Text(
                 fmtMoney(displayTotal, app.baseCurrency),
+                maxLines: 1,
                 style: const TextStyle(color: kPrimary, fontSize: 44, fontWeight: FontWeight.bold),
               ),
               if (delta != null)
@@ -316,11 +308,26 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                 }),
               ],
               const SizedBox(height: 4),
-              Text(
-                withAssets
-                    ? 'Für diesen Monat sind $entriesInLatest von ${app.accounts.length} Konten erfasst · plus ${fmtMoney(assetsTotal, app.baseCurrency)} Sachwerte.'
-                    : 'Für diesen Monat sind $entriesInLatest von ${app.accounts.length} Konten erfasst.',
-                style: const TextStyle(color: kMuted, fontSize: 13),
+              // The "erfasst" caption shares its row with the dashboard-wide
+              // range filter (right-aligned) — no separate floating filter row.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      withAssets
+                          ? 'Für diesen Monat sind $entriesInLatest von ${app.accounts.length} Konten erfasst · plus ${fmtMoney(assetsTotal, app.baseCurrency)} Sachwerte.'
+                          : 'Für diesen Monat sind $entriesInLatest von ${app.accounts.length} Konten erfasst.',
+                      style: const TextStyle(color: kMuted, fontSize: 13),
+                    ),
+                  ),
+                  if (widget.options.length > 1) ...[
+                    const SizedBox(width: 16),
+                    const Text('Zeitraum', style: TextStyle(color: kMuted, fontSize: 13)),
+                    const SizedBox(width: 12),
+                    _PresetSelector(options: widget.options, selected: widget.selected, onChanged: widget.onRangeChanged),
+                  ],
+                ],
               ),
               if (hasForeignCurrencyInTotal) ...[
                 const SizedBox(height: 4),
