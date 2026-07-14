@@ -12,8 +12,7 @@ import 'ui/splash_screen.dart';
 import 'ui/theme.dart';
 
 /// Persists window size + maximized state (best-effort, debounced) so the
-/// app reopens the way it was left — the previous Neutralino build got this
-/// for free via `"useSavedState": true`.
+/// app reopens the way it was left.
 class _WindowPrefsSaver with WindowListener {
   _WindowPrefsSaver(this.store);
 

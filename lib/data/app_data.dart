@@ -25,8 +25,8 @@ class WindowPrefs {
 }
 
 /// In-memory representation of the whole app database — a single JSON file
-/// on disk, mirroring the previous Neutralino `store.js` schema so existing
-/// exports/backups stay readable.
+/// on disk, matching the schema of existing exports/backups so they stay
+/// readable.
 class AppData {
   int schemaVersion;
   String baseCurrency;
@@ -103,12 +103,15 @@ class AppData {
 
     final meta = (json['meta'] is Map) ? Map<String, dynamic>.from(json['meta'] as Map) : <String, dynamic>{};
     final windowRaw = (json['window'] is Map) ? Map<String, dynamic>.from(json['window'] as Map) : null;
-    final ratesRaw = (json['ratesCache'] is Map) ? Map<String, dynamic>.from(json['ratesCache'] as Map) : <String, dynamic>{};
+    final ratesRaw = (json['ratesCache'] is Map)
+        ? Map<String, dynamic>.from(json['ratesCache'] as Map)
+        : <String, dynamic>{};
 
-    // Cached rates are just an optimization (re-fetchable from the API), so a
-    // single malformed entry here must never cost the caller its accounts,
-    // balances, assets and subscriptions — skip the bad entry instead of
-    // throwing, which would otherwise abort parsing of the whole file.
+    // Cached rates now live in their own standalone file; this only still
+    // parses the legacy in-store `ratesCache` so [AppStore] can migrate it
+    // out on first load. A single malformed entry must never cost the caller
+    // its accounts/balances/assets/subscriptions — skip the bad entry
+    // instead of throwing, which would otherwise abort parsing the whole file.
     final ratesCache = <String, double>{};
     for (final entry in ratesRaw.entries) {
       final v = entry.value;
@@ -141,7 +144,6 @@ class AppData {
     'balances': balances.map((b) => b.toJson()).toList(),
     'assets': assets.map((a) => a.toJson()).toList(),
     'subscriptions': subscriptions.map((s) => s.toJson()).toList(),
-    'ratesCache': ratesCache,
     'meta': {
       'nextAccountId': nextAccountId,
       'nextBalanceId': nextBalanceId,

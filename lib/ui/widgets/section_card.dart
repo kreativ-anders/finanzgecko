@@ -33,7 +33,10 @@ class SectionCard extends StatelessWidget {
                   // Expanded (not just trailing inline) so it's pinned to the
                   // card's top-right; bounding its width also lets a wide
                   // filter row wrap onto a second line instead of overflowing.
-                  if (trailing != null) Expanded(child: Align(alignment: Alignment.centerRight, child: trailing!)),
+                  if (trailing != null)
+                    Expanded(
+                      child: Align(alignment: Alignment.centerRight, child: trailing!),
+                    ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -56,6 +59,9 @@ class EmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: const TextStyle(color: kMuted, fontStyle: FontStyle.italic));
+    return Text(
+      text,
+      style: const TextStyle(color: kMuted, fontStyle: FontStyle.italic),
+    );
   }
 }

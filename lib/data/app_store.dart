@@ -13,16 +13,16 @@ import 'secure_key_store.dart';
 
 const String _applicationId = 'de.finanzgecko.app';
 const String _storeFilename = 'finanzgecko-data.json';
-// TODO(major version): remove _legacyStoreFilename and _migrateLegacyFilename
-// (added 2026-07 for the app-data.json -> finanzgecko-data.json rebrand
-// rename) once it's safe to assume every install has already run this
-// once — it's a one-time fixup, not something that needs to run forever.
-const String _legacyStoreFilename = 'app-data.json';
+// Exchange rates are public ECB reference data and re-fetchable at any time,
+// so they live in their own small, unencrypted file rather than inside the
+// encrypted store — that way caching a freshly fetched rate doesn't force a
+// full re-encrypt-and-rewrite of the entire database.
+const String _ratesFilename = 'finanzgecko-rates.json';
 const int _envelopeVersion = 1;
 
 /// Persists the entire app database as a single JSON file in the OS-native
-/// per-user data directory — same location the previous Neutralino build
-/// used, so existing installs migrate without conversion:
+/// per-user data directory, so existing installs keep working without
+/// conversion:
 ///
 ///  - Linux:   ~/.local/share/de.finanzgecko.app/finanzgecko-data.json
 ///  - macOS:   ~/Library/Application Support/de.finanzgecko.app/finanzgecko-data.json
@@ -33,26 +33,51 @@ const int _envelopeVersion = 1;
 /// OS-native credential store (Windows Credential Locker, macOS Keychain,
 /// Linux libsecret/kwallet) via [SecureKeyStore] — so the file is useless
 /// without that specific OS user's keychain unlock, not just filesystem
-/// permissions. A legacy unencrypted file from before this change is
-/// detected on read and transparently re-written as an encrypted envelope
-/// on the next save (TODO(major version): drop once installs have caught
-/// up — see the TODO by [_isEnvelope]'s call site). Filesystem permissions
-/// (0700 dir / 0600 file on
+/// permissions. Filesystem permissions (0700 dir / 0600 file on
 /// Linux/macOS, an equivalent current-user-only ACL via icacls on Windows)
-/// remain as defense in depth. Writes are atomic (temp file + rename).
+/// remain as defense in depth. Writes are atomic (temp file + rename) and
+/// serialized through a single write queue so concurrent saves can't
+/// interleave on the shared temp file.
 class AppStore {
   /// [dataDirectory] overrides the OS-resolved data directory — used by
   /// tests to point the store at a temp folder instead of the real
   /// per-user app-data location. Production code should always use the
   /// default (unnamed) constructor.
-  AppStore({Directory? dataDirectory}) : _dataDirectoryOverride = dataDirectory;
+  ///
+  /// [persistToDisk] `false` keeps everything in memory and performs no
+  /// `dart:io` file operations at all. This exists for widget tests
+  /// (`testWidgets`), which run under a fake-async clock that never pumps the
+  /// real event loop — real file I/O would never complete there and would
+  /// hang the test. Persistence itself is covered by the plain `test()`-based
+  /// store tests, which run in real async with this left at its default.
+  AppStore({Directory? dataDirectory, this.persistToDisk = true}) : _dataDirectoryOverride = dataDirectory;
 
   final Directory? _dataDirectoryOverride;
+  final bool persistToDisk;
   AppData? _data;
   String? _filePath;
+  String? _ratesFilePath;
+  final Map<String, double> _ratesCache = {};
   bool _initialized = false;
   final AesGcm _cipher = AesGcm.with256bits();
   SecretKey? _key;
+
+  /// Serializes all disk writes. Every persist appends itself to this chain
+  /// so two overlapping mutations can never race on the shared `.tmp` file —
+  /// the second write only starts once the first has fully renamed into
+  /// place. Failures are isolated to their own caller and don't break the
+  /// chain for later writes.
+  Future<void> _writeQueue = Future<void>.value();
+
+  Future<T> _enqueueWrite<T>(Future<T> Function() action) {
+    // Chain this write after the previous one, and hand the caller that same
+    // chained future so it awaits the real I/O directly. The queue itself
+    // tracks a swallowed copy so one write's failure can't poison the chain
+    // for later writes (the error still propagates to the failing caller).
+    final result = _writeQueue.then((_) => action());
+    _writeQueue = result.then((_) {}, onError: (_) {});
+    return result;
+  }
 
   bool get isInitialized => _initialized;
 
@@ -126,7 +151,16 @@ class AppStore {
     return Directory(p.join(Directory.current.path, '.finanzgecko-data'));
   }
 
+  /// True under `flutter test`, which sets this env var. Used to skip the
+  /// subprocess-based permission hardening below: `Process.run` never
+  /// completes inside the fake-async clock a `testWidgets` body runs under,
+  /// so shelling out on every persist would hang the widget tests. The
+  /// hardening is only meaningful for the real per-user data directory
+  /// anyway, not a throwaway test temp dir.
+  static bool get _inFlutterTest => Platform.environment.containsKey('FLUTTER_TEST');
+
   Future<void> _chmod(String path, String mode) async {
+    if (_inFlutterTest) return;
     if (!Platform.isLinux && !Platform.isMacOS) return; // not applicable on Windows
     try {
       await Process.run('chmod', [mode, path]);
@@ -143,6 +177,7 @@ class AppStore {
   /// later in this class — picks up the same restriction automatically,
   /// without each call site needing to remember to lock its own file down.
   Future<void> _restrictWindowsAccess(String path, {required bool isDirectory}) async {
+    if (_inFlutterTest) return;
     if (!Platform.isWindows) return;
     final user = Platform.environment['USERNAME'];
     if (user == null || user.isEmpty) return;
@@ -161,6 +196,14 @@ class AppStore {
 
     _key = await const SecureKeyStore().getOrCreateKey();
 
+    // In-memory mode (widget tests): no directory, no file reads/writes —
+    // just start from defaults. Every persist below is a no-op too.
+    if (!persistToDisk) {
+      _data = AppData.defaults();
+      _initialized = true;
+      return;
+    }
+
     final dir = _dataDirectoryOverride ?? resolveDataDirectory();
     if (!await dir.exists()) {
       await dir.create(recursive: true);
@@ -169,10 +212,8 @@ class AppStore {
     await _restrictWindowsAccess(dir.path, isDirectory: true);
 
     _filePath = p.join(dir.path, _storeFilename);
+    _ratesFilePath = p.join(dir.path, _ratesFilename);
     final file = File(_filePath!);
-    // TODO(major version): drop this call once every install has migrated —
-    // see the TODO on _legacyStoreFilename.
-    await _migrateLegacyFilename(dir, file);
     final tmpFile = File('${file.path}.tmp');
 
     // Clean up any leftover temp file from a previous crash.
@@ -186,28 +227,22 @@ class AppStore {
     try {
       final raw = await file.readAsString();
       final decoded = jsonDecode(raw);
-      // TODO(major version): once every install has re-persisted at least
-      // once since encryption was added (2026-07), every on-disk file will
-      // be an envelope — collapse this to a plain _isEnvelope-less decrypt
-      // and delete the plaintext branch below plus _isEnvelope's non-envelope
-      // callers.
-      final isEnvelope = _isEnvelope(decoded);
-      // Envelope -> decrypt to get the real JSON. Otherwise this is a
-      // pre-encryption plaintext file (or first run) — parse it directly,
-      // then let it fall through to the migration write below.
-      final parsed = isEnvelope ? jsonDecode(await _decryptEnvelope(decoded as Map)) : decoded;
-      final validated = AppData.fromDynamic(parsed);
-      if (validated != null) {
-        _data = validated;
-        if (!isEnvelope) {
-          // One-time transparent migration: rewrite the legacy plaintext
-          // file as an encrypted envelope now that it's been read once.
-          await _persist();
-        }
-      } else {
+      if (!_isEnvelope(decoded)) {
+        // Not an encrypted envelope — an unexpected or foreign file shape.
+        // Preserve it before overwriting so nothing is silently destroyed.
         await _quarantineUnreadable(file);
         _data = AppData.defaults();
         await _persist();
+      } else {
+        final parsed = jsonDecode(await _decryptEnvelope(decoded as Map));
+        final validated = AppData.fromDynamic(parsed);
+        if (validated != null) {
+          _data = validated;
+        } else {
+          await _quarantineUnreadable(file);
+          _data = AppData.defaults();
+          await _persist();
+        }
       }
     } catch (_) {
       // File missing (first run) -> start fresh, nothing to lose. File
@@ -220,23 +255,37 @@ class AppStore {
       await _persist();
     }
 
+    await _loadRatesCache();
+    // One-time migration: older stores kept the rate cache inside the
+    // encrypted database. Lift any such entries into the standalone rates
+    // file, then drop them from the in-memory store so the next persist
+    // writes the database without them.
+    if (_data!.ratesCache.isNotEmpty) {
+      _ratesCache.addAll(_data!.ratesCache);
+      _data!.ratesCache = {};
+      await _persistRates();
+    }
+
     _initialized = true;
   }
 
-  /// One-time rename of the pre-rebrand `app-data.json` to [_storeFilename],
-  /// so existing installs keep their data without the user having to
-  /// export/re-import anything. Only fires when the new filename doesn't
-  /// exist yet, so it can't clobber a file from a second run of this code.
-  Future<void> _migrateLegacyFilename(Directory dir, File newFile) async {
-    if (await newFile.exists()) return;
-    final legacyFile = File(p.join(dir.path, _legacyStoreFilename));
-    if (!await legacyFile.exists()) return;
+  /// Loads the standalone rate cache. A missing file just means "nothing
+  /// cached yet"; a corrupt one is disposable (rates are re-fetchable), so a
+  /// parse failure is swallowed rather than surfaced.
+  Future<void> _loadRatesCache() async {
+    final path = _ratesFilePath;
+    if (path == null) return;
+    final file = File(path);
+    if (!await file.exists()) return;
     try {
-      await legacyFile.rename(newFile.path);
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is Map) {
+        decoded.forEach((k, v) {
+          if (k is String && v is num) _ratesCache[k] = v.toDouble();
+        });
+      }
     } catch (_) {
-      // Best-effort only — if this fails (e.g. cross-device), fall through
-      // and let the normal first-run path start fresh rather than block
-      // startup.
+      // Disposable cache — ignore and re-fetch on demand.
     }
   }
 
@@ -253,6 +302,7 @@ class AppStore {
   /// Best-effort snapshot of the pre-import state, written alongside the
   /// main store file. Must never throw or block the import it precedes.
   Future<void> _backupBeforeImport(Map<String, dynamic> snapshot) async {
+    if (!persistToDisk) return;
     try {
       final ts = DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
       final backupFile = File(p.join(File(filePath).parent.path, 'pre-import-backup-$ts.json'));
@@ -262,7 +312,13 @@ class AppStore {
     } catch (_) {}
   }
 
-  Future<void> _persist() async {
+  /// Encrypts and writes the whole database. Serialized through the write
+  /// queue so it can never interleave with another save on the shared temp
+  /// file.
+  Future<void> _persist() => _enqueueWrite(_persistNow);
+
+  Future<void> _persistNow() async {
+    if (!persistToDisk) return;
     final path = filePath;
     final file = File(path);
     final tmpFile = File('$path.tmp');
@@ -271,6 +327,38 @@ class AppStore {
 
     try {
       await tmpFile.writeAsString(envelopeJson, flush: true);
+      if (await file.exists()) {
+        try {
+          await file.delete();
+        } catch (_) {}
+      }
+      await tmpFile.rename(path);
+      await _chmod(path, '600');
+      await _restrictWindowsAccess(path, isDirectory: false);
+    } finally {
+      if (await tmpFile.exists()) {
+        try {
+          await tmpFile.delete();
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// Writes the standalone (unencrypted) rate cache. Same atomic temp-file
+  /// dance as [_persistNow] and routed through the same write queue, but it
+  /// only ever touches the small rates file — not the encrypted database.
+  Future<void> _persistRates() => _enqueueWrite(_persistRatesNow);
+
+  Future<void> _persistRatesNow() async {
+    if (!persistToDisk) return;
+    final path = _ratesFilePath;
+    if (path == null) return;
+    final file = File(path);
+    final tmpFile = File('$path.tmp');
+    final jsonStr = jsonEncode(_ratesCache);
+
+    try {
+      await tmpFile.writeAsString(jsonStr, flush: true);
       if (await file.exists()) {
         try {
           await file.delete();
@@ -581,11 +669,11 @@ class AppStore {
 
   // ---------- Wechselkurs-Cache ----------
 
-  double? getCachedRate(String key) => _requireData.ratesCache[key];
+  double? getCachedRate(String key) => _ratesCache[key];
 
   Future<void> setCachedRate(String key, double rate) async {
-    _requireData.ratesCache[key] = rate;
-    await _persist();
+    _ratesCache[key] = rate;
+    await _persistRates();
   }
 
   // ---------- Export / Import ----------
@@ -598,6 +686,20 @@ class AppStore {
   /// import of the wrong file — confirmed by the user, but still a one-way
   /// door in the UI today — leaves a recovery copy behind.
   Future<Map<String, dynamic>> importAllData(Map<String, dynamic> imported) async {
+    // Reject backups written by a newer schema than this build understands.
+    // Silently importing could drop or misread fields this version doesn't
+    // know about — better to fail loudly and ask the user to update. Older
+    // or equal versions are always accepted (per-entry parsing below already
+    // tolerates missing fields).
+    final importedVersion = imported['schemaVersion'];
+    if (importedVersion is num && importedVersion > currentSchemaVersion) {
+      throw Exception(
+        'Dieses Backup wurde mit einer neueren App-Version erstellt '
+        '(Datenformat $importedVersion, unterstützt bis $currentSchemaVersion). '
+        'Bitte aktualisiere FinanzGecko und importiere erneut.',
+      );
+    }
+
     final data = _requireData;
     final snapshot = exportAllData();
     await _backupBeforeImport(snapshot);

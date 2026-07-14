@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:finanzgecko/data/app_store.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,9 +20,7 @@ class _FakeSecureStorage {
   static const MethodChannel _channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
   void install() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(_channel, (
-      call,
-    ) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(_channel, (call) async {
       switch (call.method) {
         case 'read':
           return values[(call.arguments as Map)['key'] as String];
@@ -60,7 +59,7 @@ void main() {
   });
 
   File storeFile() => File('${tempDir.path}/finanzgecko-data.json');
-  File legacyStoreFile() => File('${tempDir.path}/app-data.json');
+  File ratesFile() => File('${tempDir.path}/finanzgecko-rates.json');
 
   test('persisted store file is an encrypted envelope, not plaintext JSON', () async {
     final keychain = <String, String>{};
@@ -92,16 +91,18 @@ void main() {
     expect(second.getAccounts().map((a) => a.name), contains('Tagesgeld'));
   });
 
-  test('legacy plaintext file is read once, then transparently re-encrypted', () async {
+  test('a non-envelope (plaintext) store file is quarantined, not adopted', () async {
     final keychain = <String, String>{};
     _FakeSecureStorage(keychain).install();
 
     tempDir.createSync(recursive: true);
+    // A bare, unencrypted JSON blob is no longer a supported on-disk shape:
+    // it must be preserved (quarantined) rather than silently trusted, and
+    // the store starts from defaults.
     await storeFile().writeAsString(
       jsonEncode({
         'schemaVersion': 1,
         'baseCurrency': 'EUR',
-        'defaultSubscriptionInterval': 'monthly',
         'accounts': [
           {
             'id': 1,
@@ -117,7 +118,6 @@ void main() {
         'balances': [],
         'assets': [],
         'subscriptions': [],
-        'ratesCache': {},
         'meta': {'nextAccountId': 2, 'nextBalanceId': 1, 'nextAssetId': 1, 'nextSubscriptionId': 1},
       }),
     );
@@ -125,49 +125,70 @@ void main() {
     final store = AppStore(dataDirectory: tempDir);
     await store.ensureInitialized();
 
-    expect(store.getAccounts().map((a) => a.name), contains('Altes Konto'));
-
+    expect(store.getAccounts(), isEmpty);
     final onDisk = jsonDecode(await storeFile().readAsString());
-    expect(onDisk['nonce'], isA<String>());
-    expect(onDisk['cipherText'], isA<String>());
+    expect(onDisk['cipherText'], isA<String>(), reason: 'store should have been rewritten as an envelope');
+    final quarantined = tempDir.listSync().where((f) => f.path.contains('.unreadable-'));
+    expect(quarantined, isNotEmpty);
   });
 
-  test('pre-rebrand app-data.json is renamed to finanzgecko-data.json on first run', () async {
+  test('cached rates go to a separate plaintext file, not the encrypted store', () async {
     final keychain = <String, String>{};
     _FakeSecureStorage(keychain).install();
 
+    final store = AppStore(dataDirectory: tempDir);
+    await store.ensureInitialized();
+    await store.setCachedRate('USD_EUR_2026-01-31', 0.92);
+
+    // Rates file exists, is readable plaintext JSON, and holds the rate.
+    final rates = jsonDecode(await ratesFile().readAsString()) as Map<String, dynamic>;
+    expect(rates['USD_EUR_2026-01-31'], 0.92);
+
+    // A fresh store on the same dir reads the rate back.
+    final reopened = AppStore(dataDirectory: tempDir);
+    await reopened.ensureInitialized();
+    expect(reopened.getCachedRate('USD_EUR_2026-01-31'), 0.92);
+  });
+
+  test('legacy in-store ratesCache is migrated into the standalone rates file', () async {
+    // Build an encrypted store whose decrypted payload still carries an
+    // in-database `ratesCache` (the pre-migration shape), using the same key
+    // the store will read from the fake keychain.
+    final cipher = AesGcm.with256bits();
+    final key = await cipher.newSecretKey();
+    final keyBytes = await key.extractBytes();
+    final keychain = {'finanzgecko_dek': base64Encode(keyBytes)};
+    _FakeSecureStorage(keychain).install();
+
+    final payload = jsonEncode({
+      'schemaVersion': 1,
+      'baseCurrency': 'EUR',
+      'accounts': [],
+      'balances': [],
+      'assets': [],
+      'subscriptions': [],
+      'ratesCache': {'CHF_EUR_2026-02-28': 1.04},
+      'meta': {'nextAccountId': 1, 'nextBalanceId': 1, 'nextAssetId': 1, 'nextSubscriptionId': 1},
+    });
+    final box = await cipher.encrypt(utf8.encode(payload), secretKey: key);
     tempDir.createSync(recursive: true);
-    await legacyStoreFile().writeAsString(
+    await storeFile().writeAsString(
       jsonEncode({
-        'schemaVersion': 1,
-        'baseCurrency': 'EUR',
-        'defaultSubscriptionInterval': 'monthly',
-        'accounts': [
-          {
-            'id': 1,
-            'name': 'Altes Konto',
-            'bank': '',
-            'tag': 'giro',
-            'currency': 'EUR',
-            'color': '#00c878',
-            'archived': false,
-            'createdAt': DateTime.now().toIso8601String(),
-          },
-        ],
-        'balances': [],
-        'assets': [],
-        'subscriptions': [],
-        'ratesCache': {},
-        'meta': {'nextAccountId': 2, 'nextBalanceId': 1, 'nextAssetId': 1, 'nextSubscriptionId': 1},
+        'v': 1,
+        'nonce': base64Encode(box.nonce),
+        'cipherText': base64Encode(box.cipherText),
+        'mac': base64Encode(box.mac.bytes),
       }),
     );
 
     final store = AppStore(dataDirectory: tempDir);
     await store.ensureInitialized();
 
-    expect(store.getAccounts().map((a) => a.name), contains('Altes Konto'));
-    expect(await legacyStoreFile().exists(), isFalse);
-    expect(await storeFile().exists(), isTrue);
+    // The rate is readable, now lives in the standalone file, and has been
+    // dropped from the (decrypted) database.
+    expect(store.getCachedRate('CHF_EUR_2026-02-28'), 1.04);
+    final rates = jsonDecode(await ratesFile().readAsString()) as Map<String, dynamic>;
+    expect(rates['CHF_EUR_2026-02-28'], 1.04);
   });
 
   test('a tampered envelope is quarantined and the store falls back to defaults', () async {

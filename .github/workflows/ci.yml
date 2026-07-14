@@ -1,0 +1,34 @@
+name: CI
+
+# Statische Analyse + Tests bei jedem Push und Pull Request. Der Release-
+# Workflow (release.yml) baut nur getaggte Versionen — dieser hier ist die
+# schnelle Rückmeldung während der Entwicklung und muss grün sein, bevor
+# etwas gemerged/getaggt wird.
+#
+# Ein einzelner ubuntu-Runner reicht: Analyse und Unit-/Widget-Tests laufen
+# plattformunabhängig (kein nativer Desktop-Build nötig), anders als die
+# drei Release-Jobs, die je Zielplattform kompilieren.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  analyze-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Statische Analyse
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test

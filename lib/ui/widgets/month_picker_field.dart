@@ -14,7 +14,10 @@ class MonthPickerField extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   Future<void> _open(BuildContext context) async {
-    final result = await showDialog<String>(context: context, builder: (ctx) => _MonthPickerDialog(initialValue: value));
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _MonthPickerDialog(initialValue: value),
+    );
     if (result != null) onChanged(result);
   }
 
@@ -22,10 +25,7 @@ class MonthPickerField extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlinedButton(
       onPressed: () => _open(context),
-      style: OutlinedButton.styleFrom(
-        alignment: Alignment.centerLeft,
-        minimumSize: const Size(180, 48),
-      ),
+      style: OutlinedButton.styleFrom(alignment: Alignment.centerLeft, minimumSize: const Size(180, 48)),
       child: noSelect(Text(periodLabel(value))),
     );
   }

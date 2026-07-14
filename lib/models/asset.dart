@@ -28,9 +28,7 @@ class Asset {
     name: json['name'] as String? ?? '',
     value: (json['value'] as num).toDouble(),
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
-    lastEvaluatedAt: json['lastEvaluatedAt'] != null
-        ? DateTime.tryParse(json['lastEvaluatedAt'] as String)
-        : null,
+    lastEvaluatedAt: json['lastEvaluatedAt'] != null ? DateTime.tryParse(json['lastEvaluatedAt'] as String) : null,
   );
 
   Map<String, dynamic> toJson() => {

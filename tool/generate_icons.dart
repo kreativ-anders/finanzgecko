@@ -2,15 +2,16 @@
 // flutter_launcher_icons für macOS/Windows auf und skaliert den Master
 // zusätzlich auf die Linux-Hicolor-Größen (das Package kennt kein
 // Linux-Target). Aufruf: dart run tool/generate_icons.dart
+
+// Dev-CLI-Skript (kein App-Code): Fortschritt landet bewusst per print auf
+// der Konsole, ein Logging-Framework wäre hier unangemessen.
+// ignore_for_file: avoid_print
 import 'dart:io';
 
 import 'package:image/image.dart' as img;
 
 const masterPath = 'assets/icon/icon.png';
-const linuxTargets = {
-  'icons/icon-512.png': 512,
-  'icons/icon-192.png': 192,
-};
+const linuxTargets = {'icons/icon-512.png': 512, 'icons/icon-192.png': 192};
 
 Future<void> main() async {
   await _runFlutterLauncherIcons();
@@ -19,11 +20,7 @@ Future<void> main() async {
 
 Future<void> _runFlutterLauncherIcons() async {
   print('==> macOS/Windows (flutter_launcher_icons)');
-  final process = await Process.start(
-    'dart',
-    ['run', 'flutter_launcher_icons'],
-    mode: ProcessStartMode.inheritStdio,
-  );
+  final process = await Process.start('dart', ['run', 'flutter_launcher_icons'], mode: ProcessStartMode.inheritStdio);
   final code = await process.exitCode;
   if (code != 0) {
     stderr.writeln('flutter_launcher_icons ist mit Code $code fehlgeschlagen.');

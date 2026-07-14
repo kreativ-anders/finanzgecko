@@ -58,7 +58,12 @@ class AppLineChart extends StatelessWidget {
     if (points.isEmpty || values.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(child: Text('Noch keine Daten.', style: TextStyle(color: kMuted, fontStyle: FontStyle.italic))),
+        child: const Center(
+          child: Text(
+            'Noch keine Daten.',
+            style: TextStyle(color: kMuted, fontStyle: FontStyle.italic),
+          ),
+        ),
       );
     }
 
@@ -236,8 +241,10 @@ class AppLineChart extends StatelessWidget {
                           // So this decorative label never steals a hover
                           // event meant for the chart underneath it.
                           child: IgnorePointer(
-                            child:
-                                Text(text, style: const TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+                            child: Text(
+                              text,
+                              style: const TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
                           ),
                         );
                       }
@@ -276,7 +283,10 @@ class AppLineChart extends StatelessWidget {
                 Expanded(flex: lastIndex, child: const SizedBox()),
                 Text(points.last.label, style: const TextStyle(color: kMuted, fontSize: 11)),
                 const Expanded(flex: 1, child: SizedBox()),
-                const Text('Prognose', style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic)),
+                const Text(
+                  'Prognose',
+                  style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
+                ),
               ],
             )
           else
@@ -375,7 +385,13 @@ class _HoverLayerState extends State<_HoverLayer> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(left: x - 0.5, top: 0, bottom: 0, width: 1, child: Container(color: kMuted.withValues(alpha: 0.35))),
+          Positioned(
+            left: x - 0.5,
+            top: 0,
+            bottom: 0,
+            width: 1,
+            child: Container(color: kMuted.withValues(alpha: 0.35)),
+          ),
           Positioned(
             left: tooltipLeft,
             top: tooltipTop.clamp(0.0, (widget.height - estTooltipHeight).clamp(0.0, widget.height)),

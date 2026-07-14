@@ -18,7 +18,9 @@ import 'views/settings_view.dart';
 import 'views/subscriptions_view.dart';
 import 'widgets/app_snackbar.dart';
 
-const _backupTypeGroups = [XTypeGroup(label: 'JSON-Backup', extensions: ['json'])];
+const _backupTypeGroups = [
+  XTypeGroup(label: 'JSON-Backup', extensions: ['json']),
+];
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -147,16 +149,24 @@ class _TopBar extends StatelessWidget {
     return SelectionContainer.disabled(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kBorder))),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: kBorder)),
+        ),
         child: Wrap(
           crossAxisAlignment: WrapCrossAlignment.center,
           alignment: WrapAlignment.spaceBetween,
           runSpacing: 8,
           children: [
-            const Text('🦎 FinanzGecko', style: TextStyle(fontWeight: FontWeight.w700, color: kPrimary, fontSize: 16)),
+            const Text(
+              '🦎 FinanzGecko',
+              style: TextStyle(fontWeight: FontWeight.w700, color: kPrimary, fontSize: 16),
+            ),
             Wrap(
               spacing: 2,
-              children: [for (final view in AppView.values) _NavButton(view: view, active: view == current, onTap: () => onNavigate(view))],
+              children: [
+                for (final view in AppView.values)
+                  _NavButton(view: view, active: view == current, onTap: () => onNavigate(view)),
+              ],
             ),
           ],
         ),

@@ -62,7 +62,10 @@ class OverspendBanner extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: onCheck,
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2B0000), foregroundColor: const Color(0xFFFFE6E6)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2B0000),
+              foregroundColor: const Color(0xFFFFE6E6),
+            ),
             child: noSelect(const Text('Fixposten prüfen')),
           ),
         ],

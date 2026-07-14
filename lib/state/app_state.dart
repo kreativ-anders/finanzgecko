@@ -76,14 +76,7 @@ class AppState extends ChangeNotifier {
     return acc;
   }
 
-  Future<void> updateAccount(
-    int id, {
-    String? name,
-    String? bank,
-    String? tag,
-    String? currency,
-    String? color,
-  }) async {
+  Future<void> updateAccount(int id, {String? name, String? bank, String? tag, String? currency, String? color}) async {
     await store.updateAccount(id, name: name, bank: bank, tag: tag, currency: currency, color: color);
     await _reloadAndNotify();
   }

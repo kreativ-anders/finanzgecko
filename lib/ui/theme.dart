@@ -73,9 +73,7 @@ ThemeData buildAppTheme() {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: kPrimary),
-    ),
+    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: kPrimary)),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
         return states.contains(WidgetState.selected) ? const Color(0xFF04140D) : kMuted;
@@ -89,6 +87,9 @@ ThemeData buildAppTheme() {
     ),
     scrollbarTheme: const ScrollbarThemeData(),
     dialogTheme: const DialogThemeData(backgroundColor: kSurface),
-    snackBarTheme: const SnackBarThemeData(backgroundColor: kSurface, contentTextStyle: TextStyle(color: Colors.white)),
+    snackBarTheme: const SnackBarThemeData(
+      backgroundColor: kSurface,
+      contentTextStyle: TextStyle(color: Colors.white),
+    ),
   );
 }

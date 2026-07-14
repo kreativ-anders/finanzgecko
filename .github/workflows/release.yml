@@ -3,16 +3,14 @@ name: Release
 # Baut die Desktop-Bundles für Linux, macOS und Windows und hängt sie als
 # Assets an ein GitHub-Release, das zum gepushten Tag passt.
 #
-# Anders als beim früheren Neutralino-Build (ein Runner reicht, weil dort
-# alle Plattform-Binaries fertige Downloads waren) braucht Flutter für jede
-# Zielplattform einen nativen Build auf dieser Plattform -- daher drei
-# separate Jobs (ubuntu/macos/windows-latest), die alle denselben Tag
-# hochladen (softprops/action-gh-release legt das Release beim ersten Job an
-# und ergänzt es bei den folgenden).
+# Flutter braucht für jede Zielplattform einen nativen Build auf dieser
+# Plattform -- daher drei separate Jobs (ubuntu/macos/windows-latest), die
+# alle denselben Tag hochladen (softprops/action-gh-release legt das
+# Release beim ersten Job an und ergänzt es bei den folgenden).
 #
 # Jeder Build ist ein ganzer Ordner (Executable + data/ + Bibliotheken),
-# kein self-contained Single-File-Binary mehr wie bei Neutralino --
-# deswegen wird jeweils der komplette Bundle-Ordner gezippt.
+# kein self-contained Single-File-Binary -- deswegen wird jeweils der
+# komplette Bundle-Ordner gezippt.
 #
 # Ablauf für ein Release:
 #   1. Version in pubspec.yaml (version:) hochzählen und committen

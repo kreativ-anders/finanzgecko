@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:finanzgecko/data/app_store.dart';
 import 'package:finanzgecko/state/app_state.dart';
-import 'package:finanzgecko/ui/app_view.dart';
 import 'package:finanzgecko/ui/views/entries_view.dart';
 import 'package:finanzgecko/utils/formatting.dart';
 import 'package:flutter/material.dart';
@@ -21,9 +18,7 @@ class _FakeSecureStorage {
   static const MethodChannel _channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
   void install() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(_channel, (
-      call,
-    ) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(_channel, (call) async {
       switch (call.method) {
         case 'read':
           return values[(call.arguments as Map)['key'] as String];
@@ -51,19 +46,13 @@ class _FakeSecureStorage {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late Directory tempDir;
-
-  setUp(() {
-    tempDir = Directory.systemTemp.createTempSync('finanzgecko_entries_test_');
-  });
-
-  tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
-
   Future<AppState> bootAppState() async {
     _FakeSecureStorage(<String, String>{}).install();
-    final store = AppStore(dataDirectory: tempDir);
+    // In-memory: widget tests run under a fake-async clock that never pumps
+    // the real event loop, so any real dart:io file I/O would hang. See the
+    // AppStore(persistToDisk:) doc. Persistence is covered by the plain
+    // test()-based store tests instead.
+    final store = AppStore(persistToDisk: false);
     await store.ensureInitialized();
     final appState = AppState(store);
     await appState.init();
@@ -79,9 +68,20 @@ void main() {
     );
   }
 
+  // The default test surface (800x600) is smaller than the app's real minimum
+  // window and clips the archived-accounts section, so its buttons render
+  // off-screen and tap() misses them. Give the tests a tall surface so the
+  // whole view is laid out and hit-testable. Reset after each test.
+  void useLargeSurface(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+  }
+
   testWidgets('archived account balance shows under "Archivierte Konten" with a Wiederherstellen action', (
     tester,
   ) async {
+    useLargeSurface(tester);
     final appState = await bootAppState();
     final store = appState.store;
     final archived = await store.addAccount(name: 'Altes Konto', tag: 'giro', currency: 'EUR', color: '#00c878');
@@ -116,6 +116,7 @@ void main() {
   });
 
   testWidgets('Löschen permanently removes the orphaned balance entry', (tester) async {
+    useLargeSurface(tester);
     final appState = await bootAppState();
     final store = appState.store;
     final archived = await store.addAccount(name: 'Altes Konto', tag: 'giro', currency: 'EUR', color: '#00c878');
@@ -148,6 +149,7 @@ void main() {
   });
 
   testWidgets('existing balance prefills the amount field with German grouping, not raw toString', (tester) async {
+    useLargeSurface(tester);
     final appState = await bootAppState();
     final store = appState.store;
     final acc = await store.addAccount(name: 'Konto', tag: 'giro', currency: 'EUR', color: '#00c878');

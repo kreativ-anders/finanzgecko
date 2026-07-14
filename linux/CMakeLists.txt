@@ -7,8 +7,7 @@ project(runner LANGUAGES CXX)
 set(BINARY_NAME "finanzgecko")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-# Matches the previous Neutralino build's applicationId (used for
-# WM_CLASS/app_id taskbar icon matching, see packaging/linux/).
+# Used for WM_CLASS/app_id taskbar icon matching, see packaging/linux/.
 set(APPLICATION_ID "de.finanzgecko.app")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent

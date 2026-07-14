@@ -19,14 +19,7 @@ class Account {
     required this.createdAt,
   });
 
-  Account copyWith({
-    String? name,
-    String? bank,
-    String? tag,
-    String? currency,
-    String? color,
-    bool? archived,
-  }) {
+  Account copyWith({String? name, String? bank, String? tag, String? currency, String? color, bool? archived}) {
     return Account(
       id: id,
       name: name ?? this.name,

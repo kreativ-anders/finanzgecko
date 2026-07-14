@@ -5,13 +5,6 @@ alle Daten liegen in einer einzigen JSON-Datei im eigenen Datenverzeichnis
 der App. Gebaut mit [Flutter](https://flutter.dev) (Desktop-Target), lokal
 lauffähig auf Linux, macOS und Windows.
 
-> Dieser Branch (`flutter`) ist eine vollständige Neuimplementierung der
-> bisherigen [Neutralinojs](https://neutralino.js.org/)-App. Die
-> Geschäftslogik (Kontostände, Wechselkurse, Fixposten, Backup/Restore) ist
-> 1:1 übernommen, die UI ist nativ in Dart/Flutter statt HTML/CSS/JS gebaut.
-> Bestehende `app-data.json`-Dateien der alten Version werden beim ersten
-> Start automatisch in `finanzgecko-data.json` umbenannt (siehe unten).
-
 ## Einmalig einrichten
 
 ### Linux (z. B. TUXEDO OS)
@@ -121,7 +114,7 @@ flutter config --enable-macos-desktop
 flutter doctor
 ```
 
-**Datenverzeichnis** (unverändert gegenüber der Neutralino-Version):
+**Datenverzeichnis:**
 - **Linux:** `~/.local/share/de.finanzgecko.app/`
 - **macOS:** `~/Library/Application Support/de.finanzgecko.app/`
 - **Windows:** `%APPDATA%\de.finanzgecko.app\`
@@ -147,10 +140,10 @@ flutter build linux --release
 ```
 
 Ergebnis liegt in `build/linux/x64/release/bundle/` — ein **Ordner**, kein
-Single-File-Binary wie bei der alten Neutralino-Version: die ausführbare
-Datei `finanzgecko` braucht die mitgelieferten `data/` und `lib/*.so`
-daneben, um zu starten. Beim Verteilen immer den kompletten Ordner
-zippen/mitgeben, nicht nur die Executable.
+Single-File-Binary: die ausführbare Datei `finanzgecko` braucht die
+mitgelieferten `data/` und `lib/*.so` daneben, um zu starten. Beim
+Verteilen immer den kompletten Ordner zippen/mitgeben, nicht nur die
+Executable.
 
 Zum Ausprobieren direkt aus dem Bundle heraus:
 
@@ -196,9 +189,9 @@ flutter build windows --release   # unter Windows
 ```
 
 `flutter build macos` erzeugt bereits ein vollständiges `FinanzGecko.app`
-mit Info.plist, Icon und Ad-hoc-Signatur — anders als bei Neutralino ist
-dafür kein zusätzliches `packaging/macos/build-app.sh` mehr nötig, Flutter
-übernimmt das Bundling selbst. `flutter build windows` erzeugt einen Ordner
+mit Info.plist, Icon und Ad-hoc-Signatur — dafür ist kein zusätzliches
+`packaging/macos/build-app.sh` nötig, Flutter übernimmt das Bundling
+selbst. `flutter build windows` erzeugt einen Ordner
 unter `build/windows/x64/runner/Release/` (Executable + `data/` + DLLs), der
 komplett verteilt werden muss — auch hier keine Einzeldatei mehr. Zum
 Ausprobieren direkt aus dem Bundle heraus:
@@ -287,11 +280,10 @@ erzeugt.
 
 ## Warum weiterhin keine Datenbank-Engine
 
-Wie schon bei der Neutralino-Version: eine einzige JSON-Datei im
-OS-eigenen Datenverzeichnis, keine SQLite/Hive/Isar-Abhängigkeit. Für die
-Datenmenge eines persönlichen Vermögenstrackers (ein paar hundert
-Kontostände) ist "ganze Datei einlesen/schreiben" völlig ausreichend und
-hält den Code einfach.
+Eine einzige JSON-Datei im OS-eigenen Datenverzeichnis, keine
+SQLite/Hive/Isar-Abhängigkeit. Für die Datenmenge eines persönlichen
+Vermögenstrackers (ein paar hundert Kontostände) ist "ganze Datei
+einlesen/schreiben" völlig ausreichend und hält den Code einfach.
 
 **Dateipfad:**
 - **Linux:** `~/.local/share/de.finanzgecko.app/finanzgecko-data.json`
@@ -302,12 +294,21 @@ Die Datei ist AES-256-GCM-verschlüsselt (`lib/data/app_store.dart`,
 `lib/data/secure_key_store.dart`): Der Schlüssel liegt nicht in der Datei
 selbst, sondern im OS-eigenen Credential-Speicher (Windows Credential
 Locker, macOS Keychain, Linux libsecret/kwallet) und wird beim ersten
-Start pro Installation erzeugt. Eine alte, unverschlüsselte Datei aus
-einer Version vor diesem Wechsel wird beim nächsten Start automatisch
-gelesen und als verschlüsselte Envelope neu geschrieben — kein manueller
-Migrationsschritt nötig. Dateirechte (`chmod 0700` fürs Datenverzeichnis,
+Start pro Installation erzeugt. Nur eine echte Envelope-Datei wird als
+Datenquelle akzeptiert; eine unerwartete oder fremde Dateiform wird vor dem
+Überschreiben unter `*.unreadable-<Zeitstempel>` gesichert und die App
+startet mit Standardwerten. Dateirechte (`chmod 0700` fürs Datenverzeichnis,
 `0600` für die Datei, unter Linux/macOS; ACL via `icacls` unter Windows)
 bleiben zusätzlich als Verteidigungsebene bestehen.
+
+Wechselkurse (öffentliche EZB-Referenzkurse, jederzeit neu abrufbar) liegen
+bewusst **nicht** in dieser verschlüsselten Datei, sondern in einer eigenen
+kleinen Klartextdatei `finanzgecko-rates.json` daneben — so löst das
+Zwischenspeichern eines frisch geholten Kurses kein komplettes
+Neu-Verschlüsseln und -Schreiben der gesamten Datenbank aus. Alle
+Schreibvorgänge (Datenbank wie Kurs-Cache) laufen über eine gemeinsame
+Warteschlange und können sich dadurch nicht auf der temporären Datei
+überschneiden.
 
 **macOS:** `SecureKeyStore` (`lib/data/secure_key_store.dart`) übergibt
 `MacOsOptions(useDataProtectionKeyChain: false)` an `FlutterSecureStorage`.
@@ -326,9 +327,9 @@ sondern wegen des Datenverzeichnisses selbst: Mit aktiver Sandbox
 virtualisiert macOS `$HOME` für den Prozess auf einen Container-Pfad
 (`~/Library/Containers/de.finanzgecko.app/Data/...`), sodass
 `resolveDataDirectory()` in `app_store.dart` nicht mehr im oben
-dokumentierten, mit der alten Neutralino-Version geteilten Pfad landet —
-die automatische Migration bestehender Installationen würde damit
-stillschweigend ins Leere laufen. Ohne Sandbox schreibt die App direkt in
+dokumentierten Pfad landet — die App würde ihre Daten dann an einem
+anderen, nicht dokumentierten Ort ablegen und ein dort zuvor abgelegter
+Bestand wäre nicht mehr auffindbar. Ohne Sandbox schreibt die App direkt in
 den echten, dokumentierten Pfad.
 
 Export/Import laufen über native Save/Open-Dialoge (`file_selector`), nicht
@@ -338,30 +339,29 @@ Export/Import laufen über native Save/Open-Dialoge (`file_selector`), nicht
 
 Startet mit der zuletzt verwendeten Größe (Standard 1280×860, Mindestgröße
 960×640, `window_manager`). Ob das Fenster beim letzten Beenden maximiert
-war, wird ebenfalls gemerkt. Anders als bei Neutralino wird nur Größe +
-Maximiert-Status gespeichert, nicht die Bildschirmposition — das vermeidet,
-dass das Fenster nach einem Monitor-/Auflösungswechsel außerhalb des
-sichtbaren Bereichs landet.
+war, wird ebenfalls gemerkt. Gespeichert werden dabei nur Größe +
+Maximiert-Status, nicht die Bildschirmposition — das vermeidet, dass das
+Fenster nach einem Monitor-/Auflösungswechsel außerhalb des sichtbaren
+Bereichs landet.
 
 ## In-App-Menü statt nativer Menüleiste
 
 Flutters `PlatformMenuBar` unterstützt aktuell nur macOS — unter Linux und
-Windows gibt es keine native App-Menüleiste. Statt einer Neutralino-typischen
-`Neutralino.window.setMainMenu()`-Leiste hat die App deshalb einen
+Windows gibt es keine native App-Menüleiste. Die App hat deshalb einen
 "Datei"-Menüpunkt direkt im eigenen Fensterkopf (Backup exportieren/
 importieren, Beenden), plattformübergreifend identisch. Tastenkürzel
 (<kbd>Strg</kbd>+<kbd>E</kbd>/<kbd>I</kbd>/<kbd>Q</kbd>, unter macOS
 <kbd>Cmd</kbd>) funktionieren global im Fenster, unabhängig vom Menü.
 
-## Migration von der bisherigen Neutralino-/PWA-Version
+## Migration von einer früheren Version
 
-Bestehende `app-data.json` wird beim ersten Start automatisch zu
-`finanzgecko-data.json` im selben Datenverzeichnis umbenannt — das Schema ist
-identisch geblieben (gleiche Feldnamen, gleiches Datenverzeichnis). Einfach
-diese Version starten, es ist kein manueller Import nötig. Für einen
-Rechnerwechsel oder als zusätzliche Sicherheit weiterhin: über
-*Einstellungen → Backup exportieren…* ein Backup ziehen und auf dem neuen
-Rechner über *Backup importieren…* einlesen.
+Der Umzug läuft über Export/Import: in der alten Version über *Einstellungen
+→ Backup exportieren…* eine JSON-Datei ziehen und in dieser Version über
+*Backup importieren…* einlesen — das Schema ist identisch geblieben (gleiche
+Feldnamen). Derselbe Weg dient auch einem Rechnerwechsel oder als
+zusätzliche Sicherung. Ein Import prüft dabei die Schemaversion und lehnt
+Backups aus einer neueren App-Version mit klarer Meldung ab, statt sie
+womöglich unvollständig einzulesen.
 
 Eine Inkonsistenz der alten Version wurde dabei behoben: Import stellte
 Fixposten und das Standard-Fixposten-Intervall bisher nicht wieder her,

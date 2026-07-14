@@ -33,7 +33,11 @@ class DashboardView extends StatelessWidget {
           onCheck: () => onNavigate(AppView.subscriptions),
         ),
       if (backupReminder.overdue)
-        InfoBanner(message: backupReminder.message, actionLabel: 'Jetzt exportieren', onAction: () => onNavigate(AppView.settings)),
+        InfoBanner(
+          message: backupReminder.message,
+          actionLabel: 'Jetzt exportieren',
+          onAction: () => onNavigate(AppView.settings),
+        ),
       if (assetReminder != null)
         InfoBanner(message: assetReminder, actionLabel: 'Jetzt prüfen', onAction: () => onNavigate(AppView.assets)),
     ];
@@ -68,7 +72,10 @@ class DashboardView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Konten', style: Theme.of(context).textTheme.titleLarge),
-                OutlinedButton(onPressed: () => onNavigate(AppView.entries), child: noSelect(const Text('Einträge verwalten'))),
+                OutlinedButton(
+                  onPressed: () => onNavigate(AppView.entries),
+                  child: noSelect(const Text('Einträge verwalten')),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -108,8 +115,7 @@ class _TotalsOverview extends StatelessWidget {
   final List<String> periods;
   final AppState app;
 
-  double _totalForPeriod(String period) =>
-      app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
+  double _totalForPeriod(String period) => app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
 
   @override
   Widget build(BuildContext context) {
@@ -188,11 +194,11 @@ enum _HistoryPreset { ytd, twelveMonths, lastYear, all }
 
 extension on _HistoryPreset {
   String get label => switch (this) {
-        _HistoryPreset.ytd => 'Dieses Jahr',
-        _HistoryPreset.twelveMonths => '12 Monate',
-        _HistoryPreset.lastYear => 'Letztes Jahr',
-        _HistoryPreset.all => 'Alle',
-      };
+    _HistoryPreset.ytd => 'Dieses Jahr',
+    _HistoryPreset.twelveMonths => '12 Monate',
+    _HistoryPreset.lastYear => 'Letztes Jahr',
+    _HistoryPreset.all => 'Alle',
+  };
 }
 
 /// The "Verlauf" card: total net worth over time, with a preset range
@@ -211,7 +217,16 @@ class _HistoryCard extends StatefulWidget {
 }
 
 class _HistoryCardState extends State<_HistoryCard> {
-  _HistoryPreset _preset = _HistoryPreset.ytd;
+  late _HistoryPreset _preset = _initialPreset();
+
+  /// Defaults to "Dieses Jahr", but falls back to "Alle" when the current
+  /// year has no data yet — otherwise the chart would open empty (e.g. early
+  /// in a new year, or when all entries predate it).
+  _HistoryPreset _initialPreset() {
+    final currentYear = DateTime.now().year;
+    final hasCurrentYear = widget.periods.any((p) => int.parse(p.split('-')[0]) == currentYear);
+    return hasCurrentYear ? _HistoryPreset.ytd : _HistoryPreset.all;
+  }
 
   List<String> _filteredPeriods() {
     final now = DateTime.now();
@@ -322,14 +337,16 @@ class _DistributionSection extends StatelessWidget {
       byTag[acc.tag] = (byTag[acc.tag] ?? 0) + b.amountBase;
     }
     final donutSegments = [
-      for (final entry in byTag.entries) DonutSegment(label: entry.key, value: entry.value, color: colorFromHex(tagColorHex(entry.key))),
+      for (final entry in byTag.entries)
+        DonutSegment(label: entry.key, value: entry.value, color: colorFromHex(tagColorHex(entry.key))),
     ];
 
     final positiveTags = byTag.entries.where((e) => e.value > 0).toList();
     final tagTotal = positiveTags.fold<double>(0, (sum, e) => sum + e.value);
     final topEntry = positiveTags.isEmpty ? null : positiveTags.reduce((a, b) => a.value > b.value ? a : b);
     final topShare = (topEntry != null && tagTotal > 0) ? topEntry.value / tagTotal : null;
-    final showConcentrationNote = positiveTags.length >= 2 && topShare != null && topShare >= kConcentrationRiskThreshold;
+    final showConcentrationNote =
+        positiveTags.length >= 2 && topShare != null && topShare >= kConcentrationRiskThreshold;
 
     return SectionCard(
       title: 'Verteilung nach Kontotyp',
@@ -358,7 +375,10 @@ class _DistributionSection extends StatelessWidget {
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
-            child: OutlinedButton(onPressed: () => onNavigate(AppView.accounts), child: noSelect(const Text('Konten verwalten'))),
+            child: OutlinedButton(
+              onPressed: () => onNavigate(AppView.accounts),
+              child: noSelect(const Text('Konten verwalten')),
+            ),
           ),
         ],
       ),
@@ -380,7 +400,9 @@ class _SummaryRow extends StatelessWidget {
         if (constraints.maxWidth < 640) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [for (final child in children) ...[child, cardGap]]..removeLast(),
+            children: [
+              for (final child in children) ...[child, cardGap],
+            ]..removeLast(),
           );
         }
         return IntrinsicHeight(
@@ -418,7 +440,11 @@ class _AccountCards extends StatelessWidget {
           spacing: _spacing,
           runSpacing: _spacing,
           children: [
-            for (final acc in app.accounts) SizedBox(width: cardWidth, child: _AccountCard(acc: acc, app: app)),
+            for (final acc in app.accounts)
+              SizedBox(
+                width: cardWidth,
+                child: _AccountCard(acc: acc, app: app),
+              ),
           ],
         );
       },
@@ -449,15 +475,29 @@ class _AccountCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(width: 10, height: 10, decoration: BoxDecoration(color: colorFromHex(acc.color), shape: BoxShape.circle)),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(color: colorFromHex(acc.color), shape: BoxShape.circle),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: Text(acc.name, style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                Expanded(
+                  child: Text(
+                    acc.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 const SizedBox(width: 6),
                 _TagChip(tag: acc.tag),
               ],
             ),
             const SizedBox(height: 4),
-            Text(acc.bank, style: const TextStyle(color: kMuted, fontSize: 12), overflow: TextOverflow.ellipsis),
+            Text(
+              acc.bank,
+              style: const TextStyle(color: kMuted, fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 8),
             Text(
               latest != null ? fmtMoney(latest.amountBase, app.baseCurrency) : '—',
@@ -486,7 +526,10 @@ class _TagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
-      child: Text(tag, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+      child: Text(
+        tag,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }
@@ -579,7 +622,10 @@ class _SubscriptionsSection extends StatelessWidget {
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
-            child: OutlinedButton(onPressed: () => onNavigate(AppView.subscriptions), child: noSelect(const Text('Fixposten aktualisieren'))),
+            child: OutlinedButton(
+              onPressed: () => onNavigate(AppView.subscriptions),
+              child: noSelect(const Text('Fixposten aktualisieren')),
+            ),
           ),
         ],
       ),
@@ -602,7 +648,10 @@ class _SummaryItem extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
-        Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
         if (subValue != null) Text(subValue!, style: const TextStyle(color: kMuted, fontSize: 12)),
       ],
     );

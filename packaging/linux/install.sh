@@ -26,8 +26,7 @@ ICON_BASE="$HOME/.local/share/icons/hicolor"
 mkdir -p "$BIN_DIR" "$DESKTOP_DIR" "$ICON_BASE/512x512/apps" "$ICON_BASE/192x192/apps"
 
 # The whole bundle directory (executable + data/ + lib/*.so) must move
-# together — unlike the old single-file Neutralino binary, this is not one
-# self-contained file.
+# together — this is not a single self-contained file.
 rm -rf "$INSTALL_DIR"
 cp -r "$BUNDLE_SRC" "$INSTALL_DIR"
 

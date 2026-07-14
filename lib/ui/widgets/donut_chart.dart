@@ -24,7 +24,12 @@ class AppDonutChart extends StatelessWidget {
     if (total <= 0) {
       return const SizedBox(
         height: 140,
-        child: Center(child: Text('Noch keine Daten.', style: TextStyle(color: kMuted, fontStyle: FontStyle.italic))),
+        child: Center(
+          child: Text(
+            'Noch keine Daten.',
+            style: TextStyle(color: kMuted, fontStyle: FontStyle.italic),
+          ),
+        ),
       );
     }
 
@@ -57,7 +62,11 @@ class AppDonutChart extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(width: 11, height: 11, decoration: BoxDecoration(color: s.color, shape: BoxShape.circle)),
+                    Container(
+                      width: 11,
+                      height: 11,
+                      decoration: BoxDecoration(color: s.color, shape: BoxShape.circle),
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '${s.label} — ${((s.value / total) * 100).toStringAsFixed(1)}%',

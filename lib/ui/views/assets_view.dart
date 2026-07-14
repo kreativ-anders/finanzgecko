@@ -210,7 +210,10 @@ class _AssetRowState extends State<_AssetRow> {
             Container(
               margin: const EdgeInsets.only(right: 10),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(border: Border.all(color: kDanger), borderRadius: BorderRadius.circular(999)),
+              decoration: BoxDecoration(
+                border: Border.all(color: kDanger),
+                borderRadius: BorderRadius.circular(999),
+              ),
               child: const Text('Neu bewerten', style: TextStyle(color: kDanger, fontSize: 11)),
             ),
           SizedBox(
@@ -232,4 +235,5 @@ class _AssetRowState extends State<_AssetRow> {
   }
 }
 
-String _formatDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+String _formatDate(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';

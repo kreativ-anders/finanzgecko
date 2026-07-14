@@ -136,7 +136,10 @@ class _EntriesViewState extends State<EntriesView> {
                 style: TextStyle(color: kMuted),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(onPressed: () => widget.onNavigate(AppView.accounts), child: noSelect(const Text('Konto anlegen'))),
+              ElevatedButton(
+                onPressed: () => widget.onNavigate(AppView.accounts),
+                child: noSelect(const Text('Konto anlegen')),
+              ),
             ],
           ),
         ),
@@ -147,7 +150,9 @@ class _EntriesViewState extends State<EntriesView> {
     final activeIds = app.accounts.map((a) => a.id).toSet();
     final balanceByAccount = {for (final b in periodBalances) b.accountId: b};
     final orphanBalances = periodBalances.where((b) => !activeIds.contains(b.accountId)).toList();
-    final visibleAccounts = app.accounts.where((acc) => !(_onlyMissing && balanceByAccount.containsKey(acc.id))).toList();
+    final visibleAccounts = app.accounts
+        .where((acc) => !(_onlyMissing && balanceByAccount.containsKey(acc.id)))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,7 +200,10 @@ class _EntriesViewState extends State<EntriesView> {
                       ),
                       const SizedBox(height: 16),
                       if (visibleAccounts.isEmpty)
-                        Text('Für ${periodLabel(_period)} sind bereits alle Konten erfasst.', style: const TextStyle(color: kMuted))
+                        Text(
+                          'Für ${periodLabel(_period)} sind bereits alle Konten erfasst.',
+                          style: const TextStyle(color: kMuted),
+                        )
                       else
                         for (final acc in visibleAccounts)
                           _EntryRow(
@@ -282,12 +290,17 @@ class _EntryRow extends StatelessWidget {
                     text: account.name,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                     children: [
-                      TextSpan(text: '  (${account.currency})', style: const TextStyle(color: kMuted, fontWeight: FontWeight.normal)),
+                      TextSpan(
+                        text: '  (${account.currency})',
+                        style: const TextStyle(color: kMuted, fontWeight: FontWeight.normal),
+                      ),
                     ],
                   ),
                 ),
                 Text(
-                  prev != null ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})' : '',
+                  prev != null
+                      ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})'
+                      : '',
                   style: const TextStyle(color: kMuted, fontSize: 12),
                 ),
               ],
@@ -372,7 +385,9 @@ class _OrphanRow extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eintrag löschen'),
-        content: Text('Eintrag für ${account?.name ?? 'unbekanntes Konto'} · ${periodLabel(balance.period)} wirklich löschen?'),
+        content: Text(
+          'Eintrag für ${account?.name ?? 'unbekanntes Konto'} · ${periodLabel(balance.period)} wirklich löschen?',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
           ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Löschen'))),

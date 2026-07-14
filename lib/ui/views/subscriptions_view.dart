@@ -97,8 +97,10 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final income = app.subscriptions.where((s) => s.amountOriginal > 0).toList()..sort((a, b) => a.name.compareTo(b.name));
-    final expense = app.subscriptions.where((s) => s.amountOriginal < 0).toList()..sort((a, b) => a.name.compareTo(b.name));
+    final income = app.subscriptions.where((s) => s.amountOriginal > 0).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final expense = app.subscriptions.where((s) => s.amountOriginal < 0).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
     final entries = [...income, ...expense];
 
     return SingleChildScrollView(
@@ -145,13 +147,19 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                           initialValue: _interval,
                           isExpanded: true,
                           decoration: const InputDecoration(labelText: 'Intervall'),
-                          items: [for (final i in kSubscriptionIntervals) DropdownMenuItem(value: i.value, child: Text(i.label))],
+                          items: [
+                            for (final i in kSubscriptionIntervals)
+                              DropdownMenuItem(value: i.value, child: Text(i.label)),
+                          ],
                           onChanged: (v) => setState(() => _interval = v ?? _interval),
                         ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: TextFormField(controller: _currencyCtrl, decoration: const InputDecoration(labelText: 'Währung')),
+                        child: TextFormField(
+                          controller: _currencyCtrl,
+                          decoration: const InputDecoration(labelText: 'Währung'),
+                        ),
                       ),
                     ],
                   ),
@@ -173,7 +181,10 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text('Standard ist Ausgabe (−). Für eine Einnahme wie Gehalt auf + umschalten.', style: TextStyle(color: kMuted, fontSize: 12)),
+                  const Text(
+                    'Standard ist Ausgabe (−). Für eine Einnahme wie Gehalt auf + umschalten.',
+                    style: TextStyle(color: kMuted, fontSize: 12),
+                  ),
                   const SizedBox(height: 18),
                   ElevatedButton(onPressed: () => _submit(app), child: noSelect(const Text('Anlegen'))),
                 ],
@@ -200,7 +211,9 @@ class _SubscriptionRow extends StatefulWidget {
 class _SubscriptionRowState extends State<_SubscriptionRow> {
   late final TextEditingController _nameCtrl = TextEditingController(text: widget.sub.name);
   late final TextEditingController _currencyCtrl = TextEditingController(text: widget.sub.currencyOriginal);
-  late final TextEditingController _magnitudeCtrl = TextEditingController(text: fmtInputNumber(widget.sub.amountOriginal.abs()));
+  late final TextEditingController _magnitudeCtrl = TextEditingController(
+    text: fmtInputNumber(widget.sub.amountOriginal.abs()),
+  );
   late String _interval = widget.sub.interval;
   late bool _isExpense = widget.sub.amountOriginal < 0;
   Timer? _debounce;
@@ -366,7 +379,9 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
               ),
             ),
             const SizedBox(width: 10),
-            Center(child: OutlinedButton(onPressed: _delete, child: noSelect(const Text('Löschen')))),
+            Center(
+              child: OutlinedButton(onPressed: _delete, child: noSelect(const Text('Löschen'))),
+            ),
           ],
         ),
       ),

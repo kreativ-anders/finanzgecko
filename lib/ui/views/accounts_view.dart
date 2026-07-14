@@ -88,7 +88,11 @@ class _BankFieldState extends State<_BankField> {
                       final hex = bankColorHex(name) ?? widget.fallbackColorHex;
                       return ListTile(
                         dense: true,
-                        leading: Container(width: 12, height: 12, decoration: BoxDecoration(color: colorFromHex(hex), shape: BoxShape.circle)),
+                        leading: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(color: colorFromHex(hex), shape: BoxShape.circle),
+                        ),
                         title: Text(name),
                         onTap: () => onSelected(name),
                       );
@@ -107,7 +111,11 @@ class _BankFieldState extends State<_BankField> {
                 hintText: 'z.B. DKB',
                 suffixIcon: Padding(
                   padding: const EdgeInsets.all(14),
-                  child: Container(width: 12, height: 12, decoration: BoxDecoration(color: resolvedColor, shape: BoxShape.circle)),
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(color: resolvedColor, shape: BoxShape.circle),
+                  ),
                 ),
               ),
               validator: (v) => isKnownBank(v) ? null : 'Bitte eine Bank aus der Liste auswählen',
@@ -337,7 +345,11 @@ class _AccountRow extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            Container(width: 12, height: 12, decoration: BoxDecoration(color: colorFromHex(account.color), shape: BoxShape.circle)),
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(color: colorFromHex(account.color), shape: BoxShape.circle),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

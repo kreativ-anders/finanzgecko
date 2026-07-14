@@ -36,7 +36,10 @@ Future<bool> confirmReset(BuildContext context) async {
                 TextSpan(
                   children: [
                     const TextSpan(text: 'Gib zum Bestätigen '),
-                    TextSpan(text: _confirmPhrase, style: const TextStyle(fontWeight: FontWeight.bold, color: kDanger)),
+                    TextSpan(
+                      text: _confirmPhrase,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: kDanger),
+                    ),
                     const TextSpan(text: ' ein:'),
                   ],
                 ),

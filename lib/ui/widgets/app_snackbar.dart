@@ -32,10 +32,6 @@ void showErrorSnackBar(BuildContext context, String message) {
   final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
-    SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 4),
-      backgroundColor: kDanger,
-    ),
+    SnackBar(content: Text(message), duration: const Duration(seconds: 4), backgroundColor: kDanger),
   );
 }

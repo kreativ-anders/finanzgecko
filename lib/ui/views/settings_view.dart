@@ -36,7 +36,10 @@ class SettingsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Alle Beträge werden für Dashboard-Ansichten in diese Währung umgerechnet.', style: TextStyle(color: kMuted)),
+                const Text(
+                  'Alle Beträge werden für Dashboard-Ansichten in diese Währung umgerechnet.',
+                  style: TextStyle(color: kMuted),
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: 280,
@@ -107,7 +110,10 @@ class SettingsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Schreibt eine unverschlüsselte JSON-Datei mit allen Konten und Kontoständen an einen Ort deiner Wahl.', style: TextStyle(color: kMuted)),
+                const Text(
+                  'Schreibt eine unverschlüsselte JSON-Datei mit allen Konten und Kontoständen an einen Ort deiner Wahl.',
+                  style: TextStyle(color: kMuted),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   lastExport != null ? 'Letzter Export: ${_formatDateTime(lastExport)}' : 'Noch nie exportiert.',
@@ -134,7 +140,10 @@ class SettingsView extends StatelessWidget {
                 const Text.rich(
                   TextSpan(
                     children: [
-                      TextSpan(text: 'Achtung: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(
+                        text: 'Achtung: ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       TextSpan(text: 'Der Import ersetzt alle aktuell gespeicherten Daten vollständig.'),
                     ],
                   ),
@@ -184,7 +193,10 @@ class SettingsView extends StatelessWidget {
                 const SizedBox(height: 14),
                 OutlinedButton(
                   onPressed: () => _handleReset(context),
-                  style: OutlinedButton.styleFrom(foregroundColor: kDanger, side: const BorderSide(color: kDanger)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: kDanger,
+                    side: const BorderSide(color: kDanger),
+                  ),
                   child: noSelect(const Text('App zurücksetzen…')),
                 ),
               ],
@@ -254,9 +266,7 @@ class _SecurityMetaRow extends StatelessWidget {
             width: 140,
             child: Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
           ),
-          Expanded(
-            child: SelectableText(value, style: const TextStyle(fontSize: 13)),
-          ),
+          Expanded(child: SelectableText(value, style: const TextStyle(fontSize: 13))),
           if (onOpen != null)
             Padding(
               padding: const EdgeInsets.only(left: 4),
