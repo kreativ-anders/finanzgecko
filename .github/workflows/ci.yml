@@ -27,6 +27,9 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Formatierung
+        run: dart format --output=none --set-exit-if-changed .
+
       - name: Statische Analyse
         run: flutter analyze
 
