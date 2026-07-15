@@ -37,6 +37,14 @@ Feature: Einstellungen
     Then zeigt der Export-Bereich das Tastenkürzel "Strg+E" (bzw. "⌘+E" auf macOS)
     And der Import-Bereich zeigt "Strg+I" (bzw. "⌘+I")
 
+  Scenario: Kontostände zusätzlich als CSV exportieren
+    Given ich bin im Export-Bereich
+    When ich auf "Als CSV exportieren…" klicke
+    Then öffnet sich ein nativer Speichern-Dialog mit Vorschlagsnamen "finanzgecko-kontostaende-<YYYY-MM-DD>.csv"
+    And es wird eine UTF-8-CSV (mit BOM) geschrieben: eine Zeile je Konto und Monat, mit ";" getrennt und Dezimalkomma
+    And dieser Export zählt NICHT als Backup — der Backup-Reminder und "zuletzt exportiert" bleiben unberührt
+    And die CSV ist bewusst nicht wieder importierbar (nur der JSON-Export ist ein verlustfreier Round-Trip)
+
   Scenario: App zurücksetzen erfordert eine getippte Bestätigungsphrase
     When ich im rot umrandeten Bereich "Zurücksetzen" auf "App zurücksetzen…" klicke
     Then öffnet sich ein Dialog, der erklärt, dass alle Konten, Kontostände, Vermögenswerte und Fixposten

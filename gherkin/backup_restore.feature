@@ -76,3 +76,10 @@ Feature: Backup exportieren und importieren
     When diese Datei in die aktuelle Version importiert wird
     Then werden auch Fixposten und das damalige Standard-Fixposten-Intervall korrekt wiederhergestellt
       (symmetrisch zum Export — keine stillschweigend verworfenen Felder)
+
+  Scenario: Migration aus einem Fremdtool über die Import-Vorlage
+    Given ich habe meine Daten aus einem anderen Tool in das Format von "templates/import-template.json" überführt
+      (Felder, Typen und Wertebereiche wie in "templates/README.md" beschrieben, notfalls per KI-Konvertierung)
+    When ich diese Datei über "Backup importieren…" einlese
+    Then wird sie wie ein reguläres Backup behandelt (dieselben Prüfungen: Schemaversion, Sicherheitsabfrage,
+      Fehlertoleranz pro Eintrag, Auto-Increment-Zähler)

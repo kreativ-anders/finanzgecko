@@ -45,7 +45,7 @@ Feature: Dashboard — Vermögensübersicht
       Given es existieren sowohl Kontostände als auch Vermögenswerte
       When ich das Dashboard öffne
       Then zeigt die Kopfzeile "GESAMTVERMÖGEN" nur die Summe der Kontostände
-      And ein Umschalter "Konten" / "inkl. Sachwerte" ist sichtbar (nur wenn Vermögenswerte existieren)
+      And ein Schalter "inkl. Sachwerte" ist sichtbar (nur wenn Vermögenswerte existieren)
       When ich auf "inkl. Sachwerte" umschalte
       Then wird die Summe der Vermögenswerte addiert und die Beschriftung wechselt auf
         "GESAMTVERMÖGEN INKL. SACHWERTE"
@@ -98,6 +98,13 @@ Feature: Dashboard — Vermögensübersicht
     Scenario: Verteilungs-Donut zeigt nur den aktuellsten Monat des aktiven Zeitraums
       Then zeigt der Donut die Summen je Kontotyp für genau den letzten Monat des aktiven Zeitraums
 
+    Scenario: Währungsaufteilung nur bei mehr als einer Währung
+      Given im letzten Monat des aktiven Zeitraums werden positive Beträge in mehr als einer Währung gehalten
+      Then zeigt eine Karte "Währungsaufteilung" je Währung ihren Anteil am Vermögen (in Basiswährung
+        umgerechnet) und den Betrag
+      Given im letzten Monat wird nur eine einzige Währung gehalten
+      Then erscheint keine Währungsaufteilungs-Karte
+
     Scenario: Konzentrationsrisiko-Hinweis
       Given mindestens zwei Kontotypen mit positiver Summe existieren
       And der größte Kontotyp-Anteil an der positiven Gesamtsumme beträgt mindestens 65%
@@ -112,7 +119,9 @@ Feature: Dashboard — Vermögensübersicht
       Then wird keine Kennzahlen-Karte angezeigt
       Given mindestens zwei Monate mit Daten liegen vor
       Then zeigt die Karte: Gesamtveränderung seit Startmonat, bester Monat, schwächster Monat,
-        Ø-Veränderung/Monat, Monate im Plus (Anzahl und Anteil), Höchststand und dessen Monat
+        Ø-Veränderung/Monat, Monate im Plus (Anzahl und Anteil), Höchststand und dessen Monat,
+        sowie "Unter Höchststand" (Abstand des aktuellen Stands zum Höchststand in Prozent, "±0 %"/"am
+        Höchststand" wenn der aktuelle Stand selbst der Höchststand ist)
 
   Rule: Reminder-Banner (Reihenfolge ist bewusst gewählt)
 

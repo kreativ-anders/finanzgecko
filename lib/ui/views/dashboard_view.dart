@@ -28,46 +28,9 @@ class _DashboardViewState extends State<DashboardView> {
   // projection, the composition chart, the distribution donut, and the
   // Kennzahlen — everything time-based. Null until the user picks one; a
   // sensible default ("Dieses Jahr" when available) is derived from the data.
-  _HistoryPreset? _preset;
-
-  _HistoryPreset _defaultPreset(List<_HistoryPreset> available) =>
-      available.contains(_HistoryPreset.ytd) ? _HistoryPreset.ytd : _HistoryPreset.all;
-
-  List<String> _periodsForPreset(List<String> all, _HistoryPreset preset) {
-    final now = DateTime.now();
-    final currentYear = now.year;
-    int yearOf(String p) => int.parse(p.split('-')[0]);
-    int monthOf(String p) => int.parse(p.split('-')[1]);
-    switch (preset) {
-      case _HistoryPreset.twelveMonths:
-        final cutoff = DateTime(now.year, now.month - 11);
-        return all.where((p) => !DateTime(yearOf(p), monthOf(p)).isBefore(cutoff)).toList();
-      case _HistoryPreset.ytd:
-        return all.where((p) => yearOf(p) == currentYear).toList();
-      case _HistoryPreset.lastYear:
-        return all.where((p) => yearOf(p) == currentYear - 1).toList();
-      case _HistoryPreset.all:
-        return all;
-    }
-  }
-
-  /// Only offer a preset when it yields a distinct, non-empty window. "Alle" is
-  /// always available; narrower presets appear only once history grows into
-  /// them (e.g. "12 Monate" stays hidden while it equals "Alle").
-  List<_HistoryPreset> _availablePresets(List<String> all) {
-    if (all.isEmpty) return const [_HistoryPreset.all];
-    String sig(List<String> r) => r.isEmpty ? '' : '${r.first}|${r.last}|${r.length}';
-    final allSig = sig(all);
-    final seen = <String>{};
-    final result = <_HistoryPreset>[];
-    for (final preset in const [_HistoryPreset.ytd, _HistoryPreset.twelveMonths, _HistoryPreset.lastYear]) {
-      final s = sig(_periodsForPreset(all, preset));
-      if (s.isEmpty || s == allSig || !seen.add(s)) continue;
-      result.add(preset);
-    }
-    result.add(_HistoryPreset.all);
-    return result;
-  }
+  // Range filtering itself is pure and lives in utils/analysis.dart
+  // (availableRanges / periodsForRange / defaultRange) so it's unit-testable.
+  HistoryRange? _preset;
 
   @override
   Widget build(BuildContext context) {
@@ -100,10 +63,21 @@ class _DashboardViewState extends State<DashboardView> {
 
     // Resolve the active window once and thread it through every time-based
     // card below, so the filter genuinely drives the whole dashboard.
-    final available = _availablePresets(allPeriods);
-    final preset = (_preset != null && available.contains(_preset)) ? _preset! : _defaultPreset(available);
-    final filtered = allPeriods.isEmpty ? <String>[] : _periodsForPreset(allPeriods, preset);
+    final available = availableRanges(allPeriods);
+    final preset = (_preset != null && available.contains(_preset)) ? _preset! : defaultRange(available);
+    final filtered = allPeriods.isEmpty ? <String>[] : periodsForRange(allPeriods, preset);
     final includesLatest = filtered.isNotEmpty && filtered.last == allPeriods.last;
+
+    // Distinct currencies actually held in the window's latest month — the
+    // Währungsaufteilung card only makes sense with more than one.
+    final latestCurrencies = <String>{};
+    if (filtered.isNotEmpty) {
+      for (final b in app.balancesInPeriod(filtered.last)) {
+        if (b.amountBase <= 0) continue;
+        final acc = app.findAccount(b.accountId);
+        if (acc != null) latestCurrencies.add(acc.currency);
+      }
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -143,6 +117,10 @@ class _DashboardViewState extends State<DashboardView> {
               _CompositionCard(app: app, periods: filtered),
               cardGap,
               _StatsCard(app: app, periods: filtered),
+              cardGap,
+            ],
+            if (latestCurrencies.length >= 2) ...[
+              _CurrencyExposureCard(app: app, latestPeriod: filtered.last),
               cardGap,
             ],
             Row(
@@ -199,9 +177,9 @@ class _TotalsOverview extends StatefulWidget {
   final AppState app;
 
   /// The dashboard-wide range filter, rendered on the "erfasst" caption line.
-  final List<_HistoryPreset> options;
-  final _HistoryPreset selected;
-  final ValueChanged<_HistoryPreset> onRangeChanged;
+  final List<HistoryRange> options;
+  final HistoryRange selected;
+  final ValueChanged<HistoryRange> onRangeChanged;
 
   @override
   State<_TotalsOverview> createState() => _TotalsOverviewState();
@@ -354,14 +332,12 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
   }
 }
 
-enum _HistoryPreset { ytd, twelveMonths, lastYear, all }
-
-extension on _HistoryPreset {
+extension on HistoryRange {
   String get label => switch (this) {
-    _HistoryPreset.ytd => 'Dieses Jahr',
-    _HistoryPreset.twelveMonths => '12 Monate',
-    _HistoryPreset.lastYear => 'Letztes Jahr',
-    _HistoryPreset.all => 'Alle',
+    HistoryRange.ytd => 'Dieses Jahr',
+    HistoryRange.twelveMonths => '12 Monate',
+    HistoryRange.lastYear => 'Letztes Jahr',
+    HistoryRange.all => 'Alle',
   };
 }
 
@@ -510,6 +486,45 @@ class _CompositionCard extends StatelessWidget {
   }
 }
 
+/// Share of net worth by currency for the latest month of the active window —
+/// surfaces foreign-currency exposure that the base-currency total hides. Only
+/// shown by the dashboard when more than one currency is actually held.
+class _CurrencyExposureCard extends StatelessWidget {
+  const _CurrencyExposureCard({required this.app, required this.latestPeriod});
+
+  final AppState app;
+  final String latestPeriod;
+
+  @override
+  Widget build(BuildContext context) {
+    final byCurrency = <String, double>{};
+    for (final b in app.balancesInPeriod(latestPeriod)) {
+      final acc = app.findAccount(b.accountId);
+      if (acc == null || b.amountBase <= 0) continue;
+      byCurrency[acc.currency] = (byCurrency[acc.currency] ?? 0) + b.amountBase;
+    }
+    final total = byCurrency.values.fold<double>(0, (sum, v) => sum + v);
+    final entries = byCurrency.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final cur = app.baseCurrency;
+    return SectionCard(
+      title: 'Währungsaufteilung',
+      child: Wrap(
+        spacing: 32,
+        runSpacing: 12,
+        children: [
+          for (final e in entries)
+            _SummaryItem(
+              label: e.key,
+              value: fmtPercent(total > 0 ? e.value / total * 100 : 0.0),
+              subValue: fmtMoney(e.value, cur),
+              color: e.key == cur ? kPrimary : kTrendUp,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Compact stats over the full net-worth history: best/worst month, average
 /// monthly change, and how often it grew. Hidden with fewer than two months.
 class _StatsCard extends StatelessWidget {
@@ -572,6 +587,12 @@ class _StatsCard extends StatelessWidget {
             subValue: periodLabel(stats.peakPeriod),
             color: kPrimary,
           ),
+          _SummaryItem(
+            label: 'Unter Höchststand',
+            value: stats.drawdownFromPeak > 0 ? '-${fmtPercent(stats.drawdownFromPeak * 100)}' : '±0 %',
+            subValue: stats.drawdownFromPeak > 0 ? 'vs. ${periodLabel(stats.peakPeriod)}' : 'am Höchststand',
+            color: stats.drawdownFromPeak > 0 ? kDanger : kPrimary,
+          ),
         ],
       ),
     );
@@ -581,9 +602,9 @@ class _StatsCard extends StatelessWidget {
 class _PresetSelector extends StatelessWidget {
   const _PresetSelector({required this.options, required this.selected, required this.onChanged});
 
-  final List<_HistoryPreset> options;
-  final _HistoryPreset selected;
-  final ValueChanged<_HistoryPreset> onChanged;
+  final List<HistoryRange> options;
+  final HistoryRange selected;
+  final ValueChanged<HistoryRange> onChanged;
 
   @override
   Widget build(BuildContext context) {

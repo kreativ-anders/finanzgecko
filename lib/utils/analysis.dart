@@ -119,6 +119,9 @@ class NetWorthStats {
   final double peak;
   final String peakPeriod;
 
+  /// The most recent total in the series.
+  final double current;
+
   const NetWorthStats({
     required this.best,
     required this.worst,
@@ -129,10 +132,15 @@ class NetWorthStats {
     required this.startPeriod,
     required this.peak,
     required this.peakPeriod,
+    required this.current,
   });
 
   /// Share of considered months that grew, in 0..1.
   double get upShare => changeCount == 0 ? 0 : monthsUp / changeCount;
+
+  /// How far the current total sits below the all-time high, in 0..1 (0 = at
+  /// the peak). Zero when the peak is non-positive (no meaningful reference).
+  double get drawdownFromPeak => peak > 0 ? ((peak - current) / peak).clamp(0.0, 1.0).toDouble() : 0.0;
 }
 
 /// Computes [NetWorthStats] from a period-ordered [series] of totals. Returns
@@ -170,5 +178,53 @@ NetWorthStats? computeNetWorthStats(List<({String period, double total})> series
     startPeriod: series.first.period,
     peak: peak,
     peakPeriod: peakPeriod,
+    current: series.last.total,
   );
 }
+
+/// The dashboard-wide time-range presets. German labels live in the UI; the
+/// filtering logic here is pure and testable.
+enum HistoryRange { ytd, twelveMonths, lastYear, all }
+
+/// The subset of [all] ("YYYY-MM", ascending) that falls within [range].
+/// [now] is injectable so the calendar-relative ranges are testable.
+List<String> periodsForRange(List<String> all, HistoryRange range, {DateTime? now}) {
+  final ref = now ?? DateTime.now();
+  final currentYear = ref.year;
+  int yearOf(String p) => int.parse(p.split('-')[0]);
+  int monthOf(String p) => int.parse(p.split('-')[1]);
+  switch (range) {
+    case HistoryRange.twelveMonths:
+      final cutoff = DateTime(ref.year, ref.month - 11);
+      return all.where((p) => !DateTime(yearOf(p), monthOf(p)).isBefore(cutoff)).toList();
+    case HistoryRange.ytd:
+      return all.where((p) => yearOf(p) == currentYear).toList();
+    case HistoryRange.lastYear:
+      return all.where((p) => yearOf(p) == currentYear - 1).toList();
+    case HistoryRange.all:
+      return all;
+  }
+}
+
+/// Ranges worth offering: each narrower preset appears only when it yields a
+/// distinct, non-empty window (deduped against "Alle" and each other). "Alle"
+/// is always present and last.
+List<HistoryRange> availableRanges(List<String> all, {DateTime? now}) {
+  if (all.isEmpty) return const [HistoryRange.all];
+  String sig(List<String> r) => r.isEmpty ? '' : '${r.first}|${r.last}|${r.length}';
+  final allSig = sig(periodsForRange(all, HistoryRange.all, now: now));
+  final seen = <String>{};
+  final result = <HistoryRange>[];
+  for (final range in const [HistoryRange.ytd, HistoryRange.twelveMonths, HistoryRange.lastYear]) {
+    final s = sig(periodsForRange(all, range, now: now));
+    if (s.isEmpty || s == allSig || !seen.add(s)) continue;
+    result.add(range);
+  }
+  result.add(HistoryRange.all);
+  return result;
+}
+
+/// The initial range: "Dieses Jahr" when it's a distinct option, otherwise
+/// "Alle".
+HistoryRange defaultRange(List<HistoryRange> available) =>
+    available.contains(HistoryRange.ytd) ? HistoryRange.ytd : HistoryRange.all;

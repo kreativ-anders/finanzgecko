@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../state/app_state.dart';
+import '../utils/csv_export.dart';
 import 'app_view.dart';
 import 'theme.dart';
 import 'views/accounts_view.dart';
@@ -20,6 +21,10 @@ import 'widgets/app_snackbar.dart';
 
 const _backupTypeGroups = [
   XTypeGroup(label: 'JSON-Backup', extensions: ['json']),
+];
+
+const _csvTypeGroups = [
+  XTypeGroup(label: 'CSV', extensions: ['csv']),
 ];
 
 class AppShell extends StatefulWidget {
@@ -51,6 +56,32 @@ class _AppShellState extends State<AppShell> {
     } catch (err) {
       if (!mounted) return;
       showErrorSnackBar(context, 'Export fehlgeschlagen: $err');
+    }
+  }
+
+  /// Exports the Kontostände as a CSV table (for spreadsheets). Unlike the JSON
+  /// backup this is lossy and read-only, so it deliberately does NOT count as a
+  /// backup (no `markExported`, doesn't reset the Backup-Reminder).
+  Future<void> _handleExportCsv() async {
+    final appState = context.read<AppState>();
+    final csv = buildBalancesCsv(
+      appState.store.getAccounts(includeArchived: true),
+      appState.balances,
+      baseCurrency: appState.baseCurrency,
+    );
+    final suggestedName = 'finanzgecko-kontostaende-${DateTime.now().toIso8601String().substring(0, 10)}.csv';
+
+    final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _csvTypeGroups);
+    if (location == null) return; // Dialog abgebrochen
+
+    try {
+      // Leading BOM so Excel opens the UTF-8 file with correct umlauts.
+      await File(location.path).writeAsString('\u{FEFF}$csv');
+      if (!mounted) return;
+      showSavedSnackBar(context, _navigate, message: 'CSV exportiert.');
+    } catch (err) {
+      if (!mounted) return;
+      showErrorSnackBar(context, 'CSV-Export fehlgeschlagen: $err');
     }
   }
 
@@ -133,7 +164,12 @@ class _AppShellState extends State<AppShell> {
       case AppView.subscriptions:
         return SubscriptionsView(onNavigate: _navigate);
       case AppView.settings:
-        return SettingsView(onExport: _handleExport, onImport: _handleImport, onNavigate: _navigate);
+        return SettingsView(
+          onExport: _handleExport,
+          onExportCsv: _handleExportCsv,
+          onImport: _handleImport,
+          onNavigate: _navigate,
+        );
     }
   }
 }

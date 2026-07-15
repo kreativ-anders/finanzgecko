@@ -47,6 +47,7 @@ nutzbar).
 finanzgecko/
 ├── AI_MASTER.md                  # ← dieses Dokument
 ├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (siehe gherkin/README.md)
+├── templates/                    # ← Import-Vorlage (import-template.json) + Feld-Doku für die Datenmigration aus Fremdtools
 ├── README.md                     # Entwickler-Doku: Setup, Build, Release, Architektur-Tabelle, Troubleshooting
 ├── pubspec.yaml                  # Package-Name, Version, Dependencies, flutter_launcher_icons-Konfig
 ├── analysis_options.yaml         # Lint-Regeln (flutter_lints)
@@ -63,7 +64,8 @@ finanzgecko/
 │   ├── state/
 │   │   └── app_state.dart        # Zentraler ChangeNotifier: CRUD-Fassade + berechnete Werte (Reminder, Summen) für die UI
 │   ├── utils/
-│   │   ├── analysis.dart         # Reine, UI-freie Berechnungen (Trend, Prognose, Anomalie-Check, Kennzahlen) — unit-testbar
+│   │   ├── analysis.dart         # Reine, UI-freie Berechnungen (Trend, Prognose, Anomalie-Check, Kennzahlen, Zeitraum-Filter) — unit-testbar
+│   │   ├── csv_export.dart       # Reiner CSV-Builder für den Kontostände-Export (verlustbehaftet, kein Re-Import)
 │   │   └── formatting.dart       # Geld-/Prozent-/Datumsformatierung, Zahlen-Parsing, Perioden-Helper, Hex→Color
 │   └── ui/
 │       ├── app_shell.dart        # Navigation, In-App-"Datei"-Menü, Tastenkürzel, Export-/Import-Dialoge
@@ -74,6 +76,8 @@ finanzgecko/
 │       └── widgets/               # Wiederverwendbare Bausteine (Charts, Dialoge, Banner, Formularelemente)
 ├── test/                         # Dart-Unit-/Widget-Tests, gespiegelt zu den Gherkin-Szenarien (siehe Abschnitt 8)
 ├── tool/generate_icons.dart       # Icon-Pipeline (ein Master-PNG → alle Plattform-Icon-Formate)
+├── tool/generate_demo_data.dart   # erzeugt demo/finanzgecko-demo.json (realistische Demodaten, an "heute" verankert)
+├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots/Landingpage (via "Backup importieren…")
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
 └── .github/workflows/release.yml  # CI: baut alle 3 Plattform-Bundles bei jedem Tag-Push
@@ -83,12 +87,12 @@ finanzgecko/
 
 | Datei | AppView | Deutsches Label | Kernzweck |
 |---|---|---|---|
-| `dashboard_view.dart` | `dashboard` | Dashboard | Übersicht: Gesamtvermögen, Verlauf+Prognose, Verteilung, Kennzahlen, Fixposten-/Vermögenswerte-Summary, Konto-Karten |
+| `dashboard_view.dart` | `dashboard` | Dashboard | Übersicht: Gesamtvermögen, Verlauf+Prognose, Verteilung, Zusammensetzung über Zeit, Kennzahlen, Währungsaufteilung, Fixposten-/Vermögenswerte-Summary, Konto-Karten — alles über den Zeitraum-Filter gesteuert |
 | `entries_view.dart` | `entries` | Einträge | Monatsbezogene Erfassung/Korrektur von Kontoständen für alle Konten auf einmal |
 | `accounts_view.dart` | `accounts` | Konten | Konten anlegen/bearbeiten/archivieren/wiederherstellen |
 | `subscriptions_view.dart` | `subscriptions` | Fixposten | Wiederkehrende Ein-/Ausgaben anlegen/bearbeiten/löschen |
 | `assets_view.dart` | `assets` | Vermögenswerte | Sachwerte (kein Zeitverlauf) anlegen/inline bearbeiten/löschen |
-| `settings_view.dart` | `settings` | Einstellungen | Basiswährung, Sicherheits-Info, Export/Import, Reset |
+| `settings_view.dart` | `settings` | Einstellungen | Basiswährung, Sicherheits-Info, Backup-Export/Import, CSV-Export, Reset |
 
 Navigation ist **kein Router**, sondern ein einfacher `enum`-Switch in `app_shell.dart` (`_content()`), gesteuert über
 `ValueChanged<AppView> onNavigate`, das jede View nach oben durchreicht (z. B. für "Jetzt erfassen"-Buttons in
@@ -183,7 +187,15 @@ Bewusst **UI-frei und deterministisch** gehalten, damit sie ohne Flutter-Binding
   (`trendPoints`) gegen 0 geht (`priorStrength = 3`). **Nicht** additiv — beide sind Schätzer derselben monatlichen Rate.
 - `contributionMarketSplit` — zerlegt eine Vermögensänderung in "eingezahlt" (Fixposten-Netto × Monatsabstand) vs. "Markt/Sonstiges"
 - `isBalanceAnomaly` — flags einen 10×-Sprung (typisches Tippfehler-Muster: Ziffer zu viel/zu wenig)
-- `computeNetWorthStats` — Bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand
+- `computeNetWorthStats` — Bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand, Gesamtveränderung
+  seit Start, aktueller Stand und `drawdownFromPeak` (Abstand zum Höchststand in 0..1)
+- `periodsForRange` / `availableRanges` / `defaultRange` — der Dashboard-weite **Zeitraum-Filter** als reine Logik
+  (`enum HistoryRange { ytd, twelveMonths, lastYear, all }`, `now` injizierbar für Tests). `availableRanges` blendet ein
+  Preset aus, solange es dieselbe Menge wie "Alle" ergäbe (Dedup); `defaultRange` = "Dieses Jahr", sonst "Alle".
+
+Reiner CSV-Export lebt in `lib/utils/csv_export.dart` (`buildBalancesCsv`): eine Zeile pro Konto+Monat, `;`-getrennt,
+Dezimalkomma, RFC-4180-Quoting — bewusst verlustbehaftet und **ohne Re-Import** (der JSON-Backup-Pfad ist der einzige
+verlustfreie Round-Trip). Getestet in `test/csv_export_test.dart`.
 
 Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zugehörige Gherkin-Feature aktualisieren.
 
@@ -234,8 +246,11 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 | Verlauf | Zeitreihen-Chart des Gesamtvermögens über die Zeit, inkl. Prognose |
 | Zusammensetzung über Zeit | Gestapeltes Flächendiagramm: Vermögen nach Kontotyp über alle Monate |
 | Verteilung nach Kontotyp | Donut-Chart für einen einzelnen Monat |
-| Kennzahlen | Bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand |
-| Backup exportieren/importieren | Klartext-JSON-Export/Import über native Dateidialoge |
+| Kennzahlen | Gesamtveränderung, bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand, "Unter Höchststand" (Drawdown) |
+| Währungsaufteilung | Anteil des Vermögens je Währung im letzten Monat des Zeitraums (nur bei >1 Währung) |
+| Zeitraum(-Filter) | Dashboard-weiter Zeitfenster-Filter ("Dieses Jahr" / "12 Monate" / "Letztes Jahr" / "Alle"), steuert alle zeitbasierten Karten |
+| Backup exportieren/importieren | Klartext-JSON-Export/Import über native Dateidialoge (verlustfreier Round-Trip) |
+| CSV-Export | Verlustbehafteter Tabellen-Export der Kontostände (kein Re-Import) |
 
 ## 8. Tests ↔ Gherkin-Zuordnung
 
@@ -246,6 +261,9 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 | `test/app_state_test.dart` | AppState-CRUD & abgeleitete Werte (Reminder, Summen) | mehrere Features |
 | `test/app_store_encryption_test.dart` | Envelope-Verschlüsselung, Quarantäne unlesbarer Dateien | `gherkin/data_security.feature` |
 | `test/app_store_ops_test.dart` | Store-CRUD, Export/Import, Schema-Versionsprüfung | `gherkin/backup_restore.feature` |
+| `test/backup_hardening_test.dart` | Backup-Export→Import-Round-Trip & Fehlertoleranz (AppData-Ebene) | `gherkin/backup_restore.feature` |
+| `test/csv_export_test.dart` | CSV-Export (Trennzeichen, Dezimalkomma, Sortierung, Quoting) | `gherkin/settings.feature` |
+| `test/tooling_test.dart` | Demodaten-Generator (`buildDemoBackup`: Schema, Referenzen, Domänenwerte) + Icon-Master-Invariante | Dev-Tooling (kein Feature) |
 | `test/entries_view_orphan_test.dart` | Verwaiste Balances archivierter Konten | `gherkin/balances_entries.feature` |
 | `test/formatting_test.dart` | Zahlen-/Geldformatierung, Parsing | quer über alle Features (nicht-funktional) |
 

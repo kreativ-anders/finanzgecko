@@ -14,9 +14,16 @@ import '../widgets/app_snackbar.dart';
 import '../widgets/section_card.dart';
 
 class SettingsView extends StatelessWidget {
-  const SettingsView({super.key, required this.onExport, required this.onImport, required this.onNavigate});
+  const SettingsView({
+    super.key,
+    required this.onExport,
+    required this.onExportCsv,
+    required this.onImport,
+    required this.onNavigate,
+  });
 
   final Future<void> Function() onExport;
+  final Future<void> Function() onExportCsv;
   final Future<void> Function() onImport;
   final ValueChanged<AppView> onNavigate;
 
@@ -128,6 +135,14 @@ class SettingsView extends StatelessWidget {
                     Text('$modKeyLabel+E', style: const TextStyle(color: kMuted, fontSize: 12)),
                   ],
                 ),
+                const Divider(height: 28, color: kBorder),
+                const Text(
+                  'Als Tabelle (CSV) für Excel/Numbers exportieren — alle Kontostände je Monat und Konto. '
+                  'Kein Backup: die CSV kann nicht wieder importiert werden.',
+                  style: TextStyle(color: kMuted),
+                ),
+                const SizedBox(height: 14),
+                OutlinedButton(onPressed: onExportCsv, child: noSelect(const Text('Als CSV exportieren…'))),
               ],
             ),
           ),
