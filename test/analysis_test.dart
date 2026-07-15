@@ -139,6 +139,73 @@ void main() {
       expect(stats.startPeriod, '2026-01');
       expect(stats.peak, 1500); // high was Feb, not the last month
       expect(stats.peakPeriod, '2026-02');
+      expect(stats.current, 1400);
+      expect(stats.drawdownFromPeak, closeTo((1500 - 1400) / 1500, 1e-9));
+    });
+
+    test('drawdown is zero at an all-time high', () {
+      final stats = computeNetWorthStats([
+        (period: '2026-01', total: 1000),
+        (period: '2026-02', total: 1200),
+      ])!;
+      expect(stats.peak, 1200);
+      expect(stats.current, 1200);
+      expect(stats.drawdownFromPeak, 0);
+    });
+  });
+
+  group('periodsForRange', () {
+    final all = ['2024-11', '2024-12', '2025-06', '2026-01', '2026-07'];
+    final now = DateTime(2026, 7, 15);
+
+    test('ytd keeps only the current calendar year', () {
+      expect(periodsForRange(all, HistoryRange.ytd, now: now), ['2026-01', '2026-07']);
+    });
+
+    test('lastYear keeps only the previous calendar year', () {
+      expect(periodsForRange(all, HistoryRange.lastYear, now: now), ['2025-06']);
+    });
+
+    test('twelveMonths keeps the rolling last 12 months', () {
+      // Cutoff is 2025-08; 2025-06 and earlier drop out.
+      expect(periodsForRange(all, HistoryRange.twelveMonths, now: now), ['2026-01', '2026-07']);
+    });
+
+    test('all keeps everything', () {
+      expect(periodsForRange(all, HistoryRange.all, now: now), all);
+    });
+  });
+
+  group('availableRanges', () {
+    test('only Alle when there is no data', () {
+      expect(availableRanges([], now: DateTime(2026, 7, 15)), [HistoryRange.all]);
+    });
+
+    test('hides presets identical to Alle (first year of use)', () {
+      // All data sits in the current year and within 12 months, so ytd and
+      // twelveMonths both equal Alle and are hidden.
+      final ranges = availableRanges(['2026-05', '2026-06', '2026-07'], now: DateTime(2026, 7, 15));
+      expect(ranges, [HistoryRange.all]);
+    });
+
+    test('shows distinct presets once history spans years', () {
+      final ranges = availableRanges(
+        ['2024-11', '2025-06', '2026-01', '2026-07'],
+        now: DateTime(2026, 7, 15),
+      );
+      expect(ranges, contains(HistoryRange.ytd));
+      expect(ranges, contains(HistoryRange.lastYear));
+      expect(ranges.last, HistoryRange.all);
+    });
+  });
+
+  group('defaultRange', () {
+    test('prefers Dieses Jahr when available', () {
+      expect(defaultRange([HistoryRange.ytd, HistoryRange.all]), HistoryRange.ytd);
+    });
+
+    test('falls back to Alle when ytd is not offered', () {
+      expect(defaultRange([HistoryRange.lastYear, HistoryRange.all]), HistoryRange.all);
     });
   });
 }

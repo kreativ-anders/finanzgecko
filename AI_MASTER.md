@@ -76,8 +76,8 @@ finanzgecko/
 │       └── widgets/               # Wiederverwendbare Bausteine (Charts, Dialoge, Banner, Formularelemente)
 ├── test/                         # Dart-Unit-/Widget-Tests, gespiegelt zu den Gherkin-Szenarien (siehe Abschnitt 8)
 ├── tool/generate_icons.dart       # Icon-Pipeline (ein Master-PNG → alle Plattform-Icon-Formate)
-├── tool/generate_demo_data.dart   # erzeugt demo/finanzgecko-demo.json (realistische Demodaten, an "heute" verankert)
-├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots/Landingpage (via "Backup importieren…")
+├── tool/generate_demo_data.dart   # buildDemoBackup() → demo/finanzgecko-demo.json (an "heute" verankert); auch von flutter test aufgerufen
+├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots (generiert, .gitignore) — via "Backup importieren…"
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
 └── .github/workflows/release.yml  # CI: baut alle 3 Plattform-Bundles bei jedem Tag-Push
@@ -263,7 +263,7 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 | `test/app_store_ops_test.dart` | Store-CRUD, Export/Import, Schema-Versionsprüfung | `gherkin/backup_restore.feature` |
 | `test/backup_hardening_test.dart` | Backup-Export→Import-Round-Trip & Fehlertoleranz (AppData-Ebene) | `gherkin/backup_restore.feature` |
 | `test/csv_export_test.dart` | CSV-Export (Trennzeichen, Dezimalkomma, Sortierung, Quoting) | `gherkin/settings.feature` |
-| `test/tooling_test.dart` | Demodaten-Generator (`buildDemoBackup`: Schema, Referenzen, Domänenwerte) + Icon-Master-Invariante | Dev-Tooling (kein Feature) |
+| `test/tooling_test.dart` | **Regeneriert beim Testlauf** die Demodaten (`buildDemoBackup` → `demo/…json`) und die Linux-Hicolor-Icons (`generateLinuxIcons`) und validiert sie (Schema, Referenzen, Domänenwerte, Icon-Größen) | Dev-Tooling (kein Feature) |
 | `test/entries_view_orphan_test.dart` | Verwaiste Balances archivierter Konten | `gherkin/balances_entries.feature` |
 | `test/formatting_test.dart` | Zahlen-/Geldformatierung, Parsing | quer über alle Features (nicht-funktional) |
 
