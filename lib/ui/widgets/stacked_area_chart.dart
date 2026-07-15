@@ -46,7 +46,10 @@ class AppStackedAreaChart extends StatelessWidget {
       return SizedBox(
         height: height,
         child: const Center(
-          child: Text('Noch keine Daten.', style: TextStyle(color: kMuted, fontStyle: FontStyle.italic)),
+          child: Text(
+            'Noch keine Daten.',
+            style: TextStyle(color: kMuted, fontStyle: FontStyle.italic),
+          ),
         ),
       );
     }
@@ -82,9 +85,7 @@ class AppStackedAreaChart extends StatelessWidget {
           // belowBarData usage, which is known to work with this fl_chart.
           belowBarData: BarAreaData(
             show: true,
-            gradient: LinearGradient(
-              colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.9)],
-            ),
+            gradient: LinearGradient(colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.9)]),
           ),
         ),
       );
@@ -124,7 +125,8 @@ class AppStackedAreaChart extends StatelessWidget {
           spacing: 16,
           runSpacing: 8,
           children: [
-            for (var j = 0; j < active.length; j++) _LegendItem(series: active[j], latest: active[j].values.last, total: totals.last),
+            for (var j = 0; j < active.length; j++)
+              _LegendItem(series: active[j], latest: active[j].values.last, total: totals.last),
           ],
         ),
       ],
@@ -145,7 +147,11 @@ class _LegendItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: series.color, borderRadius: BorderRadius.circular(2))),
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: series.color, borderRadius: BorderRadius.circular(2)),
+        ),
         const SizedBox(width: 6),
         Text(series.label, style: const TextStyle(fontSize: 12)),
         const SizedBox(width: 6),

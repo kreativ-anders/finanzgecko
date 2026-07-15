@@ -4,29 +4,36 @@ import 'package:finanzgecko/utils/csv_export.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Account acc(int id, String name, {String bank = 'Bank', String tag = 'Girokonto', String currency = 'EUR'}) => Account(
-    id: id,
-    name: name,
-    bank: bank,
-    tag: tag,
-    currency: currency,
-    color: '#00C878',
-    archived: false,
-    createdAt: DateTime(2026, 1, 1),
-  );
-
-  Balance bal(int id, int accountId, String period, double amountOriginal, {String currency = 'EUR', double rate = 1}) =>
-      Balance(
+  Account acc(int id, String name, {String bank = 'Bank', String tag = 'Girokonto', String currency = 'EUR'}) =>
+      Account(
         id: id,
-        accountId: accountId,
-        period: period,
-        amountOriginal: amountOriginal,
-        currencyOriginal: currency,
-        rate: rate,
-        amountBase: amountOriginal * rate,
-        note: '',
-        enteredAt: DateTime(2026, 1, 1),
+        name: name,
+        bank: bank,
+        tag: tag,
+        currency: currency,
+        color: '#00C878',
+        archived: false,
+        createdAt: DateTime(2026, 1, 1),
       );
+
+  Balance bal(
+    int id,
+    int accountId,
+    String period,
+    double amountOriginal, {
+    String currency = 'EUR',
+    double rate = 1,
+  }) => Balance(
+    id: id,
+    accountId: accountId,
+    period: period,
+    amountOriginal: amountOriginal,
+    currencyOriginal: currency,
+    rate: rate,
+    amountBase: amountOriginal * rate,
+    note: '',
+    enteredAt: DateTime(2026, 1, 1),
+  );
 
   test('header + rows use semicolon delimiter and comma decimals', () {
     final csv = buildBalancesCsv([acc(1, 'Giro')], [bal(1, 1, '2026-01', 1234.5)], baseCurrency: 'EUR');

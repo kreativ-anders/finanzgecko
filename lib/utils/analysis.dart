@@ -51,12 +51,7 @@ double? trendSlopePerMonth(List<double> values) {
 /// added to the trend (that would double-count the recurring part the trend
 /// already contains) — both are estimates of the same monthly rate. Returns
 /// null when neither basis is available.
-double? projectionRate({
-  double? planRate,
-  double? trendRate,
-  required int trendPoints,
-  double priorStrength = 3,
-}) {
+double? projectionRate({double? planRate, double? trendRate, required int trendPoints, double priorStrength = 3}) {
   if (trendRate != null && planRate != null) {
     final wTrend = trendPoints / (trendPoints + priorStrength);
     return wTrend * trendRate + (1 - wTrend) * planRate;

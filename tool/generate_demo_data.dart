@@ -35,7 +35,14 @@ Map<String, dynamic> buildDemoBackup({DateTime? now}) {
     {'id': 1, 'name': 'Girokonto', 'bank': 'DKB', 'tag': 'Girokonto', 'currency': 'EUR', 'color': '#00C878'},
     {'id': 2, 'name': 'Tagesgeld', 'bank': 'ING', 'tag': 'Tagesgeld', 'currency': 'EUR', 'color': '#2FD0A0'},
     {'id': 3, 'name': 'ETF-Depot', 'bank': 'Trade Republic', 'tag': 'Depot', 'currency': 'EUR', 'color': '#4EA8FF'},
-    {'id': 4, 'name': 'US-Aktien', 'bank': 'Interactive Brokers', 'tag': 'Depot', 'currency': 'USD', 'color': '#B58BFF'},
+    {
+      'id': 4,
+      'name': 'US-Aktien',
+      'bank': 'Interactive Brokers',
+      'tag': 'Depot',
+      'currency': 'USD',
+      'color': '#B58BFF',
+    },
     {'id': 5, 'name': 'Krypto', 'bank': 'Bitpanda', 'tag': 'Krypto', 'currency': 'EUR', 'color': '#F5A524'},
     {'id': 6, 'name': 'Bargeld', 'bank': '', 'tag': 'Bargeld', 'currency': 'EUR', 'color': '#8A93A6'},
   ];

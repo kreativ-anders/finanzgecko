@@ -181,7 +181,10 @@ class _EntriesViewState extends State<EntriesView> {
                 style: TextStyle(color: kMuted),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(onPressed: () => widget.onNavigate(AppView.accounts), child: noSelect(const Text('Konto anlegen'))),
+              ElevatedButton(
+                onPressed: () => widget.onNavigate(AppView.accounts),
+                child: noSelect(const Text('Konto anlegen')),
+              ),
             ],
           ),
         ),
@@ -192,7 +195,9 @@ class _EntriesViewState extends State<EntriesView> {
     final activeIds = app.accounts.map((a) => a.id).toSet();
     final balanceByAccount = {for (final b in periodBalances) b.accountId: b};
     final orphanBalances = periodBalances.where((b) => !activeIds.contains(b.accountId)).toList();
-    final visibleAccounts = app.accounts.where((acc) => !(_onlyMissing && balanceByAccount.containsKey(acc.id))).toList();
+    final visibleAccounts = app.accounts
+        .where((acc) => !(_onlyMissing && balanceByAccount.containsKey(acc.id)))
+        .toList();
     final totals = _computeLiveTotals(app);
 
     return Column(
@@ -241,14 +246,19 @@ class _EntriesViewState extends State<EntriesView> {
                       ),
                       const SizedBox(height: 16),
                       if (visibleAccounts.isEmpty)
-                        Text('Für ${periodLabel(_period)} sind bereits alle Konten erfasst.', style: const TextStyle(color: kMuted))
+                        Text(
+                          'Für ${periodLabel(_period)} sind bereits alle Konten erfasst.',
+                          style: const TextStyle(color: kMuted),
+                        )
                       else
                         for (var i = 0; i < visibleAccounts.length; i++)
                           _EntryRow(
                             account: visibleAccounts[i],
                             controller: _controllerFor(visibleAccounts[i].id, balanceByAccount[visibleAccounts[i].id]),
                             focusNode: _focusNodeFor(visibleAccounts[i].id),
-                            nextFocusNode: i < visibleAccounts.length - 1 ? _focusNodeFor(visibleAccounts[i + 1].id) : null,
+                            nextFocusNode: i < visibleAccounts.length - 1
+                                ? _focusNodeFor(visibleAccounts[i + 1].id)
+                                : null,
                             autofocus: i == 0,
                             app: app,
                             period: _period,
@@ -268,12 +278,7 @@ class _EntriesViewState extends State<EntriesView> {
             ),
           ),
         ),
-        _SaveFooter(
-          totals: totals,
-          notice: _notice,
-          baseCurrency: app.baseCurrency,
-          onSave: () => _submit(app),
-        ),
+        _SaveFooter(totals: totals, notice: _notice, baseCurrency: app.baseCurrency, onSave: () => _submit(app)),
       ],
     );
   }
@@ -329,7 +334,11 @@ class _SaveFooter extends StatelessWidget {
                       ),
                       Text(
                         '${totals.delta >= 0 ? '+' : ''}${fmtMoney(totals.delta, baseCurrency)} ggü. vorherigem Stand',
-                        style: TextStyle(color: totals.delta >= 0 ? kPrimary : kDanger, fontSize: 13, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: totals.delta >= 0 ? kPrimary : kDanger,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -418,7 +427,8 @@ class _EntryRow extends StatelessWidget {
     final prevAmount = prev?.amountOriginal;
     String? anomaly;
     if (entered != null && prevAmount != null && isBalanceAnomaly(entered, prevAmount)) {
-      anomaly = 'Ungewöhnlich: ${entered.abs() > prevAmount.abs() ? 'viel größer' : 'viel kleiner'} als zuletzt '
+      anomaly =
+          'Ungewöhnlich: ${entered.abs() > prevAmount.abs() ? 'viel größer' : 'viel kleiner'} als zuletzt '
           '(${fmtMoney(prevAmount, account.currency)}). Tippfehler?';
     }
 
@@ -447,7 +457,9 @@ class _EntryRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      prev != null ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})' : '',
+                      prev != null
+                          ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})'
+                          : '',
                       style: const TextStyle(color: kMuted, fontSize: 12),
                     ),
                   ],
@@ -570,7 +582,9 @@ class _OrphanRow extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eintrag löschen'),
-        content: Text('Eintrag für ${account?.name ?? 'unbekanntes Konto'} · ${periodLabel(balance.period)} wirklich löschen?'),
+        content: Text(
+          'Eintrag für ${account?.name ?? 'unbekanntes Konto'} · ${periodLabel(balance.period)} wirklich löschen?',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
           ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Löschen'))),

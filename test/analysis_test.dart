@@ -68,10 +68,7 @@ void main() {
 
     test('blends with decaying prior weight', () {
       // trendPoints == priorStrength -> equal weight -> simple average.
-      expect(
-        projectionRate(planRate: 100, trendRate: 300, trendPoints: 3, priorStrength: 3),
-        closeTo(200, 1e-9),
-      );
+      expect(projectionRate(planRate: 100, trendRate: 300, trendPoints: 3, priorStrength: 3), closeTo(200, 1e-9));
     });
 
     test('trend dominates as history grows', () {
@@ -144,10 +141,7 @@ void main() {
     });
 
     test('drawdown is zero at an all-time high', () {
-      final stats = computeNetWorthStats([
-        (period: '2026-01', total: 1000),
-        (period: '2026-02', total: 1200),
-      ])!;
+      final stats = computeNetWorthStats([(period: '2026-01', total: 1000), (period: '2026-02', total: 1200)])!;
       expect(stats.peak, 1200);
       expect(stats.current, 1200);
       expect(stats.drawdownFromPeak, 0);
@@ -189,10 +183,7 @@ void main() {
     });
 
     test('shows distinct presets once history spans years', () {
-      final ranges = availableRanges(
-        ['2024-11', '2025-06', '2026-01', '2026-07'],
-        now: DateTime(2026, 7, 15),
-      );
+      final ranges = availableRanges(['2024-11', '2025-06', '2026-01', '2026-07'], now: DateTime(2026, 7, 15));
       expect(ranges, contains(HistoryRange.ytd));
       expect(ranges, contains(HistoryRange.lastYear));
       expect(ranges.last, HistoryRange.all);
