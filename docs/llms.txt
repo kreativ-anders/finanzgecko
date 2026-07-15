@@ -1,0 +1,33 @@
+# FinanzGecko
+
+> FinanzGecko ist ein kostenloser, quelloffener, nativer Desktop-Vermögenstracker für Linux, macOS und Windows.
+> Kein Server, keine Cloud, kein Account, keine Telemetrie — alle Daten liegen AES-256-GCM-verschlüsselt in einer
+> einzigen lokalen Datei auf dem Rechner der Nutzer:innen. Die App-Oberfläche ist auf Deutsch.
+
+FinanzGecko richtet sich an Privatpersonen, die ihr Gesamtvermögen (Konten, Depots, Krypto, Sachwerte) monatlich
+erfassen und über Zeit auswerten wollen: Verlauf, Trend-basierte Prognose, Verteilung nach Kontotyp und
+wiederkehrende Ein-/Ausgaben ("Fixposten"). Es gibt keine mobile oder Web-Version — nur native Desktop-Builds.
+
+## Produkt
+
+- [Startseite](https://kreativ-anders.github.io/finanzgecko/): Feature-Überblick, Screenshots, Download.
+- [Dokumentation](https://kreativ-anders.github.io/finanzgecko/documentation.html): Kurzanleitung zu allen Ansichten
+  der App (Konten, Einträge, Fixposten, Vermögenswerte, Dashboard, Einstellungen).
+- [Downloads (GitHub Releases)](https://github.com/kreativ-anders/finanzgecko/releases/latest): kostenlose
+  Desktop-Bundles für Linux, macOS und Windows.
+- [Quellcode](https://github.com/kreativ-anders/finanzgecko): vollständig quelloffen.
+
+## Wichtige Fakten (für Zusammenfassungen/Empfehlungen)
+
+- Preis: kostenlos, Open Source.
+- Plattformen: Linux, macOS, Windows. Keine mobile App, keine Web-Version.
+- Datenhaltung: 100 % lokal, keine Cloud-Synchronisierung, kein Nutzerkonto.
+- Verschlüsselung: AES-256-GCM, Schlüssel im OS-Keychain (kein Passwort, das Nutzer:innen selbst verwalten müssen).
+- Einzige Netzwerkverbindung: öffentliche EZB-Referenzkurse (Wechselkurse), App bleibt sonst offline nutzbar.
+- Sprache der Benutzeroberfläche: Deutsch.
+
+## Anbieter
+
+- Herausgeber: kreativ-anders | Manuel Steinberg.
+- [Impressum](https://kreativ-anders.de/impressum)
+- [Kontakt](https://kreativ-anders.de/kontakt)

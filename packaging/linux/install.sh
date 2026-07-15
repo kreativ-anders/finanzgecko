@@ -1,68 +1,44 @@
 #!/usr/bin/env bash
-# Installiert FinanzGecko für den aktuellen Benutzer als Desktop-Anwendung
-# (Startmenü-Eintrag + Taskleisten-Icon unter Wayland/X11).
-#
-# Hintergrund: Neutralino setzt keine GTK-Application-ID, daher bestimmt
-# argv[0] die Wayland-app_id/X11-WM_CLASS des Fensters. Ohne passende
-# .desktop-Datei kann die Shell (GNOME/KDE) kein Icon zuordnen und zeigt
-# ein generisches Fallback-Icon in der Taskleiste. Dieses Skript legt
-# einen stabil benannten Symlink an ("finanzgecko"), installiert dazu
-# eine .desktop-Datei mit passendem StartupWMClass sowie die Icons im
-# hicolor-Theme.
+# Installs FinanzGecko as a proper desktop app on Linux (Wayland/X11):
+# a stable symlink on PATH, a start-menu entry, and the app icon in the
+# hicolor theme. Needed because a directly-launched Flutter Linux bundle has
+# no desktop-file association, so the shell can't show a taskbar/dock icon
+# for it (see README "Linux: als Desktop-Anwendung installieren").
 set -euo pipefail
 
-repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-case "$(uname -m)" in
-  x86_64) bin_suffix="linux_x64" ;;
-  aarch64) bin_suffix="linux_arm64" ;;
-  armv7l|armhf) bin_suffix="linux_armhf" ;;
-  *) echo "Nicht unterstützte Architektur: $(uname -m)" >&2; exit 1 ;;
-esac
+BUNDLE_SRC="${1:-$REPO_ROOT/build/linux/x64/release/bundle}"
 
-release_bin="$repo_dir/dist/finanzgecko/finanzgecko-$bin_suffix"
-dev_bin="$repo_dir/bin/neutralino-$bin_suffix"
-
-if [ -x "$release_bin" ]; then
-  target_bin="$release_bin"
-elif [ -x "$dev_bin" ]; then
-  target_bin="$dev_bin"
-else
-  echo "Kein Binary gefunden. Erst 'neu update' oder 'neu build --release' ausführen." >&2
+if [ ! -x "$BUNDLE_SRC/finanzgecko" ]; then
+  echo "Fehler: $BUNDLE_SRC/finanzgecko nicht gefunden." >&2
+  echo "Erst 'flutter build linux --release' ausfuehren, oder den Pfad zu einem" >&2
+  echo "entpackten Release-Bundle als Argument uebergeben." >&2
   exit 1
 fi
 
-bin_dir="$HOME/.local/bin"
-app_dir="$HOME/.local/share/applications"
-icon_theme_dir="$HOME/.local/share/icons/hicolor"
+INSTALL_DIR="$HOME/.local/share/finanzgecko"
+BIN_DIR="$HOME/.local/bin"
+DESKTOP_DIR="$HOME/.local/share/applications"
+ICON_BASE="$HOME/.local/share/icons/hicolor"
 
-mkdir -p "$bin_dir" "$app_dir" "$icon_theme_dir/512x512/apps" "$icon_theme_dir/192x192/apps"
+mkdir -p "$BIN_DIR" "$DESKTOP_DIR" "$ICON_BASE/512x512/apps" "$ICON_BASE/192x192/apps"
 
-# Kein reiner Symlink: Neutralino sucht resources.neu/neutralino.config.json
-# relativ zum Verzeichnis von argv[0], nicht relativ zum aufgelösten Symlink-
-# Ziel. Ein Symlink nach ~/.local/bin würde also die Standard-Neutralino-
-# Demo statt der App laden. Der Wrapper hält argv[0] = "finanzgecko" (für
-# WM_CLASS) und übergibt den echten Ressourcen-Pfad explizit per --path.
-target_dir="$(dirname "$target_bin")"
-cat > "$bin_dir/finanzgecko" <<EOF
-#!/usr/bin/env bash
-exec -a finanzgecko "$target_bin" --path="$target_dir" "\$@"
-EOF
-chmod +x "$bin_dir/finanzgecko"
-cp "$repo_dir/icons/icon-512.png" "$icon_theme_dir/512x512/apps/de.finanzgecko.app.png"
-cp "$repo_dir/icons/icon-192.png" "$icon_theme_dir/192x192/apps/de.finanzgecko.app.png"
+# The whole bundle directory (executable + data/ + lib/*.so) must move
+# together — this is not a single self-contained file.
+rm -rf "$INSTALL_DIR"
+cp -r "$BUNDLE_SRC" "$INSTALL_DIR"
 
-# Exec mit absolutem Pfad installieren, damit es unabhängig von PATH funktioniert.
-sed "s|^Exec=finanzgecko\$|Exec=$bin_dir/finanzgecko|" \
-  "$repo_dir/packaging/linux/de.finanzgecko.app.desktop" \
-  > "$app_dir/de.finanzgecko.app.desktop"
+ln -sf "$INSTALL_DIR/finanzgecko" "$BIN_DIR/finanzgecko"
 
-command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$app_dir" || true
-command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t "$icon_theme_dir" >/dev/null 2>&1 || true
+cp "$REPO_ROOT/icons/icon-512.png" "$ICON_BASE/512x512/apps/de.finanzgecko.app.png"
+cp "$REPO_ROOT/icons/icon-192.png" "$ICON_BASE/192x192/apps/de.finanzgecko.app.png"
 
-echo "Installiert: $target_bin"
-echo "         ->  $bin_dir/finanzgecko"
-echo "Desktop-Eintrag: $app_dir/de.finanzgecko.app.desktop"
-echo
-echo "Falls die App gerade läuft: einmal beenden und über das Startmenü neu starten,"
-echo "damit die Taskleiste das neue Icon übernimmt."
+cp "$SCRIPT_DIR/de.finanzgecko.app.desktop" "$DESKTOP_DIR/de.finanzgecko.app.desktop"
+
+command -v update-desktop-database >/dev/null && update-desktop-database "$DESKTOP_DIR" || true
+command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -f "$ICON_BASE" || true
+
+echo "Installiert nach $INSTALL_DIR."
+echo "App ueber das Startmenue starten (Suche: FinanzGecko), nicht mehr direkt ueber build/."

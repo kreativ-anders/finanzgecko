@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dokumentation — FinanzGecko</title>
+  <meta name="description" content="Kurzanleitung zu FinanzGecko: Konten, Einträge, Fixposten, Vermögenswerte, Dashboard und Einstellungen." />
+  <link rel="canonical" href="https://kreativ-anders.github.io/finanzgecko/documentation.html" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="assets/style.css" />
+  <meta name="theme-color" content="#0a0f0c" />
+</head>
+<body>
+  <header class="site">
+    <div class="wrap">
+      <img class="logo" src="assets/icon-192.png" width="32" height="32" alt="" />
+      <a class="brand" href="index.html">FinanzGecko</a>
+      <nav>
+        <a href="index.html">Start</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap doc-layout">
+    <nav class="doc-nav">
+      <a href="#ablauf">Genereller Ablauf</a>
+      <a href="#konto">Konto hinzufügen</a>
+      <a href="#eintraege">Einträge hinzufügen</a>
+      <a href="#fixposten">Fixposten erfassen</a>
+      <a href="#vermoegenswerte">Vermögenswerte</a>
+      <a href="#dashboard">Dashboard &amp; Filter</a>
+      <a href="#einstellungen">Einstellungen</a>
+    </nav>
+
+    <div class="doc-content">
+      <h1>Dokumentation</h1>
+      <p class="lead">
+        FinanzGecko ist ein lokaler Vermögenstracker: Konten anlegen, monatlich Kontostände erfassen, wiederkehrende
+        Ein-/Ausgaben pflegen — und daraus ein Dashboard mit Verlauf, Prognose und Kennzahlen bekommen. Diese Seite
+        erklärt den Ablauf und die wichtigsten Ansichten.
+      </p>
+
+      <section id="ablauf">
+        <h2><span class="step">1</span> Genereller Ablauf</h2>
+        <p>
+          Die App gliedert sich in sechs Ansichten in der linken Navigation. Für den Einstieg ist die Reihenfolge
+          von links nach rechts sinnvoll:
+        </p>
+        <div class="flow">
+          <span class="flow-step">Konto anlegen</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">Kontostand erfassen</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">Fixposten pflegen</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">Vermögenswerte erfassen</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-step">Dashboard beobachten</span>
+        </div>
+        <p>
+          Jeden Monat reicht danach ein kurzer Besuch der Ansicht <em>Einträge</em>, um die aktuellen Kontostände
+          nachzutragen — das Dashboard aktualisiert sich automatisch, inklusive Verlauf, Prognose und Kennzahlen.
+        </p>
+        <div class="card note">
+          <p>
+            Alle Daten liegen ausschließlich lokal, AES-256-verschlüsselt in einer einzigen Datei auf dem Gerät.
+            Es gibt keinen Account, keine Cloud-Synchronisierung und keinen Server.
+          </p>
+        </div>
+      </section>
+
+      <section id="konto">
+        <h2><span class="step">2</span> Konto hinzufügen</h2>
+        <p>
+          In der Ansicht <strong>Konten</strong> werden alle Konten angelegt, die im Vermögen berücksichtigt werden
+          sollen — etwa Girokonto, Tagesgeld, Depot, Bargeld oder Krypto-Wallets.
+        </p>
+        <ul class="feature-list">
+          <li>Pflichtfelder: Name, Kontotyp und Währung.</li>
+          <li>Bank optional wählbar — bekannte Banken schlagen automatisch eine passende Farbe vor.</li>
+          <li>Ohne bekannte Bank wird die Farbe des Kontotyps als Standard verwendet.</li>
+          <li>Bei einer vom Basiswährung abweichenden Kontowährung erscheint ein Fremdwährungs-Hinweis.</li>
+        </ul>
+        <p>
+          Konten lassen sich jederzeit bearbeiten. Statt endgültigem Löschen werden sie <strong>archiviert</strong>
+          (Soft-Delete) — bereits erfasste Kontostände bleiben dabei erhalten und können bei Bedarf wiederhergestellt
+          werden.
+        </p>
+      </section>
+
+      <section id="eintraege">
+        <h2><span class="step">3</span> Einträge hinzufügen</h2>
+        <p>
+          Die Ansicht <strong>Einträge</strong> ist für die monatliche Erfassung gedacht: alle Konten auf einmal, für
+          einen ausgewählten Monat. Standardmäßig ist der aktuelle Monat vorausgewählt, per Monatswechsel lässt sich
+          aber auch rückwirkend erfasst werden.
+        </p>
+        <ul class="feature-list">
+          <li>Pro Konto und Monat existiert genau ein Eintrag — ein erneutes Speichern überschreibt den bestehenden Wert.</li>
+          <li>Leer gelassene Felder werden beim Speichern übersprungen, nicht auf 0 gesetzt.</li>
+          <li><span class="kbd">Enter</span> springt zum nächsten Konto, beim letzten Konto wird direkt gespeichert.</li>
+          <li>Eine Live-Zwischensumme zeigt schon während der Eingabe den Stand in der Basiswährung.</li>
+          <li>Ein Filter blendet Konten aus, für die der Monat bereits erfasst ist — praktisch, wenn nur wenige fehlen.</li>
+        </ul>
+        <div class="card note">
+          <p>
+            Springt ein Kontostand im Vergleich zum Vormonat unerwartet stark (z. B. eine Ziffer zu viel getippt),
+            weist die App mit einem Anomalie-Hinweis darauf hin.
+          </p>
+        </div>
+      </section>
+
+      <section id="fixposten">
+        <h2><span class="step">4</span> Fixposten erfassen</h2>
+        <p>
+          <strong>Fixposten</strong> sind wiederkehrende Ein- oder Ausgaben — Gehalt, Miete, Abos, Dividenden. Sie
+          fließen in die Prognose und in die Netto-Übersicht auf dem Dashboard ein.
+        </p>
+        <ul class="feature-list">
+          <li>Neue Fixposten sind standardmäßig eine Ausgabe, können aber als Einnahme markiert werden.</li>
+          <li>Intervall frei wählbar (z. B. monatlich, jährlich) — die App rechnet automatisch auf ein Monatsäquivalent um.</li>
+          <li>Beträge werden inline bearbeitet und automatisch gespeichert (Autosave nach kurzer Tippzeit, bei Fokusverlust oder <span class="kbd">Enter</span>).</li>
+          <li>Die Liste gruppiert Einnahmen vor Ausgaben und zeigt eine Summen-Übersicht.</li>
+        </ul>
+        <div class="card warn">
+          <p>
+            Ist das Netto aus allen Fixposten dauerhaft negativ, macht ein Hinweis-Banner auf dem Dashboard darauf
+            aufmerksam.
+          </p>
+        </div>
+      </section>
+
+      <section id="vermoegenswerte">
+        <h2><span class="step">5</span> Vermögenswerte</h2>
+        <p>
+          <strong>Vermögenswerte</strong> sind Sachwerte ohne monatlichen Zeitverlauf — Elektronik, Möbel, Fahrzeuge.
+          Anders als Konten wird hier nur der aktuelle Wert gepflegt, keine Historie.
+        </p>
+        <ul class="feature-list">
+          <li>Name und aktueller Wert sind Pflichtfelder beim Anlegen.</li>
+          <li>Werte werden inline bearbeitet, jede Wertänderung zählt automatisch als Neubewertung.</li>
+          <li>Wurde ein Vermögenswert rund sechs Monate nicht neu bewertet, markiert ihn die App als überfällig.</li>
+          <li>Auf dem Dashboard fließen Vermögenswerte optional, aber standardmäßig nicht in die Gesamtsumme ein.</li>
+        </ul>
+      </section>
+
+      <section id="dashboard">
+        <h2><span class="step">6</span> Dashboard &amp; Filter</h2>
+        <p>
+          Das <strong>Dashboard</strong> fasst alle erfassten Daten zusammen: Gesamtvermögen, Verlauf mit Prognose,
+          Zusammensetzung über Zeit, Verteilung nach Kontotyp, Kennzahlen sowie eine Konto-Karte pro Konto mit
+          Mini-Verlauf.
+        </p>
+        <h3>Zeitraum-Filter</h3>
+        <p>
+          Oben auf dem Dashboard lässt sich der betrachtete Zeitraum wählen (z. B. „Dieses Jahr“, „Letzte 12 Monate“
+          oder die volle Historie). Welche Presets zur Auswahl stehen, hängt von der vorhandenen Datenhistorie ab.
+          Der Filter wirkt auf alle zeitbasierten Karten gleichzeitig.
+        </p>
+        <ul class="feature-list">
+          <li>Die Prognose ist nur sichtbar, wenn der gewählte Zeitraum bis zum aktuellsten erfassten Monat reicht.</li>
+          <li>Der Verteilungs-Donut zeigt immer den aktuellsten Monat innerhalb des gewählten Zeitraums.</li>
+          <li>Die Kennzahlen-Karte (bester/schwächster Monat, Ø-Veränderung, Höchststand) erscheint erst ab zwei Monaten Historie.</li>
+        </ul>
+        <p>
+          Zusätzlich erinnert das Dashboard bei Bedarf an offene Aufgaben: den aktuellen Monat erfassen, ein
+          fälliges Backup exportieren oder überfällige Vermögenswerte neu bewerten.
+        </p>
+      </section>
+
+      <section id="einstellungen">
+        <h2><span class="step">7</span> Einstellungen</h2>
+        <p>
+          In den <strong>Einstellungen</strong> lassen sich die grundlegenden Rahmenbedingungen der App anpassen.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Basiswährung:</strong> Zielwährung, in die alle Dashboard-Summen umgerechnet werden.</li>
+          <li><strong>Sicherheits-Informationen:</strong> Einsicht, wie und wo Daten verschlüsselt gespeichert werden.</li>
+          <li><strong>Speicherort:</strong> lässt sich direkt im Dateimanager öffnen.</li>
+          <li><strong>Backup:</strong> Export/Import als Klartext-JSON über native Dateidialoge; der Export-Status wird angezeigt.</li>
+          <li><strong>Zurücksetzen:</strong> einzige unumkehrbare Aktion der App — erfordert eine getippte Bestätigungsphrase, kein einfacher Klick.</li>
+        </ul>
+        <p>Globale Tastenkürzel (unabhängig von der aktuellen Ansicht):</p>
+        <ul class="feature-list">
+          <li><span class="kbd">Strg/⌘</span> + <span class="kbd">E</span> — Backup exportieren</li>
+          <li><span class="kbd">Strg/⌘</span> + <span class="kbd">I</span> — Backup importieren</li>
+          <li><span class="kbd">Strg/⌘</span> + <span class="kbd">Q</span> — App beenden</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site">
+    <div class="wrap footer-content">
+      <span>© 2026 kreativ-anders | Manuel Steinberg</span>
+      <nav class="footer-nav">
+        <a href="https://kreativ-anders.de/impressum" target="_blank" rel="noopener">Impressum</a>
+        <a href="https://kreativ-anders.de/kontakt" target="_blank" rel="noopener">Kontakt</a>
+        <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

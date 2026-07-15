@@ -1,86 +1,122 @@
 name: Release
 
-# Baut alle Plattform-Binaries (Linux/macOS/Windows sind bei Neutralino
-# vorgefertigte Downloads, kein Cross-Compiling nötig -- ein einzelner
-# Runner reicht) und hängt sie als Assets an ein GitHub-Release, das zum
-# gepushten Tag passt. Läuft auf macos-latest, damit zusätzlich das echte
-# macOS-App-Bundle (packaging/macos/build-app.sh, braucht sips/iconutil)
-# gebaut werden kann.
+# Baut die Desktop-Bundles für Linux, macOS und Windows und hängt sie als
+# Assets an ein GitHub-Release, das zum gepushten Tag passt.
 #
-# --embed-resources bettet die Web-Ressourcen direkt in jede Binary ein --
-# es gibt bewusst kein separates resources.neu mehr, das man beim Verteilen
-# vergessen könnte (das war der Grund für den früheren "zeigt nur die
-# Neutralino-Standardseite"-Bug bei Einzel-Datei-Weitergabe). Datenverzeichnis
-# (NL_DATAPATH, dataLocation: "system") ist davon unabhängig -- ein Update
-# ist einfach "Binary ersetzen", bestehende Nutzerdaten bleiben unberührt.
-# Kein In-App-Auto-Updater mehr (siehe README): Updates laufen über
-# Neu-Download der Binary aus dem GitHub-Release.
+# Flutter braucht für jede Zielplattform einen nativen Build auf dieser
+# Plattform -- daher drei separate Jobs (ubuntu/macos/windows-latest), die
+# alle denselben Tag hochladen (softprops/action-gh-release legt das
+# Release beim ersten Job an und ergänzt es bei den folgenden).
+#
+# Jeder Build ist ein ganzer Ordner (Executable + data/ + Bibliotheken),
+# kein self-contained Single-File-Binary -- deswegen wird jeweils der
+# komplette Bundle-Ordner gezippt.
 #
 # Ablauf für ein Release:
-#   1. Version in neutralino.config.json hochzählen und committen
+#   1. Version in pubspec.yaml (version:) hochzählen und committen
 #   2. Tag pushen, z. B.: git tag v1.1.0 && git push origin v1.1.0
-#   3. Dieser Workflow lädt alle Binaries + das macOS-App-Bundle automatisch
-#      als Release-Assets hoch.
+#   3. Dieser Workflow lädt alle drei Plattform-Zips automatisch als
+#      Release-Assets hoch.
+#
+# Ad-hoc-Builds für alle drei Plattformen ohne Tag/Release (z. B. um einen
+# Branch vorab zu testen): im Actions-Tab diesen Workflow manuell über
+# "Run workflow" (workflow_dispatch) starten. Die drei Zips landen dann
+# nur als Workflow-Artifacts am Run (Reiter "Summary"), es wird kein
+# GitHub-Release angelegt.
 
 on:
   push:
     tags:
       - "v*.*.*"
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: "Tag für das Release (z. B. v1.2.3)"
-        required: true
+  workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Linux-Toolchain installieren
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+
+      - run: flutter config --enable-linux-desktop
+      - run: flutter pub get
+      - run: flutter build linux --release
+
+      - name: Bundle zippen
+        working-directory: build/linux/x64/release/bundle
+        run: zip -r ../../../../../finanzgecko-linux-x64.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finanzgecko-linux-x64
+          path: finanzgecko-linux-x64.zip
+
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: finanzgecko-linux-x64.zip
+
+  macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: subosito/flutter-action@v2
         with:
-          node-version: "22"
+          channel: stable
 
-      - name: neu CLI installieren
-        # Version gepinnt: v11.7.2 zieht uuid@14 (ESM-only), das der CLI-Code
-        # per CommonJS require() lädt -- jeder neu-Befehl bricht sofort mit
-        # ERR_REQUIRE_ESM ab (siehe README, "Bekannter CLI-Bug").
-        run: npm i -g @neutralinojs/neu@11.7.1
+      - run: flutter config --enable-macos-desktop
+      - run: flutter pub get
+      - run: flutter build macos --release
 
-      - name: Binaries + Client-Library laden
-        run: neu update
+      - name: App-Bundle zippen
+        # ditto statt zip: erhält Resource-Forks/Extended-Attributes des
+        # .app-Bundles, die für Codesigning/Gatekeeper relevant sind.
+        working-directory: build/macos/Build/Products/Release
+        run: ditto -c -k --sequesterRsrc --keepParent FinanzGecko.app ../../../../../FinanzGecko-mac.app.zip
 
-      - name: Release bauen
-        run: neu build --release --embed-resources
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FinanzGecko-mac
+          path: FinanzGecko-mac.app.zip
 
-      - name: macOS-App-Bundle bauen
-        run: ./packaging/macos/build-app.sh universal
-
-      - name: macOS-App-Bundle zippen
-        working-directory: dist/finanzgecko
-        run: ditto -c -k --sequesterRsrc --keepParent FinanzGecko.app FinanzGecko-mac.app.zip
-
-      - name: Release-ZIP bereinigen
-        # `neu build --embed-resources` packt intern trotzdem eine resources.neu
-        # ins Sammel-ZIP -- ihr Inhalt steckt aber schon in jeder Binary, daher
-        # aus dem ZIP entfernen statt sie redundant mitzuliefern.
-        run: zip -d dist/finanzgecko-release.zip resources.neu
-
-      - name: Release-Assets hochladen
+      - if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.tag_name }}
-          files: |
-            dist/finanzgecko/finanzgecko-linux_x64
-            dist/finanzgecko/finanzgecko-linux_arm64
-            dist/finanzgecko/finanzgecko-linux_armhf
-            dist/finanzgecko/finanzgecko-win_x64.exe
-            dist/finanzgecko/finanzgecko-mac_x64
-            dist/finanzgecko/finanzgecko-mac_arm64
-            dist/finanzgecko/finanzgecko-mac_universal
-            dist/finanzgecko/FinanzGecko-mac.app.zip
-            dist/finanzgecko-release.zip
+          files: FinanzGecko-mac.app.zip
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter config --enable-windows-desktop
+      - run: flutter pub get
+      - run: flutter build windows --release
+
+      - name: Bundle zippen
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath finanzgecko-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finanzgecko-windows-x64
+          path: finanzgecko-windows-x64.zip
+
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: finanzgecko-windows-x64.zip

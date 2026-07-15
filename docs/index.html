@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinanzGecko — Lokaler Vermögenstracker für Linux, macOS &amp; Windows</title>
+  <meta name="description" content="FinanzGecko ist ein kostenloser, nativer Desktop-Vermögenstracker für Linux, macOS und Windows. Kein Server, keine Cloud, kein Account — alle Daten bleiben AES-256-verschlüsselt lokal auf deinem Rechner." />
+  <link rel="canonical" href="https://kreativ-anders.github.io/finanzgecko/" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="assets/style.css" />
+  <meta name="theme-color" content="#0a0f0c" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="FinanzGecko" />
+  <meta property="og:locale" content="de_DE" />
+  <meta property="og:url" content="https://kreativ-anders.github.io/finanzgecko/" />
+  <meta property="og:title" content="FinanzGecko — Lokaler Vermögenstracker für Linux, macOS & Windows" />
+  <meta property="og:description" content="Kostenloser, nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account — alle Daten bleiben AES-256-verschlüsselt lokal auf deinem Rechner." />
+  <meta property="og:image" content="https://kreativ-anders.github.io/finanzgecko/assets/icon.png" />
+  <meta property="og:image:width" content="1024" />
+  <meta property="og:image:height" content="1024" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="FinanzGecko — Lokaler Vermögenstracker für Linux, macOS & Windows" />
+  <meta name="twitter:description" content="Kostenloser, nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account — alle Daten bleiben AES-256-verschlüsselt lokal auf deinem Rechner." />
+  <meta name="twitter:image" content="https://kreativ-anders.github.io/finanzgecko/assets/icon.png" />
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "FinanzGecko",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Linux, macOS, Windows",
+    "description": "Nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account — alle Daten bleiben AES-256-verschlüsselt lokal auf dem Rechner.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    },
+    "url": "https://kreativ-anders.github.io/finanzgecko/",
+    "downloadUrl": "https://github.com/kreativ-anders/finanzgecko/releases/latest",
+    "author": {
+      "@type": "Organization",
+      "name": "kreativ-anders",
+      "url": "https://kreativ-anders.de"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Ist FinanzGecko wirklich kostenlos?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ja. FinanzGecko ist Open Source und über GitHub Releases dauerhaft kostenlos nutzbar — ohne Abo und ohne In-App-Käufe."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wo werden meine Daten gespeichert?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ausschließlich lokal auf dem Gerät, in einer einzigen AES-256-GCM-verschlüsselten Datei. Es gibt keine Cloud-Synchronisierung und keinen Server."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Brauche ich einen Account?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Nein. FinanzGecko hat kein Login und keine Registrierung."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Welche Plattformen werden unterstützt?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Linux, macOS und Windows als native Desktop-Anwendung. Es gibt keine mobile App und keine Web-Version."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Wie bekomme ich Updates?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Es gibt keinen Auto-Updater: Update bedeutet, das neue Release-Zip von GitHub zu laden und das alte Programmverzeichnis zu ersetzen."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="site">
+    <div class="wrap">
+      <img class="logo" src="assets/icon-192.png" width="32" height="32" alt="" />
+      <a class="brand" href="index.html">FinanzGecko</a>
+      <nav>
+        <a href="#features">Funktionen</a>
+        <a href="#screenshots">Einblicke</a>
+        <a href="#bekommen">Bekommen</a>
+        <a href="#faq">FAQ</a>
+        <a href="documentation.html">Dokumentation</a>
+        <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <img class="logo" src="assets/icon-192.png" width="88" height="88" alt="FinanzGecko Logo" />
+        <h1>FinanzGecko</h1>
+        <p class="pitch">
+          Ein nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account —
+          alle Daten bleiben lokal und AES-256-verschlüsselt auf deinem Rechner.
+        </p>
+
+        <div class="cta-group">
+          <a class="btn" href="#bekommen">Kostenlos herunterladen →</a>
+          <a class="btn btn-secondary" href="documentation.html">Zur Dokumentation</a>
+        </div>
+        <p class="micro-trust">Für Linux, macOS &amp; Windows · kein Account nötig · Daten bleiben auf deinem Gerät</p>
+
+        <div class="tags">
+          <span class="tag">Linux</span>
+          <span class="tag">macOS</span>
+          <span class="tag">Windows</span>
+          <span class="tag">100% lokal</span>
+          <span class="tag">AES-256-GCM</span>
+          <span class="tag">Open Source</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="screenshots" class="screenshots">
+      <div class="wrap">
+        <h2>Ein Blick in die App</h2>
+        <p class="section-lead">Übersicht, Erfassung und Auswertung — alles in einer Ansicht.</p>
+        <div class="shot-grid">
+          <figure class="shot-placeholder">
+            <div class="shot-box" aria-hidden="true">
+              <span>Screenshot folgt</span>
+            </div>
+            <figcaption>Dashboard — Gesamtvermögen, Verlauf &amp; Prognose</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="shot-box" aria-hidden="true">
+              <span>Screenshot folgt</span>
+            </div>
+            <figcaption>Einträge — Kontostände monatlich erfassen</figcaption>
+          </figure>
+          <figure class="shot-placeholder">
+            <div class="shot-box" aria-hidden="true">
+              <span>Screenshot folgt</span>
+            </div>
+            <figcaption>Fixposten — wiederkehrende Ein- &amp; Ausgaben im Blick</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="wrap">
+        <h2>Was FinanzGecko kann</h2>
+        <p class="section-lead">Gebaut für den vollständigen Überblick über dein Vermögen — ohne Kompromisse bei Privatsphäre.</p>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h3>Verlauf &amp; Prognose</h3>
+            <p>Zeitreihen-Chart deines Gesamtvermögens inklusive Trend-basierter Prognose, damit du siehst, wohin die Reise geht.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Alle Konten an einem Ort</h3>
+            <p>Girokonto, Tagesgeld, Depot, Bargeld, Krypto — mit monatlicher Erfassung für alle Konten auf einmal.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Fixposten</h3>
+            <p>Gehalt, Miete, Abos und Dividenden als wiederkehrende Posten pflegen — automatisch auf ein Monatsäquivalent normiert.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Vermögenswerte</h3>
+            <p>Sachwerte wie Elektronik, Möbel oder Fahrzeuge erfassen, mit automatischer Erinnerung zur Neubewertung.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Kennzahlen &amp; Verteilung</h3>
+            <p>Bester/schwächster Monat, Ø-Veränderung und Verteilung nach Kontotyp auf einen Blick.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Ende-zu-Ende lokal</h3>
+            <p>AES-256-GCM-verschlüsselt, Schlüssel im OS-Keychain, kein Netzwerkzugriff außer für öffentliche Wechselkurse.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="bekommen" class="get">
+      <div class="wrap">
+        <h2>FinanzGecko bekommen</h2>
+        <p class="section-lead">Immer derselbe quelloffene Vermögenstracker — wähle den Weg, der dir am liebsten ist.</p>
+        <div class="get-grid">
+          <div class="get-card get-card-primary">
+            <h3>Kostenlos &amp; Open Source</h3>
+            <p>Direkt von GitHub Releases laden — für Linux, macOS und Windows. Quellcode frei einsehbar.</p>
+            <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">Kostenlos herunterladen →</a>
+          </div>
+          <div class="get-card">
+            <h3>Praktisch kaufen</h3>
+            <p>Für alle, die lieber über einen Store-Checkout gehen oder die Entwicklung direkt unterstützen möchten.</p>
+            <!-- Platzhalter: echte Gumroad-/Lemon-Squeezy-Produktlinks eintragen, sobald verfügbar. -->
+            <div class="store-buttons">
+              <span class="btn btn-store" aria-disabled="true" title="Bald verfügbar">
+                Bei Gumroad kaufen
+                <span class="store-badge">bald verfügbar</span>
+              </span>
+              <span class="btn btn-store" aria-disabled="true" title="Bald verfügbar">
+                Bei Lemon&nbsp;Squeezy kaufen
+                <span class="store-badge">bald verfügbar</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust">
+      <div class="wrap">
+        <div class="trust-grid">
+          <div class="trust-item">
+            <strong>Kein Account</strong>
+            <span>Keine Registrierung, kein Login, keine Telemetrie.</span>
+          </div>
+          <div class="trust-item">
+            <strong>Open Source</strong>
+            <span>Quellcode frei einsehbar auf GitHub.</span>
+          </div>
+          <div class="trust-item">
+            <strong>Kostenlos</strong>
+            <span>Keine Abos, keine In-App-Käufe.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="faq">
+      <div class="wrap">
+        <h2>Häufige Fragen</h2>
+        <div class="faq-list">
+          <details>
+            <summary>Ist FinanzGecko wirklich kostenlos?</summary>
+            <p>Ja. FinanzGecko ist Open Source und über GitHub Releases dauerhaft kostenlos nutzbar — ohne Abo und ohne In-App-Käufe.</p>
+          </details>
+          <details>
+            <summary>Wo werden meine Daten gespeichert?</summary>
+            <p>Ausschließlich lokal auf deinem Gerät, in einer einzigen AES-256-GCM-verschlüsselten Datei. Es gibt keine Cloud-Synchronisierung und keinen Server.</p>
+          </details>
+          <details>
+            <summary>Brauche ich einen Account?</summary>
+            <p>Nein. FinanzGecko hat kein Login und keine Registrierung — die App startet direkt einsatzbereit.</p>
+          </details>
+          <details>
+            <summary>Welche Plattformen werden unterstützt?</summary>
+            <p>Linux, macOS und Windows als native Desktop-Anwendung. Es gibt keine mobile App und keine Web-Version.</p>
+          </details>
+          <details>
+            <summary>Wie bekomme ich Updates?</summary>
+            <p>Es gibt keinen Auto-Updater: Update bedeutet, das neue Release-Zip von GitHub zu laden und das alte Programmverzeichnis zu ersetzen.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site">
+    <div class="wrap footer-content">
+      <span>© 2026 kreativ-anders | Manuel Steinberg</span>
+      <nav class="footer-nav">
+        <a href="https://kreativ-anders.de/impressum" target="_blank" rel="noopener">Impressum</a>
+        <a href="https://kreativ-anders.de/kontakt" target="_blank" rel="noopener">Kontakt</a>
+        <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
