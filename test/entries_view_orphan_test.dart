@@ -1,3 +1,4 @@
+// Gherkin: gherkin/balances_entries.feature
 import 'package:finanzgecko/data/app_store.dart';
 import 'package:finanzgecko/state/app_state.dart';
 import 'package:finanzgecko/ui/views/entries_view.dart';

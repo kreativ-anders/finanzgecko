@@ -46,7 +46,8 @@ nutzbar).
 ```
 finanzgecko/
 ├── AI_MASTER.md                  # ← dieses Dokument
-├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (siehe gherkin/README.md)
+├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (deklarativ)
+│   └── executable/               # ← ausführbare Features (@executable), laufen via test/support/gherkin_runner.dart
 ├── templates/                    # ← Import-Vorlage (import-template.json) + Feld-Doku für die Datenmigration aus Fremdtools
 ├── README.md                     # Entwickler-Doku: Setup, Build, Release, Architektur-Tabelle, Troubleshooting
 ├── pubspec.yaml                  # Package-Name, Version, Dependencies, flutter_launcher_icons-Konfig
@@ -75,6 +76,9 @@ finanzgecko/
 │       ├── views/                # Eine Datei pro Hauptansicht (siehe Tabelle unten)
 │       └── widgets/               # Wiederverwendbare Bausteine (Charts, Dialoge, Banner, Formularelemente)
 ├── test/                         # Dart-Unit-/Widget-Tests, gespiegelt zu den Gherkin-Szenarien (siehe Abschnitt 8)
+│   ├── support/gherkin_runner.dart # winziger, abhängigkeitsfreier Gherkin-Runner (führt @executable-Features aus)
+│   └── bdd/                        # BDD-Testdateien: rufen runFeature(...) + registrieren Step-Defs gegen lib/
+
 ├── tool/generate_icons.dart       # Icon-Pipeline (ein Master-PNG → alle Plattform-Icon-Formate)
 ├── tool/generate_demo_data.dart   # buildDemoBackup() → demo/finanzgecko-demo.json (an "heute" verankert); auch von flutter test aufgerufen
 ├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots (generiert, .gitignore) — via "Backup importieren…"
@@ -265,6 +269,28 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 
 ## 8. Tests ↔ Gherkin-Zuordnung
 
+### Feature-Übersicht (Navigations-Index)
+
+Alle Verhaltensspezifikationen auf einen Blick — Einstieg für eine KI, um vom Verhalten zur Quelle zu springen
+(jede Feature-Datei nennt ihre `# Quelle:`). `test/gherkin_sync_test.dart` erzwingt, dass jede Datei hier auftaucht.
+
+| Feature | Kurz | Status |
+|---|---|---|
+| `gherkin/dashboard.feature` | Gesamtvermögen, Verlauf+Prognose, Verteilung, Zusammensetzung, Kennzahlen, Währungsaufteilung, Banner, Konto-Karten, Zeitraum-Filter | Unit (`analysis_test`, `app_state_test`) |
+| `gherkin/balances_entries.feature` | Monatsweise Kontostand-Erfassung/Korrektur, verwaiste Balances | Unit (`entries_view_orphan_test`, `app_state_test`) |
+| `gherkin/accounts.feature` | Konten anlegen/bearbeiten/archivieren; Bank→Farbe | Unit (`account_color_test`, `app_store_ops_test`) |
+| `gherkin/subscriptions.feature` | Fixposten CRUD, Monatsäquivalent | Unit (`app_state_test`, `app_store_ops_test`) |
+| `gherkin/assets.feature` | Vermögenswerte CRUD, 6-Monats-Reminder | Unit (`app_store_ops_test`) |
+| `gherkin/settings.feature` | Basiswährung, Sicherheit, Backup-Export/Import, CSV-Export, Reset | Unit (`csv_export_test`) |
+| `gherkin/backup_restore.feature` | Export/Import (JSON), Schemaprüfung, Bank→Farbe-Import, Fehlertoleranz | Unit (`app_store_ops_test`, `backup_hardening_test`) |
+| `gherkin/data_security.feature` | AES-256-GCM, OS-Keychain, Quarantäne, Schema-Parsing | Unit (`app_data_test`, `app_store_encryption_test`) |
+| `gherkin/currency_exchange.feature` | Wechselkurse (frankfurter.dev), Cache, Offline-Fallback, manueller Kurs | nur UI/Integration (kein Unit-Test) |
+| `gherkin/window_and_navigation.feature` | Fenstergröße/Maximiert, Navigation, Splash, Tastenkürzel | nur UI/Integration (kein Unit-Test) |
+| `gherkin/executable/account_color.feature` | resolveAccountColor-Regeln | **ausführbar** (`test/bdd/account_color_bdd_test.dart`) |
+| `gherkin/executable/net_worth_projection.feature` | Trend/Prognose/Kennzahlen/Anomalie | **ausführbar** (`test/bdd/analysis_bdd_test.dart`) |
+
+### Testdateien
+
 | Testdatei | Deckt ab | Zugehöriges Feature |
 |---|---|---|
 | `test/analysis_test.dart` | Reine Berechnungen (Trend, Prognose, Anomalie, Kennzahlen) | `gherkin/dashboard.feature` |
@@ -278,10 +304,45 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 | `test/tooling_test.dart` | **Regeneriert beim Testlauf** die Demodaten (`buildDemoBackup` → `demo/…json`) und die Linux-Hicolor-Icons (`generateLinuxIcons`) und validiert sie (Schema, Referenzen, Domänenwerte, Icon-Größen) | Dev-Tooling (kein Feature) |
 | `test/entries_view_orphan_test.dart` | Verwaiste Balances archivierter Konten | `gherkin/balances_entries.feature` |
 | `test/formatting_test.dart` | Zahlen-/Geldformatierung, Parsing | quer über alle Features (nicht-funktional) |
+| `test/gherkin_sync_test.dart` | **Verdrahtet Gherkin ↔ Code/Tests** (s. u.): `# Quelle:`-Pfade existieren, `// Gherkin:`-Marker zeigen auf echte Features, Coverage-Allow-List | alle `gherkin/**/*.feature` (Meta) |
+| `test/bdd/account_color_bdd_test.dart` | **Führt** `gherkin/executable/account_color.feature` aus (Runner) gegen `resolveAccountColor` | `gherkin/executable/account_color.feature` |
+| `test/bdd/analysis_bdd_test.dart` | **Führt** `gherkin/executable/net_worth_projection.feature` aus gegen `analysis.dart` | `gherkin/executable/net_worth_projection.feature` |
 
 **Regel:** Wird ein Gherkin-Szenario ergänzt, das ein neues Verhalten beschreibt, sollte nach Möglichkeit ein
 korrespondierender Dart-Test entstehen (oder zumindest ein TODO-Kommentar mit Verweis auf das Szenario), damit
 Spezifikation und automatisierte Prüfung nicht auseinanderlaufen.
+
+**Verdrahtung Gherkin ↔ Tests (erzwungen, nicht nur Konvention):** `test/gherkin_sync_test.dart` läuft im normalen
+`flutter test` (und damit im Release-`test`-Gate) und lässt die Pipeline **fehlschlagen**, sobald Spec, Code und
+Tests auseinanderlaufen:
+1. Jede `gherkin/*.feature` braucht einen `# Quelle:`-Header, dessen Quellcode-Pfade alle existieren.
+2. Ein Test verlinkt das/die Feature(s), das/die er abdeckt, mit einer Kopfzeile `// Gherkin: gherkin/<x>.feature`
+   (mehrere kommagetrennt). Jeder Marker muss auf eine existierende Feature-Datei zeigen.
+3. Genau die im Test hinterlegte Allow-List (`featuresWithoutUnitTest`, aktuell `currency_exchange` +
+   `window_and_navigation`) darf ohne Unit-Test sein — jede Abweichung (neues ungetestetes Feature, oder ein jetzt
+   getestetes Feature) bricht den Testlauf ab und erzwingt entweder einen Test-Marker oder eine bewusste Anpassung
+   der Allow-List. So bleibt `gherkin/` kein isoliertes Doku-Silo, sondern hängt am Testlauf.
+
+### Zwei Sorten Features — deklarativ vs. ausführbar
+
+- **Deklarative Features** (`gherkin/*.feature`): beschreiben UI-/Integrationsverhalten in Prosa. Sie werden durch
+  gewöhnliche Dart-Tests + den Sync-Guard oben abgesichert, aber nicht Zeile für Zeile ausgeführt.
+- **Ausführbare Features** (`gherkin/executable/*.feature`, Tag `@executable`): werden **tatsächlich Schritt für
+  Schritt ausgeführt** von einem winzigen, abhängigkeitsfreien Runner (`test/support/gherkin_runner.dart`). Jedes
+  ausführbare Feature hat eine BDD-Testdatei in `test/bdd/`, die `runFeature(pfad, (s) { s.step(regex, body); … })`
+  aufruft; die Step-Bodies rufen echten `lib/`-Code auf. Dadurch ist die Kette **Szenario → Step-Def → Quellfunktion**
+  greifbar und greppbar (jede BDD-Datei nennt ihre `// Quelle:`).
+
+**So fügt man ein ausführbares Szenario hinzu** (bewusst knapp, damit eine KI zielgenau editiert): (1) Szenario in
+`gherkin/executable/<x>.feature` ergänzen; (2) fehlt ein Schritt, in `test/bdd/<x>_bdd_test.dart` ein `s.step(regex,
+body)` mit dünnem Aufruf der `lib/`-Funktion registrieren. Runner unterstützt bewusst nur Feature/Background/Rule/
+Scenario + Given/When/Then/And/But (keine Scenario Outline / Tabellen) — Fälle als einzelne Scenarios ausschreiben.
+
+**Bewusste Entscheidung — kein `flutter_gherkin`:** Der Runner ist absichtlich ein eigener ~90-Zeilen-Parser statt
+des Pakets `flutter_gherkin`. Begründung: null Zusatz-Abhängigkeit, läuft nativ im normalen `flutter test` (und damit
+im Release-Gate), leicht von einer KI les-/erweiterbar. `flutter_gherkin` ist auf UI-/e2e-Integrationstests
+(`integration_test`) ausgelegt und wäre für reine Domänenlogik Overhead. **Nicht ohne Rücksprache durch das Paket
+ersetzen** (vgl. Regel 5 unten).
 
 ---
 
@@ -319,6 +380,7 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    - App-Sandbox deaktiviert auf macOS — Abschnitt 4.1.
    - Fensterposition wird bewusst nicht gespeichert — Abschnitt 4.3.
    - Keine DB-Engine, eine einzige JSON-Datei — Abschnitt 2.
+   - Eigener Gherkin-Runner statt `flutter_gherkin` — Abschnitt 8.
    Diese Punkte tauchen typischerweise auch als Kommentar im Code auf; wer den Kommentar entfernt, muss auch hier
    den entsprechenden Absatz anpassen (oder umgekehrt).
 
