@@ -34,10 +34,11 @@ sollte die Ausgabe sauber sein, damit keine Daten still verloren gehen.
 |---|---|---|
 | `id` | Ganzzahl | **Eindeutig** innerhalb der Konten. Wird von `balances[].accountId` referenziert. |
 | `name` | String | Anzeigename, z. B. "Girokonto". |
-| `bank` | String | Bankname (frei; kann leer sein). |
+| `bank` | String | Bankname. Entweder **leer** (für Konten ohne Institut, z. B. Bargeld/Krypto) oder **exakt eine bekannte Bank** (z. B. `DKB`, `ING`, `Trade Republic`, `Scalable Capital` … — siehe `kBanks` in `lib/constants.dart`). Eine nicht-leere, unbekannte Bank **bricht den Import ab**. |
 | `tag` | String | **Kontotyp**, exakt einer aus: `Girokonto`, `Tagesgeld`, `Depot`, `Bargeld`, `Krypto`. |
 | `currency` | String | Kontowährung, aus der Währungsliste oben. |
-| `color` | String | Hex-Farbe, z. B. `#00C878`. |
+
+> **Kein `color`-Feld nötig.** Die Akzentfarbe ist **nicht Teil des Formats** — sie wird beim Import aus der Bank abgeleitet (bekannte Bank → Markenfarbe, leere Bank → Kontotyp-Farbe). Ein evtl. mitgegebenes `color` wird ignoriert.
 | `archived` | Boolean | `true` = archiviert (Soft-Delete). Normalerweise `false`. |
 | `createdAt` | ISO-8601-DateTime | z. B. `2025-01-15T00:00:00.000`. |
 
@@ -89,4 +90,6 @@ unterschiedlichem `period` anlegen.
 > [daily, weekly, monthly, quarterly, yearly]; `period` als `"YYYY-MM"`;
 > jede `balances[].accountId` muss auf ein `accounts[].id` zeigen;
 > `amountBase = amountOriginal × rate`; Ausgaben bei `subscriptions` als
-> negativer Betrag. Gib nur gültiges JSON aus, keine Kommentare.
+> negativer Betrag; `bank` ist leer ODER exakt eine bekannte Bank (unbekannte
+> Bank = Importfehler), `color` darf ein Platzhalter sein (wird beim Import aus
+> der Bank abgeleitet). Gib nur gültiges JSON aus, keine Kommentare.

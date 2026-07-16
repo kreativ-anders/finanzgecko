@@ -93,6 +93,26 @@ String? bankColorHex(String? bankName) {
 /// resolved brand color/name instead of arbitrary free text.
 bool isKnownBank(String? bankName) => bankColorHex(bankName) != null;
 
+/// The stored accent color for an account, derived from its [bank]:
+/// - a **known** bank → that bank's brand color (single source of truth),
+/// - an **empty** bank (e.g. Bargeld/Krypto without an institution) → the
+///   Kontotyp color as a fallback,
+/// - an **unknown, non-empty** bank → throws [FormatException].
+///
+/// This is the invariant the account form already enforces
+/// (`bankColorHex(bank) ?? tagColorHex(tag)` + known-bank validator); it lives
+/// here as a pure function so import/backup can enforce the same rule instead
+/// of trusting an arbitrary `color` from the file.
+String resolveAccountColor({required String bank, required String tag}) {
+  final trimmed = bank.trim();
+  if (trimmed.isEmpty) return tagColorHex(tag);
+  final color = bankColorHex(trimmed);
+  if (color == null) {
+    throw FormatException('Unbekannte Bank "$trimmed" — bitte eine Bank aus der Liste verwenden.');
+  }
+  return color;
+}
+
 const int kBackupReminderDays = 30;
 const int kAssetReevaluationDays = 182; // ~6 Monate
 

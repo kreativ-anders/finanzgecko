@@ -34,7 +34,32 @@ permissions:
   contents: write
 
 jobs:
+  # Qualitäts-Gate: statische Analyse, Tests und die Icon-Pipeline müssen grün
+  # sein, bevor überhaupt ein Plattform-Bundle gebaut oder released wird. Läuft
+  # plattformunabhängig auf einem einzelnen ubuntu-Runner; die Build-Jobs unten
+  # warten via `needs: test` darauf.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - name: Statische Analyse
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      - name: Icon-Pipeline prüfen (Icons aus dem Master generieren)
+        run: dart run tool/generate_icons.dart
+
   linux:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +92,7 @@ jobs:
           files: finanzgecko-linux-x64.zip
 
   macos:
+    needs: test
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -96,6 +122,7 @@ jobs:
           files: FinanzGecko-mac.app.zip
 
   windows:
+    needs: test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

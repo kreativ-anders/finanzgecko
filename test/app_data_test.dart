@@ -71,6 +71,16 @@ void main() {
       expect(json.containsKey('accounts'), isTrue);
     });
 
+    test('toExportJson omits the derived account color, keeping bank + tag', () {
+      final parsed = AppData.fromDynamic({
+        'accounts': [_account(1)], // _account carries a color
+      })!;
+      final acc = (parsed.toExportJson()['accounts'] as List).single as Map;
+      expect(acc.containsKey('color'), isFalse, reason: 'color is derived from the bank on import');
+      expect(acc.containsKey('bank'), isTrue);
+      expect(acc.containsKey('tag'), isTrue);
+    });
+
     test('round-trips accounts through toJson -> fromDynamic', () {
       final original = AppData.defaults();
       final parsed = AppData.fromDynamic({

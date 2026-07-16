@@ -1,3 +1,4 @@
+import 'package:finanzgecko/constants.dart';
 import 'package:finanzgecko/data/app_store.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,13 +38,19 @@ class _FakeSecureStorage {
   }
 }
 
-Map<String, dynamic> _account(int id, {String name = 'Konto'}) => {
+Map<String, dynamic> _account(
+  int id, {
+  String name = 'Konto',
+  String bank = '',
+  String tag = 'giro',
+  String color = '#00c878',
+}) => {
   'id': id,
   'name': name,
-  'bank': '',
-  'tag': 'giro',
+  'bank': bank,
+  'tag': tag,
   'currency': 'EUR',
-  'color': '#00c878',
+  'color': color,
   'archived': false,
   'createdAt': DateTime.now().toIso8601String(),
 };
@@ -110,6 +117,29 @@ void main() {
         ),
       );
       expect(store.getAccounts().map((a) => a.name), ['Gut']);
+    });
+
+    test('rejects an account with an unknown bank and leaves data intact', () async {
+      final store = await bootStore();
+      await store.addAccount(name: 'Behalten', tag: 'giro', color: '#00c878');
+
+      await expectLater(
+        store.importAllData(_backup(accounts: [_account(1, bank: 'Interactive Brokers')])),
+        throwsA(isA<Exception>()),
+      );
+      expect(store.getAccounts().map((a) => a.name), ['Behalten']);
+    });
+
+    test('normalizes a known bank to its brand color, ignoring the file color', () async {
+      final store = await bootStore();
+      await store.importAllData(_backup(accounts: [_account(1, bank: 'DKB', color: '#ffffff')]));
+      expect(store.getAccounts().single.color, bankColorHex('DKB'));
+    });
+
+    test('an empty bank keeps the Kontotyp fallback color', () async {
+      final store = await bootStore();
+      await store.importAllData(_backup(accounts: [_account(1, bank: '', tag: 'Depot')]));
+      expect(store.getAccounts().single.color, tagColorHex('Depot'));
     });
   });
 

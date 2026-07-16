@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cryptography/cryptography.dart';
 import 'package:path/path.dart' as p;
 
+import '../constants.dart';
 import '../models/account.dart';
 import '../models/asset.dart';
 import '../models/balance.dart';
@@ -727,9 +728,22 @@ class AppStore {
     final assets = parseList('assets', Asset.fromJson);
     final subscriptions = parseList('subscriptions', Subscription.fromJson);
 
+    // Enforce the bank→color invariant on import: a known bank fixes the brand
+    // color, an empty bank falls back to the Kontotyp color, and an UNKNOWN
+    // (non-empty) bank aborts the whole import — no silent wrong color. Done
+    // before touching `data`, so a bad backup leaves the current data intact.
+    final normalizedAccounts = <Account>[];
+    for (final a in accounts) {
+      try {
+        normalizedAccounts.add(a.copyWith(color: resolveAccountColor(bank: a.bank, tag: a.tag)));
+      } on FormatException catch (e) {
+        throw Exception('Import abgebrochen bei Konto "${a.name}": ${e.message}');
+      }
+    }
+
     int maxId(Iterable<int> ids) => ids.fold(0, (m, id) => id > m ? id : m);
 
-    data.accounts = accounts;
+    data.accounts = normalizedAccounts;
     data.balances = balances;
     data.assets = assets;
     data.subscriptions = subscriptions;

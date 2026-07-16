@@ -78,6 +78,16 @@ void main() {
       expect(accounts.map((a) => a['currency']).toSet().length, greaterThan(1));
     });
 
+    test('accounts carry no color and use known banks (color is derived on import)', () {
+      for (final a in accounts) {
+        expect(a.containsKey('color'), isFalse, reason: 'color is derived from the bank on import, not stored');
+        final bank = a['bank'] as String;
+        if (bank.isNotEmpty) {
+          expect(isKnownBank(bank), isTrue, reason: 'demo bank "$bank" must exist in kBanks');
+        }
+      }
+    });
+
     test('round-trips through export -> import', () {
       final reparsed = AppData.fromDynamic(AppData.fromDynamic(backup)!.toExportJson())!;
       expect(reparsed.balances, hasLength(19 * 6));

@@ -18,7 +18,8 @@ Feature: Backup exportieren und importieren
       Fixposten, der Basiswährung und der Schemaversion geschrieben
     And "zuletzt exportiert am" wird auf jetzt aktualisiert
     And ich sehe die Bestätigung "Backup exportiert."
-    But der Export enthält NICHT den Wechselkurs-Cache, interne Zähler (meta) oder die Fenstergeometrie
+    But der Export enthält NICHT den Wechselkurs-Cache, interne Zähler (meta), die Fenstergeometrie
+      oder die Konto-Akzentfarbe (color) — Letztere wird beim Import aus der Bank abgeleitet
 
   Scenario: Export-Dialog abgebrochen
     Given ich breche den Speichern-Dialog ab
@@ -70,6 +71,14 @@ Feature: Backup exportieren und importieren
     Given eine ansonsten gültige Backup-Datei enthält einen einzelnen fehlerhaften Eintrag in einer Liste
     Then wird nur dieser Eintrag übersprungen
     And alle anderen Einträge werden importiert
+
+  Scenario: Import erzwingt die Bank→Farbe-Regel und lehnt unbekannte Banken ab
+    Given eine Backup-/Migrationsdatei enthält Konten
+    When der Import läuft
+    Then wird die Akzentfarbe jedes Kontos aus seiner Bank neu abgeleitet (die Farbe aus der Datei wird ignoriert):
+      bekannte Bank → Markenfarbe der Bank, leere Bank (z. B. Bargeld/Krypto) → Kontotyp-Farbe
+    But enthält ein Konto eine nicht-leere, unbekannte Bank, wird der GESAMTE Import mit einer klaren
+      Fehlermeldung ("Import abgebrochen bei Konto …") abgebrochen und die aktuellen Daten bleiben unverändert
 
   Scenario: Migration von einer früheren App-Version
     Given eine ältere Version der App wurde über "Backup exportieren" gesichert

@@ -160,7 +160,9 @@ class AppData {
     'schemaVersion': schemaVersion,
     'exportedAt': DateTime.now().toIso8601String(),
     'baseCurrency': baseCurrency,
-    'accounts': accounts.map((a) => a.toJson()).toList(),
+    // Accounts use toExportJson (no color) — the color is derived from the
+    // bank on import, so it isn't part of the backup format.
+    'accounts': accounts.map((a) => a.toExportJson()).toList(),
     'balances': balances.map((b) => b.toJson()).toList(),
     'assets': assets.map((a) => a.toJson()).toList(),
     'subscriptions': subscriptions.map((s) => s.toJson()).toList(),

@@ -8,7 +8,6 @@
       "bank": "N26",
       "tag": "Girokonto",
       "currency": "EUR",
-      "color": "#00C878",
       "archived": false,
       "createdAt": "2025-01-15T00:00:00.000"
     },
@@ -18,7 +17,6 @@
       "bank": "Trade Republic",
       "tag": "Depot",
       "currency": "EUR",
-      "color": "#2FD0A0",
       "archived": false,
       "createdAt": "2025-01-15T00:00:00.000"
     }

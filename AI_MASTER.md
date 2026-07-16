@@ -80,7 +80,10 @@ finanzgecko/
 ├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots (generiert, .gitignore) — via "Backup importieren…"
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
-└── .github/workflows/release.yml  # CI: baut alle 3 Plattform-Bundles bei jedem Tag-Push
+└── .github/workflows/
+    ├── ci.yml                     # Push/PR: dart format-Check + flutter analyze + flutter test (schnelles Dev-Gate)
+    └── release.yml                # Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst `test`-Gate (analyze + test +
+                                   #   Icon-Pipeline), dann 3 native Build-Jobs (ubuntu/macos/windows, `needs: test`) → Release-Assets
 ```
 
 ### Die sechs Ansichten (`lib/ui/views/`)
@@ -135,6 +138,11 @@ automatisch über `Provider`.
   auf derselben temporären Datei überschneiden. Ein fehlgeschlagener Write vergiftet nicht die Queue für später.
 - **Unlesbare/fremde Dateien werden nie stillschweigend überschrieben** — sie werden zuerst unter
   `*.unreadable-<timestamp>` gesichert (`_quarantineUnreadable`), erst danach startet die App mit Standardwerten.
+- **Import erzwingt die Bank→Farbe-Regel:** In `importAllData` wird `account.color` über
+  `resolveAccountColor(bank, tag)` (`constants.dart`) neu gesetzt — bekannte Bank → Markenfarbe, leere Bank
+  (Bargeld/Krypto) → Kontotyp-Farbe. Eine unbekannte, nicht-leere Bank **bricht den gesamten Import ab** (kein
+  stilles Einschleusen einer willkürlichen Farbe). Das spiegelt exakt die Regel des Konto-Formulars
+  (`bankColorHex(bank) ?? tagColorHex(tag)` + Known-Bank-Validator).
 - **Dateirechte als Defense-in-Depth:** `chmod 700`/`600` (Linux/macOS), `icacls` current-user-only (Windows) —
   zusätzlich zur Verschlüsselung, nicht als Ersatz dafür.
 - **macOS-Spezifika (wichtig, nicht versehentlich rückgängig machen):**
@@ -152,7 +160,8 @@ automatisch über `Provider`.
 (`nextAccountId` etc.), `lastExportAt`, `window` (`WindowPrefs`). `fromDynamic()` ist **fehlertolerant pro Eintrag**:
 eine kaputte Zeile in einer Liste wird übersprungen statt die ganze Datei unlesbar zu machen. `toExportJson()` ist
 bewusst schlanker als `toJson()` (kein `ratesCache`/`meta`/`window` — internes Implementierungsdetail, nicht Teil
-eines Backups).
+eines Backups) **und ohne `account.color`** (`Account.toExportJson`): die Farbe ist aus der Bank ableitbar und wird
+beim Import über `resolveAccountColor` neu gesetzt — kleinere Backups, gehärteter Import.
 
 `currentSchemaVersion = 1` — bei jeder inkompatiblen Schemaänderung hochzählen und die Import-Prüfung in
 `AppStore.importAllData()` beachten (lehnt Backups aus einer *neueren* Version ab, mit klarer Fehlermeldung).
@@ -223,7 +232,9 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 ## 6. Plattform-Besonderheiten (siehe auch README für Setup-Details)
 
 - Cross-Platform-Builds sind **nicht möglich** — jede Plattform muss auf ihrem eigenen OS gebaut werden; alle drei
-  gleichzeitig nur über GitHub Actions (`.github/workflows/release.yml`).
+  gleichzeitig nur über GitHub Actions (`.github/workflows/release.yml`, per Tag-Push `v*.*.*` oder manuell über
+  `workflow_dispatch`). Vor den Build-Jobs läuft ein `test`-Gate (analyze + test + Icon-Pipeline); schlägt es fehl,
+  wird kein Bundle gebaut/released.
 - Icon-Pipeline: ein einziger 1024×1024-Master (`assets/icon/icon.png`) speist alle Plattform-Formate über
   `dart run tool/generate_icons.dart`.
 - Kein In-App-Auto-Updater — Update = neues Release-Zip laden, altes Bundle ersetzen.
@@ -260,7 +271,8 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 | `test/app_data_test.dart` | Schema-Parsing, Fehlertoleranz, Export-Shape | `gherkin/data_security.feature` |
 | `test/app_state_test.dart` | AppState-CRUD & abgeleitete Werte (Reminder, Summen) | mehrere Features |
 | `test/app_store_encryption_test.dart` | Envelope-Verschlüsselung, Quarantäne unlesbarer Dateien | `gherkin/data_security.feature` |
-| `test/app_store_ops_test.dart` | Store-CRUD, Export/Import, Schema-Versionsprüfung | `gherkin/backup_restore.feature` |
+| `test/app_store_ops_test.dart` | Store-CRUD, Export/Import, Schema-Versionsprüfung, Import-Bank→Farbe-Regel | `gherkin/backup_restore.feature` |
+| `test/account_color_test.dart` | `resolveAccountColor` (bekannte Bank → Markenfarbe, leer → Kontotyp, unbekannt → Fehler) | `gherkin/accounts.feature`, `gherkin/backup_restore.feature` |
 | `test/backup_hardening_test.dart` | Backup-Export→Import-Round-Trip & Fehlertoleranz (AppData-Ebene) | `gherkin/backup_restore.feature` |
 | `test/csv_export_test.dart` | CSV-Export (Trennzeichen, Dezimalkomma, Sortierung, Quoting) | `gherkin/settings.feature` |
 | `test/tooling_test.dart` | **Regeneriert beim Testlauf** die Demodaten (`buildDemoBackup` → `demo/…json`) und die Linux-Hicolor-Icons (`generateLinuxIcons`) und validiert sie (Schema, Referenzen, Domänenwerte, Icon-Größen) | Dev-Tooling (kein Feature) |

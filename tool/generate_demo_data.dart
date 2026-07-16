@@ -31,18 +31,21 @@ Map<String, dynamic> buildDemoBackup({DateTime? now}) {
   double r2(double v) => (v * 100).roundToDouble() / 100;
   double noise(int i, double amp, double phase) => amp * sin(i * 1.3 + phase);
 
-  final accounts = <Map<String, dynamic>>[
-    {'id': 1, 'name': 'Girokonto', 'bank': 'DKB', 'tag': 'Girokonto', 'currency': 'EUR', 'color': '#00C878'},
-    {'id': 2, 'name': 'Tagesgeld', 'bank': 'ING', 'tag': 'Tagesgeld', 'currency': 'EUR', 'color': '#2FD0A0'},
-    {'id': 3, 'name': 'ETF-Depot', 'bank': 'Trade Republic', 'tag': 'Depot', 'currency': 'EUR', 'color': '#4EA8FF'},
-    {'id': 4, 'name': 'US-Aktien', 'bank': 'Interactive Brokers', 'tag': 'Depot', 'currency': 'USD', 'color': '#B58BFF'},
-    {'id': 5, 'name': 'Krypto', 'bank': 'Bitpanda', 'tag': 'Krypto', 'currency': 'EUR', 'color': '#F5A524'},
-    {'id': 6, 'name': 'Bargeld', 'bank': '', 'tag': 'Bargeld', 'currency': 'EUR', 'color': '#8A93A6'},
+  // Real kBanks entries so the import derives each bank's brand color (DKB blau,
+  // ING orange, Trade Republic schwarz, …); Krypto/Bargeld have no institution
+  // and fall back to the Kontotyp color. No `color` here — like a real backup,
+  // it's derived on import (see Account.toExportJson / resolveAccountColor).
+  final accountsMeta = [
+    {'id': 1, 'name': 'Girokonto', 'bank': 'DKB', 'tag': 'Girokonto', 'currency': 'EUR'},
+    {'id': 2, 'name': 'Tagesgeld', 'bank': 'ING', 'tag': 'Tagesgeld', 'currency': 'EUR'},
+    {'id': 3, 'name': 'ETF-Depot', 'bank': 'Scalable Capital', 'tag': 'Depot', 'currency': 'EUR'},
+    {'id': 4, 'name': 'US-Aktien', 'bank': 'Trade Republic', 'tag': 'Depot', 'currency': 'USD'},
+    {'id': 5, 'name': 'Krypto', 'bank': '', 'tag': 'Krypto', 'currency': 'EUR'},
+    {'id': 6, 'name': 'Bargeld', 'bank': '', 'tag': 'Bargeld', 'currency': 'EUR'},
   ];
-  for (final a in accounts) {
-    a['archived'] = false;
-    a['createdAt'] = created;
-  }
+  final accounts = <Map<String, dynamic>>[
+    for (final m in accountsMeta) {...m, 'archived': false, 'createdAt': created},
+  ];
 
   // Deterministic trajectories over the 19-month index (0..18).
   double giro(int i) => 2600 + noise(i, 350, 1) + 20 * i;
