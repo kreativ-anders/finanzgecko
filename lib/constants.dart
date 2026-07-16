@@ -50,6 +50,11 @@ double intervalMonthFactor(String value) {
 }
 
 /// Bekannte Banken & Markenfarben, für Autovervollständigung + Konto-Akzentfarbe.
+///
+/// Von Hand gepflegte, bewusst unvollständige Liste — im Kern deutsche Banken plus PayPal/Wise als gebräuchliche
+/// Zahlungsdienste. `colorHex` ist jeweils die offizielle Markenfarbe der Bank, von Hand recherchiert (nicht
+/// algorithmisch abgeleitet). Neue Einträge kommen über die im Konto-Formular verlinkten Kanäle (GitHub-Issue/
+/// E-Mail) — siehe AI_MASTER.md §4.1 und `gherkin/accounts.feature`.
 class Bank {
   final String name;
   final String colorHex;

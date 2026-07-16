@@ -147,6 +147,13 @@ automatisch über `Provider`.
   (Bargeld/Krypto) → Kontotyp-Farbe. Eine unbekannte, nicht-leere Bank **bricht den gesamten Import ab** (kein
   stilles Einschleusen einer willkürlichen Farbe). Das spiegelt exakt die Regel des Konto-Formulars
   (`bankColorHex(bank) ?? tagColorHex(tag)` + Known-Bank-Validator).
+- **`kBanks` ist eine von Hand gepflegte Liste** (`constants.dart`), im Kern deutsche Banken (Sparkassen,
+  Volks-/Raiffeisenbanken, Großbanken, Direktbanken, Neobanken, Broker, …) plus die beiden international
+  gebräuchlichen Zahlungsdienste PayPal und Wise — **keine** automatisch generierte oder vollständige Liste.
+  Jede `colorHex` ist die **offizielle Markenfarbe** der Bank (aus Logo/Corporate Design), von Hand recherchiert,
+  nicht algorithmisch abgeleitet. Fehlt eine Bank, wird sie über die im Konto-Formular verlinkten Kanäle
+  vorgeschlagen (GitHub-Issue oder E-Mail, siehe `gherkin/accounts.feature`) und danach manuell als weiterer
+  `Bank(name, colorHex)`-Eintrag ergänzt.
 - **Dateirechte als Defense-in-Depth:** `chmod 700`/`600` (Linux/macOS), `icacls` current-user-only (Windows) —
   zusätzlich zur Verschlüsselung, nicht als Ersatz dafür.
 - **macOS-Spezifika (wichtig, nicht versehentlich rückgängig machen):**
