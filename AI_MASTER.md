@@ -205,11 +205,14 @@ Zentrale Fassade für die UI. Zwei Kategorien von Methoden:
    - `computeSubscriptionTotals()` — Einnahmen/Ausgaben/Netto, alle Fixposten auf Monatsäquivalent normiert
    - `previousBalance()` / `latestBalanceForAccount()` / `allPeriodsSorted()` / `balancesInPeriod()`
 
-Zusätzlich prüft `_checkReminderNotifications()` (aufgerufen nach `init()`, nach jeder Mutation via
-`_reloadAndNotify()` und alle 6 Stunden über einen `Timer.periodic`) den Backup- und den Vermögenswerte-Reminder und
-löst bei Bedarf eine native OS-Benachrichtigung über `NotificationService` aus — **episodenbasiert** (einmal pro
-neu eintretender Überfälligkeit, nicht bei jedem Check erneut), siehe §5 "Desktop-Benachrichtigungen" und
-`gherkin/notifications.feature`.
+Zusätzlich prüft `_checkReminderNotifications()` (aufgerufen nach `init()` und nach jeder Mutation via
+`_reloadAndNotify()`) den Backup- und den Vermögenswerte-Reminder und löst bei Bedarf eine native OS-Benachrichtigung
+über `NotificationService` aus — **episodenbasiert** (einmal pro neu eintretender Überfälligkeit, nicht bei jedem
+Check erneut), siehe §5 "Desktop-Benachrichtigungen" und `gherkin/notifications.feature`. Bewusst kein
+`Timer.periodic`-Fallback für eine tagelang ununterbrochen offene, unbenutzte App-Sitzung — das wäre spekulatives
+Verhalten für einen Randfall, den niemand angefragt hat, und ein nie gecancelter periodischer Timer verletzt
+`flutter_test`s "kein Timer darf den Test überleben"-Invariante in Widget-Tests. Die Prüfung läuft stattdessen bei
+jeder ohnehin stattfindenden Mutation/Reload sowie beim nächsten App-Start.
 
 ### 4.5 Reine Analyse-Funktionen (`lib/utils/analysis.dart`)
 

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
 import '../constants.dart';
@@ -54,11 +52,6 @@ class AppState extends ChangeNotifier {
     ready = true;
     notifyListeners();
     await _checkReminderNotifications();
-    // Fängt den Fall ab, dass die App tagelang offen bleibt, ohne dass eine
-    // Mutation (die _checkReminderNotifications ebenfalls anstößt) passiert —
-    // sonst würde eine neu eintretende Überfälligkeit nie geprüft. Kein
-    // Cancel nötig: der Timer lebt so lange wie der App-Prozess.
-    Timer.periodic(const Duration(hours: 6), (_) => _checkReminderNotifications());
   }
 
   void _reload() {

@@ -287,6 +287,9 @@ void main() {
       final store1 = AppStore(dataDirectory: tempDir);
       await store1.ensureInitialized();
       await store1.importAllData(backup);
+      // Isolate the asset notification from the (unrelated) backup reminder,
+      // which would otherwise also fire on a never-exported fresh store.
+      await store1.setLastExportAt(DateTime.now());
 
       final fake1 = _FakeNotificationService();
       await AppState(store1, notificationService: fake1).init();
