@@ -317,19 +317,25 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
               ),
               if (hasForeignCurrencyInTotal) ...[
                 const SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.info_outline, size: 13, color: kMuted),
-                    const SizedBox(width: 6),
-                    const Expanded(
-                      child: Text(
-                        'Enthält Konten in Fremdwährung: Die Summe kann durch Rundung beim Wechselkurs um wenige Cent von der '
-                        'Summe der einzeln angezeigten Kontostände abweichen.',
-                        style: TextStyle(color: kMuted, fontSize: 12),
+                // Capped to a comfortable reading width — at the dashboard's
+                // full ~1100px content width this line would otherwise
+                // stretch edge to edge, well past a readable line length.
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.info_outline, size: 13, color: kMuted),
+                      const SizedBox(width: 6),
+                      const Flexible(
+                        child: Text(
+                          'Enthält Konten in Fremdwährung: Die Summe kann durch Rundung beim Wechselkurs um wenige Cent von der '
+                          'Summe der einzeln angezeigten Kontostände abweichen.',
+                          style: TextStyle(color: kMuted, fontSize: 12),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -487,6 +493,7 @@ class _CompositionCard extends StatelessWidget {
       child: AppStackedAreaChart(
         periodLabels: [for (final p in periods) periodLabel(p)],
         series: series,
+        showHover: true,
         currency: app.baseCurrency,
       ),
     );

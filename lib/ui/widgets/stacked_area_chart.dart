@@ -32,12 +32,17 @@ class AppStackedAreaChart extends StatelessWidget {
     required this.series,
     this.height = 180,
     this.currency = '',
+    this.showHover = false,
   });
 
   final List<String> periodLabels;
   final List<StackedSeries> series;
   final double height;
   final String currency;
+
+  /// Adds a mouse-hover crosshair + tooltip listing every active series'
+  /// value at the hovered period — mirrors [AppLineChart.showHover].
+  final bool showHover;
 
   @override
   Widget build(BuildContext context) {
@@ -96,24 +101,44 @@ class AppStackedAreaChart extends StatelessWidget {
       );
     }
 
+    final chart = LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: (n - 1).toDouble(),
+        minY: 0,
+        maxY: axisMaxY,
+        lineTouchData: kChartLineTouchDisabled,
+        gridData: kChartGridHidden,
+        borderData: kChartBorderHidden,
+        titlesData: kChartTitlesHidden,
+        lineBarsData: bars,
+      ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
           height: height,
-          child: LineChart(
-            LineChartData(
-              minX: 0,
-              maxX: (n - 1).toDouble(),
-              minY: 0,
-              maxY: axisMaxY,
-              lineTouchData: kChartLineTouchDisabled,
-              gridData: kChartGridHidden,
-              borderData: kChartBorderHidden,
-              titlesData: kChartTitlesHidden,
-              lineBarsData: bars,
-            ),
-          ),
+          child: !showHover
+              ? chart
+              : LayoutBuilder(
+                  builder: (context, constraints) => Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(child: chart),
+                      Positioned.fill(
+                        child: _StackedHoverLayer(
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
+                          periodLabels: periodLabels,
+                          active: active,
+                          currency: currency,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
         ),
         const SizedBox(height: 4),
         Row(
@@ -124,8 +149,8 @@ class AppStackedAreaChart extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        // Legend: colour swatch, label, and the latest-period share so the
-        // chart is readable without a hover layer.
+        // Legend: colour swatch, label, and the latest-period share — stays
+        // readable on its own even with showHover off.
         Wrap(
           spacing: 16,
           runSpacing: 8,
@@ -139,6 +164,143 @@ class AppStackedAreaChart extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Mouse-hover crosshair + multi-series tooltip for [AppStackedAreaChart],
+/// built the same way as [AppLineChart]'s own hover layer (`MouseRegion` +
+/// `setState`, not fl_chart's touch system — see that file's rationale,
+/// which applies here too since this is also a continuous x-position).
+/// Unlike the line chart there's no single y-value to anchor to (multiple
+/// stacked bands), so the tooltip's vertical position is fixed near the top
+/// and only its horizontal position follows the cursor.
+class _StackedHoverLayer extends StatefulWidget {
+  const _StackedHoverLayer({
+    required this.width,
+    required this.height,
+    required this.periodLabels,
+    required this.active,
+    required this.currency,
+  });
+
+  final double width;
+  final double height;
+  final List<String> periodLabels;
+  final List<StackedSeries> active;
+  final String currency;
+
+  @override
+  State<_StackedHoverLayer> createState() => _StackedHoverLayerState();
+}
+
+class _StackedHoverLayerState extends State<_StackedHoverLayer> {
+  int? _hoverIndex;
+
+  void _updateHover(Offset localPosition) {
+    if (widget.width <= 0) return;
+    final lastIndex = widget.periodLabels.length - 1;
+    final fraction = (localPosition.dx / widget.width).clamp(0.0, 1.0);
+    final index = (fraction * lastIndex).round().clamp(0, lastIndex);
+    if (_hoverIndex != index) setState(() => _hoverIndex = index);
+  }
+
+  void _clearHover() {
+    if (_hoverIndex != null) setState(() => _hoverIndex = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onHover: (event) => _updateHover(event.localPosition),
+      onExit: (_) => _clearHover(),
+      child: SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: _hoverIndex == null ? null : _buildIndicator(_hoverIndex!),
+      ),
+    );
+  }
+
+  Widget _buildIndicator(int index) {
+    final lastIndex = widget.periodLabels.length - 1;
+    final xFraction = lastIndex == 0 ? 0.0 : index / lastIndex;
+    final x = xFraction * widget.width;
+
+    // Only series with a nonzero value at this period are worth listing.
+    final rows = widget.active.where((s) => s.values[index] > 0).toList();
+
+    const tooltipWidth = 170.0;
+    const gap = 10.0;
+    final maxLeft = (widget.width - tooltipWidth).clamp(0.0, widget.width);
+    final tooltipLeft = (x - tooltipWidth / 2).clamp(0.0, maxLeft);
+
+    return IgnorePointer(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: x - 0.5,
+            top: 0,
+            bottom: 0,
+            width: 1,
+            child: Container(color: kMuted.withValues(alpha: 0.35)),
+          ),
+          Positioned(
+            left: tooltipLeft,
+            top: gap,
+            width: tooltipWidth,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: kSurface,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: kBorder),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.periodLabels[index],
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  for (final s in rows)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(color: s.color, borderRadius: BorderRadius.circular(2)),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              s.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: kMuted, fontSize: 11),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            widget.currency.isEmpty
+                                ? s.values[index].toStringAsFixed(0)
+                                : fmtMoney(s.values[index], widget.currency),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

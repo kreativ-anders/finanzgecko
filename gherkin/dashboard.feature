@@ -96,8 +96,21 @@ Feature: Dashboard — Vermögensübersicht
       And Kontotypen werden in der Reihenfolge der bekannten Liste angezeigt, unbekannte/benutzerdefinierte Typen
         werden angehängt
 
+    Scenario: Zusammensetzung über Zeit zeigt beim Hover eine Monats-Tooltip
+      Given der Mauszeiger steht über einem Monat der Zusammensetzungs-Karte
+      Then erscheint eine senkrechte Hilfslinie an diesem Monat
+      And ein Tooltip listet jeden im Stapel enthaltenen Kontotyp mit Farbpunkt, Name und Betrag für genau diesen
+        Monat auf
+      And der Tooltip verschwindet, sobald der Mauszeiger die Karte verlässt
+
     Scenario: Verteilungs-Donut zeigt nur den aktuellsten Monat des aktiven Zeitraums
       Then zeigt der Donut die Summen je Kontotyp für genau den letzten Monat des aktiven Zeitraums
+
+    Scenario: Verteilungs-Donut zeigt beim Hover Anteil und Kontotyp im Freiraum der Mitte
+      Given der Mauszeiger steht über einem Segment des Verteilungs-Donuts
+      Then wächst dieses Segment sichtbar leicht nach außen
+      And im leeren Innenkreis des Donuts erscheinen der Kontotyp und sein Prozentanteil
+      And die Anzeige verschwindet, sobald der Mauszeiger das Segment verlässt
 
     Scenario: Währungsaufteilung nur bei mehr als einer Währung
       Given im letzten Monat des aktiven Zeitraums werden positive Beträge in mehr als einer Währung gehalten
