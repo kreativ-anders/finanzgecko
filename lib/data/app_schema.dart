@@ -42,6 +42,15 @@ class AppSchema {
   DateTime? lastExportAt;
   WindowPrefs window;
 
+  // Reminder-Benachrichtigungen (OS-Notifications): episodenbasiert statt
+  // zeitbasiert gedrosselt — ein Flag/eine ID-Menge merkt sich, dass für den
+  // *aktuellen* überfälligen Zustand bereits benachrichtigt wurde. Die Aktion,
+  // die den Zustand auflöst (Export bzw. Neubewertung eines Vermögenswerts),
+  // setzt den jeweiligen Eintrag zurück. Siehe gherkin/notifications.feature.
+  bool notificationsEnabled;
+  bool backupOverdueNotified;
+  List<int> assetOverdueNotifiedIds;
+
   AppSchema({
     required this.schemaVersion,
     required this.baseCurrency,
@@ -56,7 +65,10 @@ class AppSchema {
     required this.nextSubscriptionId,
     required this.lastExportAt,
     required this.window,
-  });
+    this.notificationsEnabled = true,
+    this.backupOverdueNotified = false,
+    List<int>? assetOverdueNotifiedIds,
+  }) : assetOverdueNotifiedIds = assetOverdueNotifiedIds ?? [];
 
   factory AppSchema.defaults() => AppSchema(
     schemaVersion: currentSchemaVersion,
@@ -134,6 +146,14 @@ class AppSchema {
       nextSubscriptionId: (meta['nextSubscriptionId'] as num?)?.toInt() ?? 1,
       lastExportAt: lastExportAtRaw is String ? DateTime.tryParse(lastExportAtRaw) : null,
       window: windowRaw != null ? WindowPrefs.fromJson(windowRaw) : WindowPrefs.defaults(),
+      notificationsEnabled: meta['notificationsEnabled'] is bool ? meta['notificationsEnabled'] as bool : true,
+      backupOverdueNotified: meta['backupOverdueNotified'] is bool ? meta['backupOverdueNotified'] as bool : false,
+      assetOverdueNotifiedIds: meta['assetOverdueNotifiedIds'] is List
+          ? [
+              for (final v in meta['assetOverdueNotifiedIds'] as List)
+                if (v is num) v.toInt(),
+            ]
+          : <int>[],
     );
   }
 
@@ -150,6 +170,9 @@ class AppSchema {
       'nextAssetId': nextAssetId,
       'nextSubscriptionId': nextSubscriptionId,
       'lastExportAt': lastExportAt?.toIso8601String(),
+      'notificationsEnabled': notificationsEnabled,
+      'backupOverdueNotified': backupOverdueNotified,
+      'assetOverdueNotifiedIds': assetOverdueNotifiedIds,
     },
     'window': window.toJson(),
   };

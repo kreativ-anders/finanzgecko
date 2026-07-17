@@ -15,6 +15,12 @@ Feature: Einstellungen
     And ich sehe eine Speicher-Bestätigung
     And alle Dashboard-Summen werden ab sofort in dieser Währung berechnet
 
+  Scenario: Desktop-Benachrichtigungen ein-/ausschalten
+    Then zeigt der Abschnitt "Benachrichtigungen" einen Schalter "Desktop-Benachrichtigungen", standardmäßig aktiv
+    When ich den Schalter deaktiviere
+    Then werden ab sofort keine OS-Benachrichtigungen mehr gesendet (Detailverhalten: siehe
+      gherkin/notifications.feature)
+
   Scenario: Sicherheits-Informationen sind einsehbar, aber nicht sensibel
     Then zeigt der Abschnitt "Sicherheit" ein Badge "Verschlüsselung aktiv"
     And das Verfahren "AES-256-GCM"

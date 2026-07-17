@@ -544,7 +544,9 @@ class AppStore {
   }
 
   /// Changing [value] counts as a fresh re-evaluation today — that drives the
-  /// 6-month reminder without needing a separate "re-evaluate" button.
+  /// 6-month reminder without needing a separate "re-evaluate" button. Also
+  /// resolves this asset's overdue-notification episode (see
+  /// [assetOverdueNotifiedIds]), so it can notify again next time it's overdue.
   Future<Asset> updateAsset(int id, {String? name, double? value}) async {
     final data = _requireData;
     final idx = data.assets.indexWhere((a) => a.id == id);
@@ -555,6 +557,7 @@ class AppStore {
       lastEvaluatedAt: value != null ? DateTime.now() : null,
     );
     data.assets[idx] = updated;
+    if (value != null) data.assetOverdueNotifiedIds.remove(id);
     await _persist();
     return updated;
   }
@@ -562,6 +565,7 @@ class AppStore {
   Future<void> deleteAsset(int id) async {
     final data = _requireData;
     data.assets.removeWhere((a) => a.id == id);
+    data.assetOverdueNotifiedIds.remove(id);
     await _persist();
   }
 
@@ -644,8 +648,34 @@ class AppStore {
     await _persist();
   }
 
+  /// Also resolves the backup-overdue notification episode (see
+  /// [backupOverdueNotified]), so it can notify again next time it's overdue.
   Future<void> setLastExportAt(DateTime value) async {
     _requireData.lastExportAt = value;
+    _requireData.backupOverdueNotified = false;
+    await _persist();
+  }
+
+  // ---------- Reminder-Benachrichtigungen (OS-Notifications) ----------
+
+  bool get notificationsEnabled => _requireData.notificationsEnabled;
+  bool get backupOverdueNotified => _requireData.backupOverdueNotified;
+  List<int> get assetOverdueNotifiedIds => List.of(_requireData.assetOverdueNotifiedIds);
+
+  Future<void> setNotificationsEnabled(bool value) async {
+    _requireData.notificationsEnabled = value;
+    await _persist();
+  }
+
+  Future<void> markBackupOverdueNotified() async {
+    _requireData.backupOverdueNotified = true;
+    await _persist();
+  }
+
+  Future<void> markAssetOverdueNotified(int assetId) async {
+    if (!_requireData.assetOverdueNotifiedIds.contains(assetId)) {
+      _requireData.assetOverdueNotifiedIds.add(assetId);
+    }
     await _persist();
   }
 

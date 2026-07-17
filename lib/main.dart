@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'data/app_schema.dart';
 import 'data/app_store.dart';
+import 'services/notification_service.dart';
 import 'state/app_state.dart';
 import 'ui/navigation_shell.dart';
 import 'ui/splash_screen.dart';
@@ -67,7 +68,10 @@ Future<void> main() async {
   });
   windowManager.addListener(_WindowPrefsSaver(store));
 
-  final appState = AppState(store);
+  final notificationService = NotificationService();
+  await notificationService.init();
+
+  final appState = AppState(store, notificationService: notificationService);
   await appState.init();
 
   runApp(FinanzGeckoApp(appState: appState));

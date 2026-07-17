@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../constants.dart';
@@ -7,6 +9,7 @@ import '../models/asset.dart';
 import '../models/balance.dart';
 import '../models/subscription.dart';
 import '../services/currency_service.dart';
+import '../services/notification_service.dart';
 import '../utils/formatting.dart';
 
 class BackupReminder {
@@ -29,10 +32,13 @@ class SubscriptionTotals {
 /// from the store afterwards and calls notifyListeners(), so all views stay
 /// in sync automatically (no manual per-route reload like the old SPA router).
 class AppState extends ChangeNotifier {
-  AppState(this.store) : currencyService = CurrencyService(store);
+  AppState(this.store, {NotificationService? notificationService})
+    : currencyService = CurrencyService(store),
+      notificationService = notificationService ?? NotificationService();
 
   final AppStore store;
   final CurrencyService currencyService;
+  final NotificationService notificationService;
 
   bool ready = false;
 
@@ -47,6 +53,12 @@ class AppState extends ChangeNotifier {
     _reload();
     ready = true;
     notifyListeners();
+    await _checkReminderNotifications();
+    // Fängt den Fall ab, dass die App tagelang offen bleibt, ohne dass eine
+    // Mutation (die _checkReminderNotifications ebenfalls anstößt) passiert —
+    // sonst würde eine neu eintretende Überfälligkeit nie geprüft. Kein
+    // Cancel nötig: der Timer lebt so lange wie der App-Prozess.
+    Timer.periodic(const Duration(hours: 6), (_) => _checkReminderNotifications());
   }
 
   void _reload() {
@@ -60,6 +72,36 @@ class AppState extends ChangeNotifier {
   Future<void> _reloadAndNotify() async {
     _reload();
     notifyListeners();
+    await _checkReminderNotifications();
+  }
+
+  /// Feuert eine OS-Benachrichtigung genau einmal pro "Episode" eines
+  /// überfälligen Backup- bzw. Vermögenswerte-Reminders — nicht bei jedem
+  /// App-Start erneut, solange der Zustand unverändert überfällig bleibt. Die
+  /// Episode wird durch die auflösende Aktion zurückgesetzt (Export bzw.
+  /// Neubewertung/Löschen eines Vermögenswerts, siehe [AppStore.setLastExportAt]/
+  /// [AppStore.updateAsset]/[AppStore.deleteAsset]). Siehe gherkin/notifications.feature.
+  Future<void> _checkReminderNotifications() async {
+    if (!store.notificationsEnabled) return;
+
+    final backup = getBackupReminder();
+    if (backup.overdue && !store.backupOverdueNotified) {
+      await notificationService.show(title: 'FinanzGecko', body: backup.message);
+      await store.markBackupOverdueNotified();
+    }
+
+    final overdueAssets = assets.where(isAssetOverdue).toList();
+    final notifiedIds = store.assetOverdueNotifiedIds;
+    final newlyOverdue = overdueAssets.where((a) => !notifiedIds.contains(a.id)).toList();
+    if (newlyOverdue.isNotEmpty) {
+      // Eine gebündelte Meldung (wie im Dashboard-Banner), nicht eine pro
+      // Vermögenswert — sonst würden viele überfällige Assets eine
+      // Benachrichtigungsflut auslösen.
+      await notificationService.show(title: 'FinanzGecko', body: getAssetReminder()!);
+      for (final asset in newlyOverdue) {
+        await store.markAssetOverdueNotified(asset.id);
+      }
+    }
   }
 
   // ---------- Accounts ----------
@@ -262,6 +304,11 @@ class AppState extends ChangeNotifier {
 
   Future<void> setBaseCurrency(String value) async {
     await store.setBaseCurrency(value);
+    await _reloadAndNotify();
+  }
+
+  Future<void> setNotificationsEnabled(bool value) async {
+    await store.setNotificationsEnabled(value);
     await _reloadAndNotify();
   }
 

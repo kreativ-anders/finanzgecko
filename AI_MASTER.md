@@ -31,6 +31,7 @@ Erweiterung erhalten bleiben (siehe [Glossar](#7-domänen-glossar-verbindlich)).
 | Verschlüsselung | `cryptography` (AES-256-GCM) + `flutter_secure_storage` (Schlüssel im OS-Keychain) | ^2.7.0 / ^10.3.1 |
 | Charts | `fl_chart` (Linie, Donut, gestapelte Fläche — eigene Wrapper in `lib/ui/widgets/`) | ^1.2.0 |
 | Wechselkurse | `http` gegen die freie Frankfurter.app-API (EZB-Referenzkurse) | ^1.6.0 |
+| OS-Benachrichtigungen | `local_notifier` (native Desktop-Notifications Linux/macOS/Windows) | ^0.1.6 |
 | Fenster | `window_manager` (Größe/Maximiert-Status merken) | ^0.5.2 |
 | Dateidialoge | `file_selector` (native Save/Open, kein Browser-Download) | ^1.1.0 |
 | Links | `url_launcher` (externe URLs, mailto:, Datei-Explorer öffnen) | ^6.3.2 |
@@ -61,7 +62,8 @@ finanzgecko/
 │   │   └── secure_key_store.dart # AES-Schlüssel im OS-Keychain (flutter_secure_storage)
 │   ├── models/                   # Datenklassen mit fromJson/toJson: Account, Balance, Asset, Subscription
 │   ├── services/
-│   │   └── currency_service.dart # Frankfurter.app-Anbindung inkl. Cache-Fallback
+│   │   ├── currency_service.dart # Frankfurter.app-Anbindung inkl. Cache-Fallback
+│   │   └── notification_service.dart # Dünner `local_notifier`-Wrapper für native OS-Benachrichtigungen
 │   ├── state/
 │   │   └── app_state.dart        # Zentraler ChangeNotifier: CRUD-Fassade + berechnete Werte (Reminder, Summen) für die UI
 │   ├── utils/
@@ -171,7 +173,9 @@ automatisch über `Provider`.
 
 `AppSchema` ist das komplette In-Memory-Abbild der JSON-Datei: `schemaVersion`, `baseCurrency`, Listen (`accounts`,
 `balances`, `assets`, `subscriptions`), `ratesCache` (Legacy-Migrationspfad, s.o.), Auto-Increment-IDs
-(`nextAccountId` etc.), `lastExportAt`, `window` (`WindowPrefs`). `fromDynamic()` ist **fehlertolerant pro Eintrag**:
+(`nextAccountId` etc.), `lastExportAt`, `window` (`WindowPrefs`), sowie das Reminder-Notification-Tracking
+`notificationsEnabled`, `backupOverdueNotified`, `assetOverdueNotifiedIds` (episodenbasiert, siehe §4.4 und
+`gherkin/notifications.feature`) — alles additive `meta`-Felder, kein `schemaVersion`-Bump nötig. `fromDynamic()` ist **fehlertolerant pro Eintrag**:
 eine kaputte Zeile in einer Liste wird übersprungen statt die ganze Datei unlesbar zu machen. `toExportJson()` ist
 bewusst schlanker als `toJson()` (kein `ratesCache`/`meta`/`window` — internes Implementierungsdetail, nicht Teil
 eines Backups) **und ohne `account.color`** (`Account.toExportJson`): die Farbe ist aus der Bank ableitbar und wird
@@ -200,6 +204,12 @@ Zentrale Fassade für die UI. Zwei Kategorien von Methoden:
    - `getUpdateReminder()` — Nudge, wenn der neueste erfasste Monat älter als der aktuelle ist
    - `computeSubscriptionTotals()` — Einnahmen/Ausgaben/Netto, alle Fixposten auf Monatsäquivalent normiert
    - `previousBalance()` / `latestBalanceForAccount()` / `allPeriodsSorted()` / `balancesInPeriod()`
+
+Zusätzlich prüft `_checkReminderNotifications()` (aufgerufen nach `init()`, nach jeder Mutation via
+`_reloadAndNotify()` und alle 6 Stunden über einen `Timer.periodic`) den Backup- und den Vermögenswerte-Reminder und
+löst bei Bedarf eine native OS-Benachrichtigung über `NotificationService` aus — **episodenbasiert** (einmal pro
+neu eintretender Überfälligkeit, nicht bei jedem Check erneut), siehe §5 "Desktop-Benachrichtigungen" und
+`gherkin/notifications.feature`.
 
 ### 4.5 Reine Analyse-Funktionen (`lib/utils/analysis.dart`)
 
@@ -242,6 +252,10 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   nötig, speichert automatisch beim Tippstopp/Fokusverlust/Enter.
 - **Reminder/Banner-Reihenfolge im Dashboard** (`dashboard_view.dart`): Update-Reminder → Overspend-Banner (nur wenn
   Fixposten-Netto negativ) → Backup-Reminder → Asset-Reminder. Diese Reihenfolge ist bewusst (Dringlichkeit).
+- **Desktop-Benachrichtigungen** (Einstellungen → "Benachrichtigungen", standardmäßig aktiv): spiegeln Backup- und
+  Asset-Reminder zusätzlich als native OS-Notification, damit man sie auch sieht, wenn das Dashboard gerade nicht
+  offen ist. Feuert **episodenbasiert genau einmal** pro neu eintretender Überfälligkeit (nicht bei jedem App-Start
+  erneut) und **nur, während die App läuft** — kein Hintergrunddienst, siehe §6 und `gherkin/notifications.feature`.
 
 ## 6. Plattform-Besonderheiten (siehe auch README für Setup-Details)
 
@@ -294,6 +308,7 @@ Alle Verhaltensspezifikationen auf einen Blick — Einstieg für eine KI, um vom
 | `gherkin/subscriptions.feature` | Fixposten CRUD, Monatsäquivalent | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/assets.feature` | Vermögenswerte CRUD, 6-Monats-Reminder | Unit (`app_store_ops_test`) |
 | `gherkin/settings.feature` | Basiswährung, Sicherheit, Backup-Export/Import, CSV-Export, Reset | Unit (`csv_export_test`) |
+| `gherkin/notifications.feature` | OS-Benachrichtigungen für Backup-/Asset-Reminder, episodenbasiert, Ein-/Ausschalten | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/backup_restore.feature` | Export/Import (JSON), Schemaprüfung, Bank→Farbe-Import, Fehlertoleranz | Unit (`app_store_ops_test`, `backup_hardening_test`) |
 | `gherkin/data_security.feature` | AES-256-GCM, OS-Keychain, Quarantäne, Schema-Parsing | Unit (`app_schema_test`, `app_store_encryption_test`) |
 | `gherkin/currency_exchange.feature` | Wechselkurse (frankfurter.dev), Cache, Offline-Fallback, manueller Kurs | nur UI/Integration (kein Unit-Test) |

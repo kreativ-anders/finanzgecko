@@ -1,11 +1,28 @@
-// Gherkin: gherkin/dashboard.feature, gherkin/balances_entries.feature, gherkin/subscriptions.feature
+// Gherkin: gherkin/dashboard.feature, gherkin/balances_entries.feature, gherkin/subscriptions.feature, gherkin/notifications.feature
 import 'dart:io';
 
 import 'package:finanzgecko/constants.dart';
+import 'package:finanzgecko/data/app_schema.dart';
 import 'package:finanzgecko/data/app_store.dart';
+import 'package:finanzgecko/services/notification_service.dart';
 import 'package:finanzgecko/state/app_state.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Records `show()` calls instead of touching a real OS notification center —
+/// used to test the episode-based firing logic in [AppState] without any
+/// platform dependency.
+class _FakeNotificationService extends NotificationService {
+  final List<String> shown = [];
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<void> show({required String title, required String body}) async {
+    shown.add(body);
+  }
+}
 
 /// In-memory fake of the flutter_secure_storage platform channel — same
 /// approach as app_store_encryption_test.dart, so AppState's real AppStore
@@ -213,6 +230,80 @@ void main() {
       expect(state.baseCurrency, 'EUR');
       await state.setBaseCurrency('USD');
       expect(state.baseCurrency, 'USD');
+    });
+  });
+
+  group('reminder notifications', () {
+    test('backup: fires once when overdue, stays silent across a relaunch, fires again after export+new episode', () async {
+      final store1 = AppStore(dataDirectory: tempDir);
+      await store1.ensureInitialized();
+      await store1.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderDays + 1)));
+
+      final fake1 = _FakeNotificationService();
+      await AppState(store1, notificationService: fake1).init();
+      expect(fake1.shown, hasLength(1));
+      expect(fake1.shown.single, contains('Zeit für ein neues Backup'));
+
+      // Reopening the app (fresh AppState/AppStore over the same directory)
+      // must not refire while the episode is unresolved.
+      final fake2 = _FakeNotificationService();
+      final state2 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake2);
+      await state2.init();
+      expect(fake2.shown, isEmpty);
+
+      // Exporting resolves the episode; a fresh overdue period fires again.
+      await state2.markExported();
+      await state2.store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderDays + 1)));
+      final fake3 = _FakeNotificationService();
+      final state3 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake3);
+      await state3.init();
+      expect(fake3.shown, hasLength(1));
+    });
+
+    test('backup: disabled toggle suppresses the notification even while overdue', () async {
+      final store = AppStore(dataDirectory: tempDir);
+      await store.ensureInitialized();
+      await store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderDays + 1)));
+      await store.setNotificationsEnabled(false);
+
+      final fake = _FakeNotificationService();
+      await AppState(store, notificationService: fake).init();
+      expect(fake.shown, isEmpty);
+    });
+
+    test('assets: fires once (bundled), stays silent across a relaunch, fires again after re-evaluation', () async {
+      final past = DateTime.now().subtract(const Duration(days: kAssetReevaluationDays + 1)).toIso8601String();
+      final backup = {
+        'schemaVersion': currentSchemaVersion,
+        'baseCurrency': 'EUR',
+        'accounts': <Map<String, dynamic>>[],
+        'balances': <Map<String, dynamic>>[],
+        'assets': [
+          {'id': 1, 'name': 'Auto', 'value': 1000, 'createdAt': past, 'lastEvaluatedAt': past},
+        ],
+        'subscriptions': <Map<String, dynamic>>[],
+      };
+
+      final store1 = AppStore(dataDirectory: tempDir);
+      await store1.ensureInitialized();
+      await store1.importAllData(backup);
+
+      final fake1 = _FakeNotificationService();
+      await AppState(store1, notificationService: fake1).init();
+      expect(fake1.shown, hasLength(1));
+      expect(fake1.shown.single, contains('Auto'));
+
+      final fake2 = _FakeNotificationService();
+      final state2 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake2);
+      await state2.init();
+      expect(fake2.shown, isEmpty, reason: 'still the same unresolved episode');
+
+      await state2.updateAsset(1, value: 1200);
+
+      final fake3 = _FakeNotificationService();
+      final state3 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake3);
+      await state3.init();
+      expect(fake3.shown, isEmpty, reason: 'freshly re-evaluated, no longer overdue');
     });
   });
 }

@@ -1,4 +1,4 @@
-// Gherkin: gherkin/backup_restore.feature, gherkin/accounts.feature, gherkin/subscriptions.feature, gherkin/assets.feature
+// Gherkin: gherkin/backup_restore.feature, gherkin/accounts.feature, gherkin/subscriptions.feature, gherkin/assets.feature, gherkin/notifications.feature
 import 'package:finanzgecko/constants.dart';
 import 'package:finanzgecko/data/app_store.dart';
 import 'package:flutter/services.dart';
@@ -206,6 +206,64 @@ void main() {
 
       final afterValue = await store.updateAsset(asset.id, value: 1200);
       expect(afterValue.lastEvaluatedAt!.isBefore(original), isFalse, reason: 'value edit refreshes the timestamp');
+    });
+  });
+
+  group('reminder notification bookkeeping', () {
+    // Gherkin: gherkin/notifications.feature
+    test('notificationsEnabled defaults to true and is persisted', () async {
+      final store = await bootStore();
+      expect(store.notificationsEnabled, isTrue);
+      await store.setNotificationsEnabled(false);
+      expect(store.notificationsEnabled, isFalse);
+    });
+
+    test('markBackupOverdueNotified sets the flag; a fresh export clears it again', () async {
+      final store = await bootStore();
+      expect(store.backupOverdueNotified, isFalse);
+      await store.markBackupOverdueNotified();
+      expect(store.backupOverdueNotified, isTrue);
+      await store.setLastExportAt(DateTime.now());
+      expect(store.backupOverdueNotified, isFalse, reason: 'a new export resolves the notified episode');
+    });
+
+    test('markAssetOverdueNotified is idempotent; updateAsset with a new value resolves the episode', () async {
+      final store = await bootStore();
+      final asset = await store.addAsset(name: 'Auto', value: 1000);
+
+      await store.markAssetOverdueNotified(asset.id);
+      await store.markAssetOverdueNotified(asset.id);
+      expect(store.assetOverdueNotifiedIds, [asset.id], reason: 'no duplicate entries for the same id');
+
+      await store.updateAsset(asset.id, value: 1200);
+      expect(
+        store.assetOverdueNotifiedIds,
+        isEmpty,
+        reason: 're-evaluating the asset resolves its notified episode',
+      );
+    });
+
+    test('deleteAsset removes any lingering notified-episode entry', () async {
+      final store = await bootStore();
+      final asset = await store.addAsset(name: 'Auto', value: 1000);
+      await store.markAssetOverdueNotified(asset.id);
+
+      await store.deleteAsset(asset.id);
+      expect(store.assetOverdueNotifiedIds, isEmpty);
+    });
+
+    test('resetAll clears notification settings back to defaults', () async {
+      final store = await bootStore();
+      final asset = await store.addAsset(name: 'Auto', value: 1000);
+      await store.setNotificationsEnabled(false);
+      await store.markBackupOverdueNotified();
+      await store.markAssetOverdueNotified(asset.id);
+
+      await store.resetAll();
+
+      expect(store.notificationsEnabled, isTrue);
+      expect(store.backupOverdueNotified, isFalse);
+      expect(store.assetOverdueNotifiedIds, isEmpty);
     });
   });
 
