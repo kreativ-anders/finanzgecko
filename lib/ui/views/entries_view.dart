@@ -239,10 +239,30 @@ class _EntriesViewState extends State<EntriesView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Auch rückwirkend möglich — einfach den passenden Monat wählen. Ein bestehender Eintrag für Konto + '
-                        'Monat wird überschrieben. Leere Felder werden übersprungen. Enter springt zum nächsten Konto.',
-                        style: TextStyle(color: kMuted),
+                      // Full detail lives in the tooltip so it's available on
+                      // demand without permanently occupying three lines above
+                      // the account rows on every single visit.
+                      const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Tooltip(
+                            message:
+                                'Auch rückwirkend möglich — einfach den passenden Monat wählen. Ein bestehender '
+                                'Eintrag für Konto + Monat wird überschrieben. Leere Felder werden übersprungen. '
+                                'Enter springt zum nächsten Konto.',
+                            child: Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Icon(Icons.info_outline, size: 14, color: kMuted),
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Auch rückwirkend erfassbar — bestehende Einträge werden überschrieben.',
+                              style: TextStyle(color: kMuted),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       if (visibleAccounts.isEmpty)

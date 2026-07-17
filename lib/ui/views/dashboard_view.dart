@@ -44,7 +44,12 @@ class _DashboardViewState extends State<DashboardView> {
 
     final banners = <Widget>[
       if (updateReminder != null)
-        InfoBanner(message: updateReminder, actionLabel: 'Jetzt erfassen', onAction: () => onNavigate(AppView.entries)),
+        InfoBanner(
+          message: updateReminder,
+          actionLabel: 'Jetzt erfassen',
+          onAction: () => onNavigate(AppView.entries),
+          urgency: BannerUrgency.nudge,
+        ),
       if (app.subscriptions.isNotEmpty && totals.net < 0)
         OverspendBanner(
           expenseText: fmtMoney(totals.totalExpense, app.baseCurrency),
@@ -224,28 +229,16 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Label row: caption with the "inkl. Sachwerte" switch right next
-              // to it — the switch changes the total, so it sits by the caption.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      withAssets
-                          ? 'GESAMTVERMÖGEN INKL. SACHWERTE · STAND ${periodLabel(latestPeriod).toUpperCase()}'
-                          : 'GESAMTVERMÖGEN · STAND ${periodLabel(latestPeriod).toUpperCase()}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
-                    ),
-                  ),
-                  if (hasAssets) ...[
-                    const SizedBox(width: 12),
-                    const Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 13)),
-                    const SizedBox(width: 8),
-                    Switch(value: _includeAssets, onChanged: (v) => setState(() => _includeAssets = v)),
-                  ],
-                ],
+              // Overline stands alone now — the "inkl. Sachwerte" switch used to
+              // share this row and compete with it at nearly the same visual
+              // weight. It now sits right under the number it controls instead.
+              Text(
+                withAssets
+                    ? 'GESAMTVERMÖGEN INKL. SACHWERTE · STAND ${periodLabel(latestPeriod).toUpperCase()}'
+                    : 'GESAMTVERMÖGEN · STAND ${periodLabel(latestPeriod).toUpperCase()}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
               ),
               const SizedBox(height: 4),
               Text(
@@ -253,6 +246,21 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                 maxLines: 1,
                 style: const TextStyle(color: kPrimary, fontSize: 44, fontWeight: FontWeight.bold),
               ),
+              if (hasAssets) ...[
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Switch(value: _includeAssets, onChanged: (v) => setState(() => _includeAssets = v)),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 12)),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 2),
               if (delta != null)
                 Text(
                   '${delta >= 0 ? '+' : ''}${fmtMoney(delta, app.baseCurrency)}'
@@ -419,9 +427,21 @@ class _HistoryCard extends StatelessWidget {
                 } else {
                   basis = 'Prognose aus den Fixposten (noch wenig Verlauf)';
                 }
-                return Text(
-                  '$basis: ${signed(rate)}/Monat → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${signed(delta)}).',
-                  style: const TextStyle(color: kMuted, fontSize: 12),
+                // The rate is the one number worth reading at a glance; basis
+                // and endpoint are methodology/detail, demoted to a smaller
+                // second line instead of one long compound sentence.
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Prognose: ${signed(rate)}/Monat',
+                      style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      '$basis → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${signed(delta)})',
+                      style: const TextStyle(color: kMuted, fontSize: 12),
+                    ),
+                  ],
                 );
               },
             ),
@@ -591,6 +611,7 @@ class _StatsCard extends StatelessWidget {
             value: stats.drawdownFromPeak > 0 ? '-${fmtPercent(stats.drawdownFromPeak * 100)}' : '±0 %',
             subValue: stats.drawdownFromPeak > 0 ? 'vs. ${periodLabel(stats.peakPeriod)}' : 'am Höchststand',
             color: stats.drawdownFromPeak > 0 ? kDanger : kPrimary,
+            hint: 'Abstand des aktuellen Stands zum bisherigen Höchststand',
           ),
         ],
       ),
@@ -977,7 +998,7 @@ class _SubscriptionsSection extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: OutlinedButton(
               onPressed: () => onNavigate(AppView.subscriptions),
-              child: noSelect(const Text('Fixposten aktualisieren')),
+              child: noSelect(const Text('Fixposten verwalten')),
             ),
           ),
         ],
@@ -987,12 +1008,18 @@ class _SubscriptionsSection extends StatelessWidget {
 }
 
 class _SummaryItem extends StatelessWidget {
-  const _SummaryItem({required this.label, required this.value, this.subValue, required this.color});
+  const _SummaryItem({required this.label, required this.value, this.subValue, required this.color, this.hint});
 
   final String label;
   final String value;
   final String? subValue;
   final Color color;
+
+  /// Optional plain-language explainer for a label that isn't self-evident
+  /// (e.g. "Unter Höchststand" reads as jargon without context) — shown as a
+  /// hoverable info icon rather than permanent text, so it doesn't add
+  /// weight for readers who already know the term.
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
@@ -1000,7 +1027,19 @@ class _SummaryItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
+            if (hint != null) ...[
+              const SizedBox(width: 4),
+              Tooltip(
+                message: hint!,
+                child: const Icon(Icons.info_outline, size: 12, color: kMuted),
+              ),
+            ],
+          ],
+        ),
         Text(
           value,
           style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold),

@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
+/// Distinguishes a routine nudge from a genuinely overdue/urgent state — both
+/// render as the same neutral [InfoBanner] shell, but sharing one warning
+/// icon for both made a "you haven't entered this month yet" nudge look as
+/// urgent as "backup 45 days overdue". Only [urgent] gets the warning glyph.
+enum BannerUrgency { nudge, urgent }
+
 class InfoBanner extends StatelessWidget {
-  const InfoBanner({super.key, required this.message, this.actionLabel, this.onAction});
+  const InfoBanner({super.key, required this.message, this.actionLabel, this.onAction, this.urgency = BannerUrgency.urgent});
 
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final BannerUrgency urgency;
 
   @override
   Widget build(BuildContext context) {
+    final icon = urgency == BannerUrgency.urgent ? '⚠️' : 'ℹ️';
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -21,7 +29,7 @@ class InfoBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(child: Text('⚠️ $message')),
+          Expanded(child: Text('$icon $message')),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(width: 12),
             OutlinedButton(onPressed: onAction, child: noSelect(Text(actionLabel!))),
