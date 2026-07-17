@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../constants.dart';
 import 'app_view.dart';
 import 'backup_actions.dart';
 import 'theme.dart';
@@ -41,9 +42,9 @@ class _NavigationShellState extends State<NavigationShell> {
 
     return CallbackShortcuts(
       bindings: {
-        LogicalKeySet(modKey, LogicalKeyboardKey.keyE): () => exportBackup(context, _navigate),
-        LogicalKeySet(modKey, LogicalKeyboardKey.keyI): () => importBackup(context, _navigate),
-        LogicalKeySet(modKey, LogicalKeyboardKey.keyQ): _handleQuit,
+        LogicalKeySet(modKey, AppShortcuts.export.key): () => exportBackup(context, _navigate),
+        LogicalKeySet(modKey, AppShortcuts.import_.key): () => importBackup(context, _navigate),
+        LogicalKeySet(modKey, AppShortcuts.quit.key): _handleQuit,
       },
       child: Focus(
         autofocus: true,

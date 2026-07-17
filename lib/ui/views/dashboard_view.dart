@@ -193,9 +193,6 @@ class _TotalsOverview extends StatefulWidget {
 class _TotalsOverviewState extends State<_TotalsOverview> {
   bool _includeAssets = false;
 
-  double _totalForPeriod(String period) =>
-      widget.app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
-
   @override
   Widget build(BuildContext context) {
     final app = widget.app;
@@ -203,14 +200,14 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
     final latestPeriod = periods.last;
     final prevPeriod = periods.length > 1 ? periods[periods.length - 2] : null;
 
-    final currentTotal = _totalForPeriod(latestPeriod);
-    final prevTotal = prevPeriod != null ? _totalForPeriod(prevPeriod) : null;
+    final currentTotal = app.totalForPeriod(latestPeriod);
+    final prevTotal = prevPeriod != null ? app.totalForPeriod(prevPeriod) : null;
     final delta = prevTotal != null ? currentTotal - prevTotal : null;
     final pct = (delta != null && prevTotal != null && prevTotal != 0) ? (delta / prevTotal) * 100 : null;
     final entriesInLatest = app.balancesInPeriod(latestPeriod).length;
     final hasForeignCurrencyInTotal = app.balancesInPeriod(latestPeriod).any((b) {
-      final matches = app.accounts.where((a) => a.id == b.accountId);
-      return matches.isNotEmpty && matches.first.currency != app.baseCurrency;
+      final acc = app.findAccount(b.accountId);
+      return acc != null && acc.currency != app.baseCurrency;
     });
 
     // Vermögenswerte (Sachwerte) have no monthly history, so including them
@@ -263,7 +260,7 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
               const SizedBox(height: 2),
               if (delta != null)
                 Text(
-                  '${delta >= 0 ? '+' : ''}${fmtMoney(delta, app.baseCurrency)}'
+                  '${fmtSignedMoney(delta, app.baseCurrency)}'
                   '${pct != null ? ' (${delta >= 0 ? '+' : ''}${fmtPercent(pct)})' : ''}'
                   ' ggü. ${periodLabel(prevPeriod!)}',
                   style: TextStyle(color: delta >= 0 ? kPrimary : kDanger, fontWeight: FontWeight.w600),
@@ -284,9 +281,9 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                       monthGap: monthsBetweenPeriods(prevPeriod, latestPeriod),
                     );
                     final cur = app.baseCurrency;
-                    String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
                     return Text(
-                      'geschätzt: davon ~${signed(split.contributions)} eingezahlt · ~${signed(split.market)} Markt & Sonstiges',
+                      'geschätzt: davon ~${fmtSignedMoney(split.contributions, cur)} eingezahlt · '
+                      '~${fmtSignedMoney(split.market, cur)} Markt & Sonstiges',
                       style: const TextStyle(color: kMuted, fontSize: 12),
                     );
                   },
@@ -363,20 +360,11 @@ class _HistoryCard extends StatelessWidget {
   final AppState app;
   final bool includesLatest;
 
-  double _totalForPeriod(String period) => app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
-
-  /// "YYYY-MM" [months] after [period] (DateTime handles year rollover).
-  String _periodPlus(String period, int months) {
-    final parts = period.split('-');
-    final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]) + months);
-    return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final filtered = periods;
-    final chartData = [for (final p in filtered) ChartPoint(periodLabel(p), _totalForPeriod(p))];
-    final values = [for (final p in filtered) _totalForPeriod(p)];
+    final chartData = [for (final p in filtered) ChartPoint(periodLabel(p), app.totalForPeriod(p))];
+    final values = [for (final p in filtered) app.totalForPeriod(p)];
 
     // The projection is primarily statistical: a least-squares trend of the
     // actual net-worth history (which already reflects the variable spending
@@ -393,7 +381,7 @@ class _HistoryCard extends StatelessWidget {
     final rate = projectionRate(planRate: planRate, trendRate: trendRate, trendPoints: trendPoints);
 
     final forecast = (months > 0 && rate != null)
-        ? ChartForecast(monthlyDelta: rate, months: months, endLabel: periodLabel(_periodPlus(filtered.last, months)))
+        ? ChartForecast(monthlyDelta: rate, months: months, endLabel: periodLabel(addMonthsToPeriod(filtered.last, months)))
         : null;
 
     return SectionCard(
@@ -416,9 +404,8 @@ class _HistoryCard extends StatelessWidget {
               builder: (context) {
                 final rate = forecast.monthlyDelta;
                 final delta = rate * forecast.months;
-                final total = _totalForPeriod(filtered.last) + delta;
+                final total = app.totalForPeriod(filtered.last) + delta;
                 final cur = app.baseCurrency;
-                String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
                 final String basis;
                 if (trendRate != null && planRate != null) {
                   basis = 'Prognose aus $trendPoints Monaten Verlauf, mit Fixposten geglättet';
@@ -434,11 +421,11 @@ class _HistoryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Prognose: ${signed(rate)}/Monat',
+                      'Prognose: ${fmtSignedMoney(rate, cur)}/Monat',
                       style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     Text(
-                      '$basis → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${signed(delta)})',
+                      '$basis → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${fmtSignedMoney(delta, cur)})',
                       style: const TextStyle(color: kMuted, fontSize: 12),
                     ),
                   ],
@@ -555,15 +542,12 @@ class _StatsCard extends StatelessWidget {
   /// All periods with data, sorted ascending.
   final List<String> periods;
 
-  double _totalForPeriod(String period) => app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
-
   @override
   Widget build(BuildContext context) {
-    final series = [for (final p in periods) (period: p, total: _totalForPeriod(p))];
+    final series = [for (final p in periods) (period: p, total: app.totalForPeriod(p))];
     final stats = computeNetWorthStats(series);
     if (stats == null) return const SizedBox.shrink();
     final cur = app.baseCurrency;
-    String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
     return SectionCard(
       title: 'Kennzahlen',
       child: Wrap(
@@ -572,25 +556,25 @@ class _StatsCard extends StatelessWidget {
         children: [
           _SummaryItem(
             label: 'Gesamtveränderung',
-            value: signed(stats.totalGrowth),
+            value: fmtSignedMoney(stats.totalGrowth, cur),
             subValue: 'seit ${periodLabel(stats.startPeriod)}',
             color: stats.totalGrowth >= 0 ? kPrimary : kDanger,
           ),
           _SummaryItem(
             label: 'Bester Monat',
-            value: signed(stats.best.delta),
+            value: fmtSignedMoney(stats.best.delta, cur),
             subValue: periodLabel(stats.best.period),
             color: stats.best.delta >= 0 ? kPrimary : kDanger,
           ),
           _SummaryItem(
             label: 'Schwächster Monat',
-            value: signed(stats.worst.delta),
+            value: fmtSignedMoney(stats.worst.delta, cur),
             subValue: periodLabel(stats.worst.period),
             color: stats.worst.delta >= 0 ? kPrimary : kDanger,
           ),
           _SummaryItem(
             label: 'Ø Veränderung/Monat',
-            value: signed(stats.averageChange),
+            value: fmtSignedMoney(stats.averageChange, cur),
             subValue: '${stats.changeCount} Monate',
             color: stats.averageChange >= 0 ? kPrimary : kDanger,
           ),
@@ -684,9 +668,8 @@ class _DistributionSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final byTag = <String, double>{};
     for (final b in app.balancesInPeriod(latestPeriod)) {
-      final matches = app.accounts.where((a) => a.id == b.accountId);
-      if (matches.isEmpty) continue;
-      final acc = matches.first;
+      final acc = app.findAccount(b.accountId);
+      if (acc == null) continue;
       byTag[acc.tag] = (byTag[acc.tag] ?? 0) + b.amountBase;
     }
     final donutSegments = [
@@ -867,7 +850,7 @@ class _AccountCard extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      '${delta >= 0 ? '+' : ''}${fmtMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
+                      '${fmtSignedMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
                       style: TextStyle(
                         color: delta >= 0 ? kPrimary : kDanger,
                         fontSize: 12,
@@ -986,8 +969,8 @@ class _SubscriptionsSection extends StatelessWidget {
                 ),
                 _SummaryItem(
                   label: 'Differenz',
-                  value: '${totals.net >= 0 ? '+' : ''}${fmtMoney(totals.net, app.baseCurrency)}',
-                  subValue: '${totals.net >= 0 ? '+' : ''}${fmtMoney(totals.net * 12, app.baseCurrency)}/Jahr',
+                  value: fmtSignedMoney(totals.net, app.baseCurrency),
+                  subValue: '${fmtSignedMoney(totals.net * 12, app.baseCurrency)}/Jahr',
                   color: totals.net >= 0 ? kPrimary : kDanger,
                 ),
               ],

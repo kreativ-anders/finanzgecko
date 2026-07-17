@@ -48,10 +48,22 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
   @override
   void initState() {
     super.initState();
-    final parts = widget.initialValue.split('-');
-    selectedYear = int.parse(parts[0]);
-    selectedMonth = int.parse(parts[1]);
+    final parsed = _parsePeriod(widget.initialValue);
+    final now = DateTime.now();
+    selectedYear = parsed?.$1 ?? now.year;
+    selectedMonth = parsed?.$2 ?? now.month;
     viewYear = selectedYear;
+  }
+
+  /// Tolerant "YYYY-MM" parse — malformed input (e.g. a hand-edited import)
+  /// falls back to the current month in [initState] instead of throwing.
+  static (int, int)? _parsePeriod(String value) {
+    final parts = value.split('-');
+    if (parts.length != 2) return null;
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    if (year == null || month == null || month < 1 || month > 12) return null;
+    return (year, month);
   }
 
   @override

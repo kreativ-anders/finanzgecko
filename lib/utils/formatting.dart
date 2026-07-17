@@ -15,6 +15,11 @@ String fmtMoney(double value, String currency) {
 /// added automatically, positive sign is left to the caller (matches fmtMoney).
 String fmtPercent(double value) => '${NumberFormat('#,##0.0', 'de_DE').format(value)}%';
 
+/// [fmtMoney] with an explicit leading "+" for non-negative values, so a
+/// delta/change reads unambiguously (fmtMoney alone leaves positive values
+/// unsigned). Used throughout for month-over-month and forecast deltas.
+String fmtSignedMoney(double value, String currency) => '${value >= 0 ? '+' : ''}${fmtMoney(value, currency)}';
+
 /// Formats a number for prefilling an editable amount field: German grouping
 /// and decimal separators (matching fmtMoney's look), trailing zeros trimmed.
 /// Stays a plain numeric string (no currency symbol) so it round-trips
@@ -63,11 +68,15 @@ String currentPeriod() {
 
 String todayISO() => DateTime.now().toIso8601String().substring(0, 10);
 
-Color colorFromHex(String hex) {
+Color? _tryColorFromHex(String hex) {
   var clean = hex.replaceFirst('#', '');
   if (clean.length == 6) clean = 'FF$clean';
   final value = int.tryParse(clean, radix: 16);
-  return value != null ? Color(value) : const Color(0xFF00C878);
+  return value != null ? Color(value) : null;
 }
+
+/// Falls back to the app's primary brand color ([kPrimaryHex]) for
+/// unparseable input, rather than a separate hardcoded literal.
+Color colorFromHex(String hex) => _tryColorFromHex(hex) ?? _tryColorFromHex(kPrimaryHex)!;
 
 int daysSince(DateTime date) => DateTime.now().difference(date).inDays;

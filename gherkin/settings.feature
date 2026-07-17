@@ -58,6 +58,12 @@ Feature: Einstellungen
       unwiderruflich gelöscht werden und die Basiswährung zurückgesetzt wird
     And der Bestätigen-Button ist erst aktiv, wenn ich exakt "ZURÜCKSETZEN" ins Textfeld eingetippt habe
 
+  Scenario: Vor jedem Zurücksetzen wird automatisch eine Sicherung des vorherigen Stands angelegt
+    Given ich habe "ZURÜCKSETZEN" korrekt eingetippt und bestätigt
+    Then wird zuvor der bisherige Datenstand als eigene, verschlüsselte Datei
+      "pre-reset-backup-<Zeitstempel>.json" im Datenverzeichnis abgelegt (wie beim Import, siehe backup_restore.feature)
+    And ein Fehler bei dieser Sicherung darf das eigentliche Zurücksetzen nicht verhindern (best effort)
+
   Scenario: Erfolgreiches Zurücksetzen
     Given ich habe "ZURÜCKSETZEN" korrekt eingetippt und bestätigt
     Then werden alle Konten, Kontostände, Vermögenswerte und Fixposten gelöscht

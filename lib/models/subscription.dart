@@ -40,4 +40,22 @@ class Subscription {
     'amountBase': amountBase,
     'createdAt': createdAt.toIso8601String(),
   };
+
+  Subscription copyWith({
+    String? name,
+    String? interval,
+    double? amountOriginal,
+    String? currencyOriginal,
+    double? rate,
+    double? amountBase,
+  }) => Subscription(
+    id: id,
+    name: name ?? this.name,
+    interval: interval ?? this.interval,
+    amountOriginal: amountOriginal ?? this.amountOriginal,
+    currencyOriginal: currencyOriginal ?? this.currencyOriginal,
+    rate: rate ?? this.rate,
+    amountBase: amountBase ?? this.amountBase,
+    createdAt: createdAt,
+  );
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
+
 const List<String> kTags = ['Girokonto', 'Tagesgeld', 'Depot', 'Bargeld', 'Krypto'];
 
 /// Hex strings (not Color) — these are stored verbatim in account.color, so
@@ -15,6 +17,26 @@ String tagColorHex(String tag) => kTagColors[tag] ?? '#888888';
 const List<String> kCurrencies = ['EUR', 'USD', 'CHF', 'GBP', 'JPY', 'SEK', 'NOK', 'DKK'];
 
 const List<String> kMonthLabels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+
+/// A global keyboard shortcut: the [key] it's bound to in
+/// `ui/navigation_shell.dart` (combined there with Strg/⌘) and the single
+/// letter shown as a hint next to the corresponding button in
+/// `ui/views/settings_view.dart` — paired here so a rebind can't silently
+/// desync the displayed hint.
+class AppShortcut {
+  const AppShortcut(this.key, this.letter);
+
+  final LogicalKeyboardKey key;
+  final String letter;
+}
+
+class AppShortcuts {
+  const AppShortcuts._();
+
+  static const export = AppShortcut(LogicalKeyboardKey.keyE, 'E');
+  static const import_ = AppShortcut(LogicalKeyboardKey.keyI, 'I');
+  static const quit = AppShortcut(LogicalKeyboardKey.keyQ, 'Q');
+}
 
 /// Fixposten: wiederkehrende Ein-/Ausgaben. monthFactor rechnet den jeweiligen
 /// Turnus auf ein Monatsäquivalent um, damit z.B. ein jährlicher und ein
@@ -120,6 +142,10 @@ String resolveAccountColor({required String bank, required String tag}) {
 
 const int kBackupReminderDays = 30;
 const int kAssetReevaluationDays = 182; // ~6 Monate
+
+/// Debounce before an inline-edited field (Vermögenswerte, Fixposten) is
+/// auto-saved — see AI_MASTER.md §5 "Inline-Edit mit Debounce".
+const Duration kInlineEditDebounce = Duration(milliseconds: 600);
 
 /// Share (of positive Kontotyp totals) above which the dashboard flags a
 /// concentration risk in "Verteilung nach Kontotyp".

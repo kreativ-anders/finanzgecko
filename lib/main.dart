@@ -47,34 +47,83 @@ class _WindowPrefsSaver with WindowListener {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final store = AppStore();
-  await store.ensureInitialized();
-  final windowPrefs = store.windowPrefs;
+  try {
+    final store = AppStore();
+    await store.ensureInitialized();
+    final windowPrefs = store.windowPrefs;
 
-  await windowManager.ensureInitialized();
-  final windowOptions = WindowOptions(
-    size: Size(windowPrefs.width, windowPrefs.height),
-    minimumSize: const Size(960, 640),
-    center: true,
-    title: 'FinanzGecko',
-    backgroundColor: kBackground,
-  );
-  await windowManager.waitUntilReadyToShow(windowOptions, () async {
-    if (windowPrefs.maximized) {
-      await windowManager.maximize();
-    }
-    await windowManager.show();
-    await windowManager.focus();
-  });
-  windowManager.addListener(_WindowPrefsSaver(store));
+    await windowManager.ensureInitialized();
+    final windowOptions = WindowOptions(
+      size: Size(windowPrefs.width, windowPrefs.height),
+      minimumSize: const Size(960, 640),
+      center: true,
+      title: 'FinanzGecko',
+      backgroundColor: kBackground,
+    );
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      if (windowPrefs.maximized) {
+        await windowManager.maximize();
+      }
+      await windowManager.show();
+      await windowManager.focus();
+    });
+    windowManager.addListener(_WindowPrefsSaver(store));
 
-  final notificationService = NotificationService();
-  await notificationService.init();
+    final notificationService = NotificationService();
+    await notificationService.init();
 
-  final appState = AppState(store, notificationService: notificationService);
-  await appState.init();
+    final appState = AppState(store, notificationService: notificationService);
+    await appState.init();
 
-  runApp(FinanzGeckoApp(appState: appState));
+    runApp(FinanzGeckoApp(appState: appState));
+  } catch (err, stack) {
+    // A failure this early (e.g. no OS keychain/secret-service daemon
+    // available for SecureKeyStore) would otherwise crash before a single
+    // frame is drawn, with nothing shown to the user at all — show a
+    // minimal, dependency-free error screen instead of a silent crash.
+    debugPrint('FinanzGecko startup failed: $err\n$stack');
+    runApp(_StartupErrorApp(error: err));
+  }
+}
+
+/// Minimal fallback UI for a startup failure — deliberately doesn't depend on
+/// [AppState]/[AppStore] (those are exactly what may have failed to
+/// initialize), so it has nothing else that could fail along the way.
+class _StartupErrorApp extends StatelessWidget {
+  const _StartupErrorApp({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'FinanzGecko',
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(),
+      home: Scaffold(
+        backgroundColor: kBackground,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: kDanger, size: 40),
+                const SizedBox(height: 16),
+                const Text(
+                  'FinanzGecko konnte nicht gestartet werden.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text('$error', style: const TextStyle(color: kMuted), textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class FinanzGeckoApp extends StatelessWidget {

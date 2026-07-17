@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../constants.dart';
 import '../../models/asset.dart';
 import '../../state/app_state.dart';
 import '../../utils/formatting.dart';
@@ -45,7 +46,7 @@ class _AssetsViewState extends State<AssetsView> {
       showSavedSnackBar(context, widget.onNavigate, message: 'Angelegt.');
     } catch (err) {
       if (!mounted) return;
-      showErrorSnackBar(context, 'Fehler beim Anlegen: $err');
+      showErrorSnackBar(context, 'Fehler beim Anlegen: ${describeError(err)}');
     }
   }
 
@@ -75,7 +76,8 @@ class _AssetsViewState extends State<AssetsView> {
                 if (assets.isEmpty)
                   const EmptyHint('Noch keine Vermögenswerte angelegt.')
                 else
-                  for (final asset in assets) _AssetRow(asset: asset, app: app, onNavigate: widget.onNavigate),
+                  for (final asset in assets)
+                    _AssetRow(key: ValueKey(asset.id), asset: asset, app: app, onNavigate: widget.onNavigate),
               ],
             ),
           ),
@@ -112,7 +114,7 @@ class _AssetsViewState extends State<AssetsView> {
 }
 
 class _AssetRow extends StatefulWidget {
-  const _AssetRow({required this.asset, required this.app, required this.onNavigate});
+  const _AssetRow({super.key, required this.asset, required this.app, required this.onNavigate});
 
   final Asset asset;
   final AppState app;
@@ -143,7 +145,7 @@ class _AssetRowState extends State<_AssetRow> {
 
   void _scheduleSave() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 600), _saveValue);
+    _debounce = Timer(kInlineEditDebounce, _saveValue);
   }
 
   Future<void> _saveValue() async {
@@ -159,7 +161,7 @@ class _AssetRowState extends State<_AssetRow> {
       showSavedSnackBar(context, widget.onNavigate);
     } catch (err) {
       if (!mounted) return;
-      showErrorSnackBar(context, 'Fehler beim Speichern: $err');
+      showErrorSnackBar(context, 'Fehler beim Speichern: ${describeError(err)}');
       _valueCtrl.text = fmtInputNumber(widget.asset.value);
     }
   }

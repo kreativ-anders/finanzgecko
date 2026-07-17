@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/formatting.dart';
 import '../theme.dart';
+import 'line_chart.dart' show kChartBorderHidden, kChartGridHidden, kChartLineTouchDisabled, kChartTitlesHidden;
 
 /// One band of a stacked-area chart: a labelled, coloured series with one
 /// value per period (bottom-to-top stacking order is the list order).
@@ -41,6 +42,10 @@ class AppStackedAreaChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = periodLabels.length;
+    assert(
+      series.every((s) => s.values.length == n),
+      'StackedSeries.values must have periodLabels.length ($n) entries for each series',
+    );
     final active = series.where((s) => s.values.any((v) => v > 0)).toList();
     if (n < 2 || active.isEmpty) {
       return SizedBox(
@@ -102,10 +107,10 @@ class AppStackedAreaChart extends StatelessWidget {
               maxX: (n - 1).toDouble(),
               minY: 0,
               maxY: axisMaxY,
-              lineTouchData: const LineTouchData(enabled: false),
-              gridData: const FlGridData(show: false),
-              borderData: FlBorderData(show: false),
-              titlesData: const FlTitlesData(show: false),
+              lineTouchData: kChartLineTouchDisabled,
+              gridData: kChartGridHidden,
+              borderData: kChartBorderHidden,
+              titlesData: kChartTitlesHidden,
               lineBarsData: bars,
             ),
           ),
@@ -126,7 +131,11 @@ class AppStackedAreaChart extends StatelessWidget {
           runSpacing: 8,
           children: [
             for (var j = 0; j < active.length; j++)
-              _LegendItem(series: active[j], latest: active[j].values.last, total: totals.last),
+              ChartLegendItem(
+                color: active[j].color,
+                label: active[j].label,
+                trailing: fmtPercent(totals.last > 0 ? active[j].values.last / totals.last * 100 : 0.0),
+              ),
           ],
         ),
       ],
@@ -134,28 +143,26 @@ class AppStackedAreaChart extends StatelessWidget {
   }
 }
 
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.series, required this.latest, required this.total});
+/// A "colour swatch + label + trailing value" row — the compact, hover-free
+/// legend shared by the dashboard's small inline charts (this one,
+/// [AppDonutChart]) so both present categorical color keys identically.
+class ChartLegendItem extends StatelessWidget {
+  const ChartLegendItem({super.key, required this.color, required this.label, required this.trailing});
 
-  final StackedSeries series;
-  final double latest;
-  final double total;
+  final Color color;
+  final String label;
+  final String trailing;
 
   @override
   Widget build(BuildContext context) {
-    final share = total > 0 ? latest / total * 100 : 0.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: series.color, borderRadius: BorderRadius.circular(2)),
-        ),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 6),
-        Text(series.label, style: const TextStyle(fontSize: 12)),
+        Text(label, style: const TextStyle(fontSize: 12)),
         const SizedBox(width: 6),
-        Text(fmtPercent(share), style: const TextStyle(color: kMuted, fontSize: 12)),
+        Text(trailing, style: const TextStyle(color: kMuted, fontSize: 12)),
       ],
     );
   }

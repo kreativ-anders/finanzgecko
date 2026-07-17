@@ -1,7 +1,34 @@
 import 'package:flutter/material.dart';
 
+import '../../data/app_store.dart';
 import '../app_view.dart';
 import '../theme.dart';
+
+/// Maps a caught error to German user-facing text. The data layer's own
+/// exceptions (see `data/app_store.dart`) intentionally carry no message
+/// text — composing it is a UI-layer concern, kept in this one place so it
+/// doesn't get re-derived ad hoc at every catch site. Anything else falls
+/// back to its own string form.
+String describeError(Object err) {
+  if (err is RecordNotFoundException) {
+    return switch (err.entity) {
+      'account' => 'Konto nicht gefunden.',
+      'asset' => 'Vermögenswert nicht gefunden.',
+      'subscription' => 'Fixposten nicht gefunden.',
+      _ => 'Eintrag nicht gefunden.',
+    };
+  }
+  if (err is UnsupportedBackupVersionException) {
+    return 'Dieses Backup wurde mit einer neueren App-Version erstellt '
+        '(Datenformat ${err.importedVersion}, unterstützt bis ${err.supportedVersion}). '
+        'Bitte aktualisiere FinanzGecko und importiere erneut.';
+  }
+  if (err is AccountImportRejectedException) {
+    return 'Import abgebrochen bei Konto "${err.accountName}": '
+        'Unbekannte Bank "${err.unknownBank}" — bitte eine Bank aus der Liste verwenden.';
+  }
+  return '$err';
+}
 
 DateTime? _lastSavedSnackBarAt;
 String? _lastSavedSnackBarMessage;

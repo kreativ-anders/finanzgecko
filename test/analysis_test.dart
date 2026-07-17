@@ -54,6 +54,46 @@ void main() {
     });
   });
 
+  group('addMonthsToPeriod', () {
+    test('within a year', () {
+      expect(addMonthsToPeriod('2026-03', 2), '2026-05');
+    });
+
+    test('rolls over into the next year', () {
+      expect(addMonthsToPeriod('2026-11', 3), '2027-02');
+    });
+
+    test('zero months is a no-op', () {
+      expect(addMonthsToPeriod('2026-06', 0), '2026-06');
+    });
+  });
+
+  group('olsTrend', () {
+    test('null with fewer than two points', () {
+      expect(olsTrend([], []), isNull);
+      expect(olsTrend([0], [100]), isNull);
+    });
+
+    test('perfect linear series recovers slope and intercept', () {
+      final fit = olsTrend([0, 1, 2, 3], [100, 200, 300, 400]);
+      expect(fit!.slope, closeTo(100, 1e-9));
+      expect(fit.intercept, closeTo(100, 1e-9));
+    });
+
+    test('non-contiguous x (a gap) still fits the underlying line', () {
+      // x=0,1,3 (a gap at x=2) on the same line y = 100 + 100x.
+      final fit = olsTrend([0, 1, 3], [100, 200, 400]);
+      expect(fit!.slope, closeTo(100, 1e-9));
+      expect(fit.intercept, closeTo(100, 1e-9));
+    });
+
+    test('matches trendSlopePerMonth for a plain 0..n-1 index', () {
+      const values = [300.0, 250.0, 320.0, 280.0];
+      final fit = olsTrend([0, 1, 2, 3], values);
+      expect(fit!.slope, closeTo(trendSlopePerMonth(values)!, 1e-9));
+    });
+  });
+
   group('projectionRate', () {
     test('null when neither basis available', () {
       expect(projectionRate(planRate: null, trendRate: null, trendPoints: 5), isNull);

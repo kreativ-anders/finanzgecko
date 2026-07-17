@@ -21,29 +21,47 @@ int monthsToYearEnd(String period) {
   return remaining <= 0 ? 12 : remaining;
 }
 
-/// Ordinary least-squares slope (change per step) of [values] against their
-/// indices 0..n-1 — the observed per-month trend. Null with fewer than two
-/// values or a degenerate fit.
-double? trendSlopePerMonth(List<double> values) {
-  final n = values.length;
+/// [period] ("YYYY-MM") advanced by [months] (year rollover handled by
+/// [DateTime]'s own month-overflow normalization).
+String addMonthsToPeriod(String period, int months) {
+  final parts = period.split('-');
+  final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]) + months);
+  return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
+}
+
+/// Ordinary least-squares fit of [ys] against [xs] (same length, x need not be
+/// contiguous — a gap in the series is just a larger step between two x
+/// values). Null with fewer than two points or a degenerate fit. The general
+/// form behind [trendSlopePerMonth]; also used directly wherever the caller's
+/// x-axis isn't a plain 0..n-1 index (e.g. a chart with gaps).
+({double slope, double intercept})? olsTrend(List<double> xs, List<double> ys) {
+  final n = xs.length;
   if (n < 2) return null;
   var xMean = 0.0;
   var yMean = 0.0;
   for (var i = 0; i < n; i++) {
-    xMean += i;
-    yMean += values[i];
+    xMean += xs[i];
+    yMean += ys[i];
   }
   xMean /= n;
   yMean /= n;
   var numerator = 0.0;
   var denominator = 0.0;
   for (var i = 0; i < n; i++) {
-    final dx = i - xMean;
-    numerator += dx * (values[i] - yMean);
+    final dx = xs[i] - xMean;
+    numerator += dx * (ys[i] - yMean);
     denominator += dx * dx;
   }
-  return denominator == 0 ? null : numerator / denominator;
+  if (denominator == 0) return null;
+  final slope = numerator / denominator;
+  return (slope: slope, intercept: yMean - slope * xMean);
 }
+
+/// Ordinary least-squares slope (change per step) of [values] against their
+/// indices 0..n-1 — the observed per-month trend. Null with fewer than two
+/// values or a degenerate fit.
+double? trendSlopePerMonth(List<double> values) =>
+    olsTrend([for (var i = 0; i < values.length; i++) i.toDouble()], values)?.slope;
 
 /// Blends a statistical [trendRate] with a [planRate] prior (the Fixposten
 /// net). The trend is primary; the plan only stabilizes small samples and its

@@ -1,7 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../utils/formatting.dart';
 import '../theme.dart';
+import 'stacked_area_chart.dart' show ChartLegendItem;
 
 class DonutSegment {
   final String label;
@@ -12,9 +14,10 @@ class DonutSegment {
 }
 
 class AppDonutChart extends StatelessWidget {
-  const AppDonutChart({super.key, required this.segments});
+  const AppDonutChart({super.key, required this.segments, this.height = 140});
 
   final List<DonutSegment> segments;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +25,9 @@ class AppDonutChart extends StatelessWidget {
     final total = positive.fold<double>(0, (sum, s) => sum + s.value);
 
     if (total <= 0) {
-      return const SizedBox(
-        height: 140,
-        child: Center(
+      return SizedBox(
+        height: height,
+        child: const Center(
           child: Text(
             'Noch keine Daten.',
             style: TextStyle(color: kMuted, fontStyle: FontStyle.italic),
@@ -39,8 +42,8 @@ class AppDonutChart extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         SizedBox(
-          width: 140,
-          height: 140,
+          width: height,
+          height: height,
           child: PieChart(
             PieChartData(
               sections: [
@@ -59,21 +62,7 @@ class AppDonutChart extends StatelessWidget {
             for (final s in positive)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 11,
-                      height: 11,
-                      decoration: BoxDecoration(color: s.color, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${s.label} — ${((s.value / total) * 100).toStringAsFixed(1)}%',
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
+                child: ChartLegendItem(color: s.color, label: s.label, trailing: fmtPercent(s.value / total * 100)),
               ),
           ],
         ),

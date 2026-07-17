@@ -8,32 +8,36 @@ import '../theme.dart';
 /// pair). Returns null if cancelled or the input isn't a valid positive number.
 Future<double?> promptManualRate(BuildContext context, {required String from, required String to}) async {
   final ctrl = TextEditingController();
-  final result = await showDialog<double>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Kein Wechselkurs verfügbar'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Kein Wechselkurs $from → $to verfügbar (offline?). Bitte Kurs manuell eingeben:'),
-          const SizedBox(height: 12),
-          TextField(
-            controller: ctrl,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(labelText: '1 $from = ? $to'),
+  try {
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kein Wechselkurs verfügbar'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Kein Wechselkurs $from → $to verfügbar (offline?). Bitte Kurs manuell eingeben:'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: '1 $from = ? $to'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: noSelect(const Text('Abbrechen'))),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(parseInputNumber(ctrl.text)),
+            child: noSelect(const Text('Übernehmen')),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: noSelect(const Text('Abbrechen'))),
-        ElevatedButton(
-          onPressed: () => Navigator.of(ctx).pop(parseInputNumber(ctrl.text)),
-          child: noSelect(const Text('Übernehmen')),
-        ),
-      ],
-    ),
-  );
-  return (result != null && result > 0) ? result : null;
+    );
+    return (result != null && result > 0) ? result : null;
+  } finally {
+    ctrl.dispose();
+  }
 }

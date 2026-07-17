@@ -1,8 +1,19 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../utils/analysis.dart';
 import '../../utils/formatting.dart';
 import '../theme.dart';
+
+/// The dashboard's small inline charts (this file, [AppStackedAreaChart])
+/// draw their own labels/legends instead of fl_chart's built-in chrome, so
+/// all of it is switched off identically in both — shared here rather than
+/// each widget repeating the same four properties.
+const kChartLineTouchDisabled = LineTouchData(enabled: false);
+const kChartGridHidden = FlGridData(show: false);
+// FlBorderData's constructor isn't const (unlike its three siblings above).
+final kChartBorderHidden = FlBorderData(show: false);
+const kChartTitlesHidden = FlTitlesData(show: false);
 
 class ChartPoint {
   final String label;
@@ -104,10 +115,12 @@ class AppLineChart extends StatelessWidget {
         points[i].value != null ? FlSpot(i.toDouble(), points[i].value!) : FlSpot.nullSpot,
     ];
 
-    // Ordinary least-squares regression over (index, value) — the simplest
-    // defensible trend for a short, noisy series. Exponential would assume a
-    // constant growth rate that net worth (which can be zero or negative)
-    // doesn't actually have.
+    // Least-squares regression over (index, value) — the simplest defensible
+    // trend for a short, noisy series. Exponential would assume a constant
+    // growth rate that net worth (which can be zero or negative) doesn't
+    // actually have. x stays the point's original index (gaps keep their
+    // real time-distance instead of being compacted away) — see
+    // utils/analysis.dart's olsTrend for the shared regression math.
     double? trendSlope;
     double? trendIntercept;
     if (showTrend && forecast == null && values.length >= 2) {
@@ -119,19 +132,9 @@ class AppLineChart extends StatelessWidget {
         xs.add(i.toDouble());
         ys.add(v);
       }
-      final n = xs.length;
-      final xMean = xs.reduce((a, b) => a + b) / n;
-      final yMean = ys.reduce((a, b) => a + b) / n;
-      var numerator = 0.0;
-      var denominator = 0.0;
-      for (var i = 0; i < n; i++) {
-        numerator += (xs[i] - xMean) * (ys[i] - yMean);
-        denominator += (xs[i] - xMean) * (xs[i] - xMean);
-      }
-      if (denominator != 0) {
-        trendSlope = numerator / denominator;
-        trendIntercept = yMean - trendSlope * xMean;
-      }
+      final fit = olsTrend(xs, ys);
+      trendSlope = fit?.slope;
+      trendIntercept = fit?.intercept;
     }
 
     final lastIndex = points.length - 1;
@@ -259,10 +262,10 @@ class AppLineChart extends StatelessWidget {
         maxY: axisMaxY,
         // fl_chart's own touch/tooltip system is intentionally unused — see
         // _HoverLayer below, which handles hover entirely on its own.
-        lineTouchData: const LineTouchData(enabled: false),
-        gridData: const FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        titlesData: const FlTitlesData(show: false),
+        lineTouchData: kChartLineTouchDisabled,
+        gridData: kChartGridHidden,
+        borderData: kChartBorderHidden,
+        titlesData: kChartTitlesHidden,
         extraLinesData: (min < 0 && max > 0)
             ? ExtraLinesData(
                 horizontalLines: [

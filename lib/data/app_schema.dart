@@ -5,6 +5,25 @@ import '../models/subscription.dart';
 
 const int currentSchemaVersion = 1;
 
+/// Parses a JSON list tolerantly: skips (rather than throws on) any entry
+/// that isn't a usable map or fails [fromJson] — one malformed row must never
+/// cost the caller the rest of the list. Shared between [AppSchema]'s own
+/// on-disk parsing and [AppStore.importAllData]'s backup parsing.
+List<T> parseTolerantList<T>(dynamic raw, T Function(Map<String, dynamic>) fromJson) {
+  if (raw is! List) return <T>[];
+  final result = <T>[];
+  for (final item in raw) {
+    if (item is Map) {
+      try {
+        result.add(fromJson(Map<String, dynamic>.from(item)));
+      } catch (_) {
+        // Skip malformed entry, keep the rest of the list usable.
+      }
+    }
+  }
+  return result;
+}
+
 /// Remembered window geometry, restored on next launch (best-effort).
 class WindowPrefs {
   final double width;
@@ -93,26 +112,6 @@ class AppSchema {
     if (parsed is! Map) return null;
     final json = parsed;
 
-    List<T> parseList<T>(String key, T Function(Map<String, dynamic>) fromJson) {
-      final raw = json[key];
-      if (raw is! List) return <T>[];
-      final result = <T>[];
-      for (final item in raw) {
-        if (item is Map<String, dynamic>) {
-          try {
-            result.add(fromJson(item));
-          } catch (_) {
-            // Skip malformed entry, keep the rest of the file usable.
-          }
-        } else if (item is Map) {
-          try {
-            result.add(fromJson(Map<String, dynamic>.from(item)));
-          } catch (_) {}
-        }
-      }
-      return result;
-    }
-
     final meta = (json['meta'] is Map) ? Map<String, dynamic>.from(json['meta'] as Map) : <String, dynamic>{};
     final windowRaw = (json['window'] is Map) ? Map<String, dynamic>.from(json['window'] as Map) : null;
     final ratesRaw = (json['ratesCache'] is Map)
@@ -135,10 +134,10 @@ class AppSchema {
     return AppSchema(
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? currentSchemaVersion,
       baseCurrency: json['baseCurrency'] is String ? json['baseCurrency'] as String : 'EUR',
-      accounts: parseList('accounts', Account.fromJson),
-      balances: parseList('balances', Balance.fromJson),
-      assets: parseList('assets', Asset.fromJson),
-      subscriptions: parseList('subscriptions', Subscription.fromJson),
+      accounts: parseTolerantList(json['accounts'], Account.fromJson),
+      balances: parseTolerantList(json['balances'], Balance.fromJson),
+      assets: parseTolerantList(json['assets'], Asset.fromJson),
+      subscriptions: parseTolerantList(json['subscriptions'], Subscription.fromJson),
       ratesCache: ratesCache,
       nextAccountId: (meta['nextAccountId'] as num?)?.toInt() ?? 1,
       nextBalanceId: (meta['nextBalanceId'] as num?)?.toInt() ?? 1,

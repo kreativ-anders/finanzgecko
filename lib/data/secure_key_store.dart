@@ -24,6 +24,11 @@ class SecureKeyStore {
     mOptions: MacOsOptions(usesDataProtectionKeychain: false),
   );
 
+  /// Unlike the store's other OS calls (chmod, icacls, ...), a failure here
+  /// is deliberately NOT swallowed: without a key the app cannot read or
+  /// write its data at all, so the error is left to propagate up to the
+  /// startup guard in `main()`, which shows it instead of silently
+  /// continuing in a broken state.
   Future<SecretKey> getOrCreateKey() async {
     final existing = await _storage.read(key: _keyName);
     if (existing != null) {

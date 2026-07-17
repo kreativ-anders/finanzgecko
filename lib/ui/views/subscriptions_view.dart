@@ -90,7 +90,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
       showSavedSnackBar(context, widget.onNavigate, message: 'Angelegt.');
     } catch (err) {
       if (!mounted) return;
-      showErrorSnackBar(context, 'Fehler beim Anlegen: $err');
+      showErrorSnackBar(context, 'Fehler beim Anlegen: ${describeError(err)}');
     }
   }
 
@@ -122,7 +122,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                 if (entries.isEmpty)
                   const EmptyHint('Noch keine Fixposten erfasst.')
                 else
-                  for (final s in entries) _SubscriptionRow(sub: s, app: app, onNavigate: widget.onNavigate),
+                  for (final s in entries) _SubscriptionRow(key: ValueKey(s.id), sub: s, app: app, onNavigate: widget.onNavigate),
               ],
             ),
           ),
@@ -198,7 +198,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
 }
 
 class _SubscriptionRow extends StatefulWidget {
-  const _SubscriptionRow({required this.sub, required this.app, required this.onNavigate});
+  const _SubscriptionRow({super.key, required this.sub, required this.app, required this.onNavigate});
 
   final Subscription sub;
   final AppState app;
@@ -230,7 +230,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
   void _scheduleSave() {
     setState(() {}); // recompute the monthly preview immediately, save follows after debounce
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 600), _save);
+    _debounce = Timer(kInlineEditDebounce, _save);
   }
 
   double get _previewMonthly {
@@ -278,7 +278,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
       showSavedSnackBar(context, widget.onNavigate);
     } catch (err) {
       if (!mounted) return;
-      showErrorSnackBar(context, 'Fehler beim Speichern: $err');
+      showErrorSnackBar(context, 'Fehler beim Speichern: ${describeError(err)}');
     }
   }
 

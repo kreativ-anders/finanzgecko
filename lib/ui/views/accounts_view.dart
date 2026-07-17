@@ -177,6 +177,76 @@ class _BankSuggestionHint extends StatelessWidget {
   }
 }
 
+/// The Bank/Name/Typ/Währung field group shared by the "Neues Konto" form and
+/// the inline edit form — both wrap this in their own [Form] (with their own
+/// submit button and validation trigger), so only the field layout itself is
+/// shared here.
+class _AccountFormFields extends StatelessWidget {
+  const _AccountFormFields({
+    required this.nameCtrl,
+    required this.bankCtrl,
+    required this.tag,
+    required this.currency,
+    required this.baseCurrency,
+    required this.fallbackColorHex,
+    required this.tagOptions,
+    required this.currencyOptions,
+    required this.onTagChanged,
+    required this.onCurrencyChanged,
+  });
+
+  final TextEditingController nameCtrl;
+  final TextEditingController bankCtrl;
+  final String tag;
+  final String currency;
+  final String baseCurrency;
+  final String fallbackColorHex;
+  final Iterable<String> tagOptions;
+  final Iterable<String> currencyOptions;
+  final ValueChanged<String?> onTagChanged;
+  final ValueChanged<String?> onCurrencyChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _BankField(controller: bankCtrl, fallbackColorHex: fallbackColorHex),
+        const SizedBox(height: 14),
+        TextFormField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(labelText: 'Name', hintText: 'z.B. Gehaltskonto, Trading'),
+          validator: (v) => (v == null || v.trim().isEmpty) ? 'Pflichtfeld' : null,
+        ),
+        const SizedBox(height: 14),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: tag,
+                decoration: const InputDecoration(labelText: 'Typ'),
+                items: [for (final t in tagOptions) DropdownMenuItem(value: t, child: Text(t))],
+                onChanged: onTagChanged,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: currency,
+                decoration: const InputDecoration(labelText: 'Währung'),
+                items: [for (final c in currencyOptions) DropdownMenuItem(value: c, child: Text(c))],
+                onChanged: onCurrencyChanged,
+              ),
+            ),
+          ],
+        ),
+        _CurrencyHint(currency: currency, baseCurrency: baseCurrency),
+      ],
+    );
+  }
+}
+
 class AccountsView extends StatefulWidget {
   const AccountsView({super.key, required this.onNavigate});
 
@@ -223,7 +293,7 @@ class _AccountsViewState extends State<AccountsView> {
       showSavedSnackBar(context, widget.onNavigate, message: 'Angelegt.');
     } catch (err) {
       if (!mounted) return;
-      showErrorSnackBar(context, 'Fehler beim Anlegen des Kontos: $err');
+      showErrorSnackBar(context, 'Fehler beim Anlegen des Kontos: ${describeError(err)}');
     }
   }
 
@@ -268,37 +338,18 @@ class _AccountsViewState extends State<AccountsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _BankField(controller: _bankCtrl, fallbackColorHex: tagColorHex(_tag)),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Name', hintText: 'z.B. Gehaltskonto, Trading'),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Pflichtfeld' : null,
+                  _AccountFormFields(
+                    nameCtrl: _nameCtrl,
+                    bankCtrl: _bankCtrl,
+                    tag: _tag,
+                    currency: _currency,
+                    baseCurrency: app.baseCurrency,
+                    fallbackColorHex: tagColorHex(_tag),
+                    tagOptions: kTags,
+                    currencyOptions: kCurrencies,
+                    onTagChanged: (v) => setState(() => _tag = v ?? _tag),
+                    onCurrencyChanged: (v) => setState(() => _currency = v ?? _currency),
                   ),
-                  const SizedBox(height: 14),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _tag,
-                          decoration: const InputDecoration(labelText: 'Typ'),
-                          items: [for (final t in kTags) DropdownMenuItem(value: t, child: Text(t))],
-                          onChanged: (v) => setState(() => _tag = v ?? _tag),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _currency,
-                          decoration: const InputDecoration(labelText: 'Währung'),
-                          items: [for (final c in kCurrencies) DropdownMenuItem(value: c, child: Text(c))],
-                          onChanged: (v) => setState(() => _currency = v ?? _currency),
-                        ),
-                      ),
-                    ],
-                  ),
-                  _CurrencyHint(currency: _currency, baseCurrency: app.baseCurrency),
                   const SizedBox(height: 18),
                   ElevatedButton(onPressed: _submitNew, child: noSelect(const Text('Konto anlegen'))),
                 ],
@@ -385,6 +436,7 @@ class _AccountEditForm extends StatefulWidget {
 }
 
 class _AccountEditFormState extends State<_AccountEditForm> {
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl = TextEditingController(text: widget.account.name);
   late final TextEditingController _bankCtrl = TextEditingController(text: widget.account.bank);
   late String _tag = widget.account.tag;
@@ -398,15 +450,12 @@ class _AccountEditFormState extends State<_AccountEditForm> {
   }
 
   Future<void> _save() async {
-    if (_nameCtrl.text.trim().isEmpty) {
-      showErrorSnackBar(context, 'Bitte einen Namen eingeben.');
-      return;
-    }
+    // Same Form + validators as the "Neues Konto" creation flow (Pflichtfeld
+    // name, known-bank check inside _BankField) — editing used to bypass
+    // them with separate manual checks, so a validator tightened on
+    // creation silently didn't apply here.
+    if (!_formKey.currentState!.validate()) return;
     final bank = _bankCtrl.text.trim();
-    if (!isKnownBank(bank)) {
-      showErrorSnackBar(context, 'Bitte eine Bank aus der Liste auswählen.');
-      return;
-    }
     try {
       await context.read<AppState>().updateAccount(
         widget.account.id,
@@ -421,7 +470,7 @@ class _AccountEditFormState extends State<_AccountEditForm> {
       widget.onDone();
     } catch (err) {
       if (!mounted) return;
-      showErrorSnackBar(context, 'Fehler beim Speichern: $err');
+      showErrorSnackBar(context, 'Fehler beim Speichern: ${describeError(err)}');
     }
   }
 
@@ -430,51 +479,33 @@ class _AccountEditFormState extends State<_AccountEditForm> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _BankField(controller: _bankCtrl, fallbackColorHex: widget.account.color),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Name', hintText: 'z.B. Gehaltskonto, Trading'),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _tag,
-                    decoration: const InputDecoration(labelText: 'Typ'),
-                    items: [
-                      for (final t in {...kTags, _tag}) DropdownMenuItem(value: t, child: Text(t)),
-                    ],
-                    onChanged: (v) => setState(() => _tag = v ?? _tag),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _currency,
-                    decoration: const InputDecoration(labelText: 'Währung'),
-                    items: [
-                      for (final c in {...kCurrencies, _currency}) DropdownMenuItem(value: c, child: Text(c)),
-                    ],
-                    onChanged: (v) => setState(() => _currency = v ?? _currency),
-                  ),
-                ),
-              ],
-            ),
-            _CurrencyHint(currency: _currency, baseCurrency: context.read<AppState>().baseCurrency),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                ElevatedButton(onPressed: _save, child: noSelect(const Text('Speichern'))),
-                const SizedBox(width: 10),
-                OutlinedButton(onPressed: widget.onDone, child: noSelect(const Text('Abbrechen'))),
-              ],
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _AccountFormFields(
+                nameCtrl: _nameCtrl,
+                bankCtrl: _bankCtrl,
+                tag: _tag,
+                currency: _currency,
+                baseCurrency: context.read<AppState>().baseCurrency,
+                fallbackColorHex: widget.account.color,
+                tagOptions: {...kTags, _tag},
+                currencyOptions: {...kCurrencies, _currency},
+                onTagChanged: (v) => setState(() => _tag = v ?? _tag),
+                onCurrencyChanged: (v) => setState(() => _currency = v ?? _currency),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  ElevatedButton(onPressed: _save, child: noSelect(const Text('Speichern'))),
+                  const SizedBox(width: 10),
+                  OutlinedButton(onPressed: widget.onDone, child: noSelect(const Text('Abbrechen'))),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

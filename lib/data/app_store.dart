@@ -21,6 +21,46 @@ const String _storeFilename = 'finanzgecko-data.json';
 const String _ratesFilename = 'finanzgecko-rates.json';
 const int _envelopeVersion = 1;
 
+/// Thrown by an update/delete lookup when the given id no longer exists in
+/// the store. Carries structural data only (no user-facing text) — composing
+/// German text from it is a UI-layer concern (see `describeError` in
+/// `ui/widgets/app_snackbar.dart`), not the persistence layer's.
+class RecordNotFoundException implements Exception {
+  const RecordNotFoundException(this.entity, this.id);
+
+  /// One of "account", "balance", "asset", "subscription".
+  final String entity;
+  final int id;
+
+  @override
+  String toString() => 'RecordNotFoundException($entity #$id)';
+}
+
+/// Thrown by [AppStore.importAllData] when the backup's `schemaVersion` is
+/// newer than this build understands.
+class UnsupportedBackupVersionException implements Exception {
+  const UnsupportedBackupVersionException({required this.importedVersion, required this.supportedVersion});
+
+  final num importedVersion;
+  final int supportedVersion;
+
+  @override
+  String toString() => 'UnsupportedBackupVersionException(imported: $importedVersion, supported: $supportedVersion)';
+}
+
+/// Thrown by [AppStore.importAllData] when an account in the backup names a
+/// bank [resolveAccountColor] doesn't recognize — the whole import is
+/// rejected rather than silently assigning an arbitrary color.
+class AccountImportRejectedException implements Exception {
+  const AccountImportRejectedException({required this.accountName, required this.unknownBank});
+
+  final String accountName;
+  final String unknownBank;
+
+  @override
+  String toString() => 'AccountImportRejectedException(account: $accountName, unknownBank: $unknownBank)';
+}
+
 /// Persists the entire app database as a single JSON file in the OS-native
 /// per-user data directory, so existing installs keep working without
 /// conversion:
@@ -290,44 +330,44 @@ class AppStore {
     }
   }
 
+  /// Filesystem-safe timestamp suffix (no `:`/`.`) shared by every
+  /// side-file this class writes (quarantine copies, pre-import/-reset
+  /// snapshots).
+  static String _timestampSuffix() => DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
+
   /// Best-effort copy of a store file that failed to parse, so a corrupt or
   /// unexpectedly-shaped file never gets silently destroyed by [_persist]
   /// writing fresh defaults over it. A failed backup must not block startup.
   Future<void> _quarantineUnreadable(File file) async {
     try {
-      final ts = DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
-      await file.copy('${file.path}.unreadable-$ts');
+      await file.copy('${file.path}.unreadable-${_timestampSuffix()}');
     } catch (_) {}
   }
 
-  /// Best-effort snapshot of the pre-import state, written alongside the
-  /// main store file. Must never throw or block the import it precedes.
-  Future<void> _backupBeforeImport(Map<String, dynamic> snapshot) async {
+  /// Best-effort snapshot of the current state, written alongside the main
+  /// store file before a destructive one-way action (import, reset). Must
+  /// never throw or block the action it precedes.
+  Future<void> _writeSnapshotBackup(String label, Map<String, dynamic> snapshot) async {
     if (!persistToDisk) return;
     try {
-      final ts = DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
-      final backupFile = File(p.join(File(filePath).parent.path, 'pre-import-backup-$ts.json'));
+      final backupFile = File(p.join(File(filePath).parent.path, 'pre-$label-backup-${_timestampSuffix()}.json'));
       final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
       final envelopeJson = await _encryptToEnvelope(jsonStr);
       await backupFile.writeAsString(envelopeJson, flush: true);
     } catch (_) {}
   }
 
-  /// Encrypts and writes the whole database. Serialized through the write
-  /// queue so it can never interleave with another save on the shared temp
-  /// file.
-  Future<void> _persist() => _enqueueWrite(_persistNow);
-
-  Future<void> _persistNow() async {
+  /// Atomically writes [content] to [path]: write to a sibling `.tmp` file,
+  /// delete any existing file, then rename the temp file into place — so a
+  /// crash mid-write never leaves a half-written file behind. Shared by
+  /// [_persistNow] (encrypted database) and [_persistRatesNow] (plain rate
+  /// cache); callers serialize their own calls through [_enqueueWrite].
+  Future<void> _atomicWrite(String path, String content) async {
     if (!persistToDisk) return;
-    final path = filePath;
     final file = File(path);
     final tmpFile = File('$path.tmp');
-    final jsonStr = const JsonEncoder.withIndent('  ').convert(_requireData.toJson());
-    final envelopeJson = await _encryptToEnvelope(jsonStr);
-
     try {
-      await tmpFile.writeAsString(envelopeJson, flush: true);
+      await tmpFile.writeAsString(content, flush: true);
       if (await file.exists()) {
         try {
           await file.delete();
@@ -343,6 +383,18 @@ class AppStore {
         } catch (_) {}
       }
     }
+  }
+
+  /// Encrypts and writes the whole database. Serialized through the write
+  /// queue so it can never interleave with another save on the shared temp
+  /// file.
+  Future<void> _persist() => _enqueueWrite(_persistNow);
+
+  Future<void> _persistNow() async {
+    if (!persistToDisk) return;
+    final jsonStr = const JsonEncoder.withIndent('  ').convert(_requireData.toJson());
+    final envelopeJson = await _encryptToEnvelope(jsonStr);
+    await _atomicWrite(filePath, envelopeJson);
   }
 
   /// Writes the standalone (unencrypted) rate cache. Same atomic temp-file
@@ -354,27 +406,7 @@ class AppStore {
     if (!persistToDisk) return;
     final path = _ratesFilePath;
     if (path == null) return;
-    final file = File(path);
-    final tmpFile = File('$path.tmp');
-    final jsonStr = jsonEncode(_ratesCache);
-
-    try {
-      await tmpFile.writeAsString(jsonStr, flush: true);
-      if (await file.exists()) {
-        try {
-          await file.delete();
-        } catch (_) {}
-      }
-      await tmpFile.rename(path);
-      await _chmod(path, '600');
-      await _restrictWindowsAccess(path, isDirectory: false);
-    } finally {
-      if (await tmpFile.exists()) {
-        try {
-          await tmpFile.delete();
-        } catch (_) {}
-      }
-    }
+    await _atomicWrite(path, jsonEncode(_ratesCache));
   }
 
   // ---------- Accounts ----------
@@ -431,27 +463,45 @@ class AppStore {
   }) async {
     final data = _requireData;
     final idx = data.accounts.indexWhere((a) => a.id == id);
-    if (idx == -1) throw Exception('Konto nicht gefunden');
-    final updated = data.accounts[idx].copyWith(name: name, bank: bank, tag: tag, currency: currency, color: color);
+    if (idx == -1) throw RecordNotFoundException('account', id);
+    final previous = data.accounts[idx];
+    final updated = previous.copyWith(name: name, bank: bank, tag: tag, currency: currency, color: color);
     data.accounts[idx] = updated;
-    await _persist();
+    try {
+      await _persist();
+    } catch (_) {
+      data.accounts[idx] = previous;
+      rethrow;
+    }
     return updated;
   }
 
   Future<void> archiveAccount(int id) async {
     final data = _requireData;
     final idx = data.accounts.indexWhere((a) => a.id == id);
-    if (idx == -1) throw Exception('Konto nicht gefunden');
-    data.accounts[idx] = data.accounts[idx].copyWith(archived: true);
-    await _persist();
+    if (idx == -1) throw RecordNotFoundException('account', id);
+    final previous = data.accounts[idx];
+    data.accounts[idx] = previous.copyWith(archived: true);
+    try {
+      await _persist();
+    } catch (_) {
+      data.accounts[idx] = previous;
+      rethrow;
+    }
   }
 
   Future<void> restoreAccount(int id) async {
     final data = _requireData;
     final idx = data.accounts.indexWhere((a) => a.id == id);
-    if (idx == -1) throw Exception('Konto nicht gefunden');
-    data.accounts[idx] = data.accounts[idx].copyWith(archived: false);
-    await _persist();
+    if (idx == -1) throw RecordNotFoundException('account', id);
+    final previous = data.accounts[idx];
+    data.accounts[idx] = previous.copyWith(archived: false);
+    try {
+      await _persist();
+    } catch (_) {
+      data.accounts[idx] = previous;
+      rethrow;
+    }
   }
 
   // ---------- Balances ----------
@@ -486,6 +536,7 @@ class AppStore {
   }) async {
     final data = _requireData;
     final idx = data.balances.indexWhere((b) => b.accountId == accountId && b.period == period);
+    final previous = idx != -1 ? data.balances[idx] : null;
     final record = Balance(
       id: idx != -1 ? data.balances[idx].id : data.nextBalanceId,
       accountId: accountId,
@@ -503,24 +554,46 @@ class AppStore {
       data.nextBalanceId += 1;
       data.balances.add(record);
     }
-    await _persist();
+    try {
+      await _persist();
+    } catch (_) {
+      if (previous != null) {
+        data.balances[idx] = previous;
+      } else {
+        data.balances.removeLast();
+        data.nextBalanceId -= 1;
+      }
+      rethrow;
+    }
     return record;
   }
 
   Future<Balance> updateBalance(int id, {double? amountOriginal, double? amountBase}) async {
     final data = _requireData;
     final idx = data.balances.indexWhere((b) => b.id == id);
-    if (idx == -1) throw Exception('Eintrag nicht gefunden');
-    final updated = data.balances[idx].copyWith(amountOriginal: amountOriginal, amountBase: amountBase);
+    if (idx == -1) throw RecordNotFoundException('balance', id);
+    final previous = data.balances[idx];
+    final updated = previous.copyWith(amountOriginal: amountOriginal, amountBase: amountBase);
     data.balances[idx] = updated;
-    await _persist();
+    try {
+      await _persist();
+    } catch (_) {
+      data.balances[idx] = previous;
+      rethrow;
+    }
     return updated;
   }
 
   Future<void> deleteBalance(int id) async {
     final data = _requireData;
-    data.balances.removeWhere((b) => b.id == id);
-    await _persist();
+    final idx = data.balances.indexWhere((b) => b.id == id);
+    final removed = idx == -1 ? null : data.balances.removeAt(idx);
+    try {
+      await _persist();
+    } catch (_) {
+      if (removed != null) data.balances.insert(idx, removed);
+      rethrow;
+    }
   }
 
   // ---------- Vermögenswerte ----------
@@ -550,23 +623,39 @@ class AppStore {
   Future<Asset> updateAsset(int id, {String? name, double? value}) async {
     final data = _requireData;
     final idx = data.assets.indexWhere((a) => a.id == id);
-    if (idx == -1) throw Exception('Vermögenswert nicht gefunden');
-    final updated = data.assets[idx].copyWith(
+    if (idx == -1) throw RecordNotFoundException('asset', id);
+    final previous = data.assets[idx];
+    final wasNotified = data.assetOverdueNotifiedIds.contains(id);
+    final updated = previous.copyWith(
       name: name,
       value: value,
       lastEvaluatedAt: value != null ? DateTime.now() : null,
     );
     data.assets[idx] = updated;
     if (value != null) data.assetOverdueNotifiedIds.remove(id);
-    await _persist();
+    try {
+      await _persist();
+    } catch (_) {
+      data.assets[idx] = previous;
+      if (value != null && wasNotified) data.assetOverdueNotifiedIds.add(id);
+      rethrow;
+    }
     return updated;
   }
 
   Future<void> deleteAsset(int id) async {
     final data = _requireData;
-    data.assets.removeWhere((a) => a.id == id);
+    final idx = data.assets.indexWhere((a) => a.id == id);
+    final removed = idx == -1 ? null : data.assets.removeAt(idx);
+    final wasNotified = data.assetOverdueNotifiedIds.contains(id);
     data.assetOverdueNotifiedIds.remove(id);
-    await _persist();
+    try {
+      await _persist();
+    } catch (_) {
+      if (removed != null) data.assets.insert(idx, removed);
+      if (wasNotified) data.assetOverdueNotifiedIds.add(id);
+      rethrow;
+    }
   }
 
   // ---------- Fixposten ----------
@@ -615,27 +704,36 @@ class AppStore {
   }) async {
     final data = _requireData;
     final idx = data.subscriptions.indexWhere((s) => s.id == id);
-    if (idx == -1) throw Exception('Fixposten nicht gefunden');
-    final current = data.subscriptions[idx];
-    final updated = Subscription(
-      id: current.id,
-      name: name ?? current.name,
-      interval: interval ?? current.interval,
-      amountOriginal: amountOriginal ?? current.amountOriginal,
-      currencyOriginal: currencyOriginal ?? current.currencyOriginal,
-      rate: rate ?? current.rate,
-      amountBase: amountBase ?? current.amountBase,
-      createdAt: current.createdAt,
+    if (idx == -1) throw RecordNotFoundException('subscription', id);
+    final previous = data.subscriptions[idx];
+    final updated = previous.copyWith(
+      name: name,
+      interval: interval,
+      amountOriginal: amountOriginal,
+      currencyOriginal: currencyOriginal,
+      rate: rate,
+      amountBase: amountBase,
     );
     data.subscriptions[idx] = updated;
-    await _persist();
+    try {
+      await _persist();
+    } catch (_) {
+      data.subscriptions[idx] = previous;
+      rethrow;
+    }
     return updated;
   }
 
   Future<void> deleteSubscription(int id) async {
     final data = _requireData;
-    data.subscriptions.removeWhere((s) => s.id == id);
-    await _persist();
+    final idx = data.subscriptions.indexWhere((s) => s.id == id);
+    final removed = idx == -1 ? null : data.subscriptions.removeAt(idx);
+    try {
+      await _persist();
+    } catch (_) {
+      if (removed != null) data.subscriptions.insert(idx, removed);
+      rethrow;
+    }
   }
 
   // ---------- Settings ----------
@@ -644,16 +742,32 @@ class AppStore {
   DateTime? get lastExportAt => _requireData.lastExportAt;
 
   Future<void> setBaseCurrency(String value) async {
-    _requireData.baseCurrency = value;
-    await _persist();
+    final data = _requireData;
+    final previous = data.baseCurrency;
+    data.baseCurrency = value;
+    try {
+      await _persist();
+    } catch (_) {
+      data.baseCurrency = previous;
+      rethrow;
+    }
   }
 
   /// Also resolves the backup-overdue notification episode (see
   /// [backupOverdueNotified]), so it can notify again next time it's overdue.
   Future<void> setLastExportAt(DateTime value) async {
-    _requireData.lastExportAt = value;
-    _requireData.backupOverdueNotified = false;
-    await _persist();
+    final data = _requireData;
+    final previousExportAt = data.lastExportAt;
+    final previousNotified = data.backupOverdueNotified;
+    data.lastExportAt = value;
+    data.backupOverdueNotified = false;
+    try {
+      await _persist();
+    } catch (_) {
+      data.lastExportAt = previousExportAt;
+      data.backupOverdueNotified = previousNotified;
+      rethrow;
+    }
   }
 
   // ---------- Reminder-Benachrichtigungen (OS-Notifications) ----------
@@ -663,30 +777,61 @@ class AppStore {
   List<int> get assetOverdueNotifiedIds => List.of(_requireData.assetOverdueNotifiedIds);
 
   Future<void> setNotificationsEnabled(bool value) async {
-    _requireData.notificationsEnabled = value;
-    await _persist();
+    final data = _requireData;
+    final previous = data.notificationsEnabled;
+    data.notificationsEnabled = value;
+    try {
+      await _persist();
+    } catch (_) {
+      data.notificationsEnabled = previous;
+      rethrow;
+    }
   }
 
   Future<void> markBackupOverdueNotified() async {
-    _requireData.backupOverdueNotified = true;
-    await _persist();
+    final data = _requireData;
+    final previous = data.backupOverdueNotified;
+    data.backupOverdueNotified = true;
+    try {
+      await _persist();
+    } catch (_) {
+      data.backupOverdueNotified = previous;
+      rethrow;
+    }
   }
 
   Future<void> markAssetOverdueNotified(int assetId) async {
-    if (!_requireData.assetOverdueNotifiedIds.contains(assetId)) {
-      _requireData.assetOverdueNotifiedIds.add(assetId);
+    final data = _requireData;
+    final alreadyPresent = data.assetOverdueNotifiedIds.contains(assetId);
+    if (!alreadyPresent) data.assetOverdueNotifiedIds.add(assetId);
+    try {
+      await _persist();
+    } catch (_) {
+      if (!alreadyPresent) data.assetOverdueNotifiedIds.remove(assetId);
+      rethrow;
     }
-    await _persist();
   }
 
   /// Wipes everything back to a fresh install: all accounts, balances,
   /// assets and subscriptions gone, settings back to their defaults. Window
   /// geometry is deliberately preserved — it isn't a user-visible "setting"
   /// and resetting it would just move/resize the window unexpectedly.
+  ///
+  /// Snapshots the pre-reset state first (mirroring [importAllData]'s
+  /// pre-import snapshot) since this is the app's other genuinely
+  /// irreversible action, then rolls the in-memory replacement back if the
+  /// write itself fails.
   Future<void> resetAll() async {
-    final window = _requireData.window;
+    final previous = _requireData;
+    await _writeSnapshotBackup('reset', previous.toExportJson());
+    final window = previous.window;
     _data = AppSchema.defaults()..window = window;
-    await _persist();
+    try {
+      await _persist();
+    } catch (_) {
+      _data = previous;
+      rethrow;
+    }
   }
 
   // ---------- Fenstergeometrie ----------
@@ -694,8 +839,15 @@ class AppStore {
   WindowPrefs get windowPrefs => _requireData.window;
 
   Future<void> setWindowPrefs(WindowPrefs prefs) async {
-    _requireData.window = prefs;
-    await _persist();
+    final data = _requireData;
+    final previous = data.window;
+    data.window = prefs;
+    try {
+      await _persist();
+    } catch (_) {
+      data.window = previous;
+      rethrow;
+    }
   }
 
   // ---------- Wechselkurs-Cache ----------
@@ -724,39 +876,17 @@ class AppStore {
     // tolerates missing fields).
     final importedVersion = imported['schemaVersion'];
     if (importedVersion is num && importedVersion > currentSchemaVersion) {
-      throw Exception(
-        'Dieses Backup wurde mit einer neueren App-Version erstellt '
-        '(Datenformat $importedVersion, unterstützt bis $currentSchemaVersion). '
-        'Bitte aktualisiere FinanzGecko und importiere erneut.',
-      );
+      throw UnsupportedBackupVersionException(importedVersion: importedVersion, supportedVersion: currentSchemaVersion);
     }
 
     final data = _requireData;
     final snapshot = exportAllData();
-    await _backupBeforeImport(snapshot);
+    await _writeSnapshotBackup('import', snapshot);
 
-    // Mirrors AppSchema.fromDynamic's per-entry recovery: one malformed row in
-    // an otherwise-valid backup (e.g. from a slightly different schema
-    // version) should be skipped, not abort the whole import.
-    List<T> parseList<T>(String key, T Function(Map<String, dynamic>) fromJson) {
-      final raw = imported[key];
-      if (raw is! List) return <T>[];
-      final result = <T>[];
-      for (final item in raw) {
-        if (item is! Map) continue;
-        try {
-          result.add(fromJson(Map<String, dynamic>.from(item)));
-        } catch (_) {
-          // Skip malformed entry, keep the rest of the import usable.
-        }
-      }
-      return result;
-    }
-
-    final accounts = parseList('accounts', Account.fromJson);
-    final balances = parseList('balances', Balance.fromJson);
-    final assets = parseList('assets', Asset.fromJson);
-    final subscriptions = parseList('subscriptions', Subscription.fromJson);
+    final accounts = parseTolerantList(imported['accounts'], Account.fromJson);
+    final balances = parseTolerantList(imported['balances'], Balance.fromJson);
+    final assets = parseTolerantList(imported['assets'], Asset.fromJson);
+    final subscriptions = parseTolerantList(imported['subscriptions'], Subscription.fromJson);
 
     // Enforce the bank→color invariant on import: a known bank fixes the brand
     // color, an empty bank falls back to the Kontotyp color, and an UNKNOWN
@@ -770,12 +900,25 @@ class AppStore {
             color: resolveAccountColor(bank: a.bank, tag: a.tag),
           ),
         );
-      } on FormatException catch (e) {
-        throw Exception('Import abgebrochen bei Konto "${a.name}": ${e.message}');
+      } on FormatException {
+        throw AccountImportRejectedException(accountName: a.name, unknownBank: a.bank);
       }
     }
 
     int maxId(Iterable<int> ids) => ids.fold(0, (m, id) => id > m ? id : m);
+
+    // Snapshotted so a failed persist below can roll the in-memory store back
+    // to exactly what it held before this import (mirrors every other
+    // mutator's rollback-on-failed-persist behavior).
+    final previousAccounts = data.accounts;
+    final previousBalances = data.balances;
+    final previousAssets = data.assets;
+    final previousSubscriptions = data.subscriptions;
+    final previousBaseCurrency = data.baseCurrency;
+    final previousNextAccountId = data.nextAccountId;
+    final previousNextBalanceId = data.nextBalanceId;
+    final previousNextAssetId = data.nextAssetId;
+    final previousNextSubscriptionId = data.nextSubscriptionId;
 
     data.accounts = normalizedAccounts;
     data.balances = balances;
@@ -790,7 +933,20 @@ class AppStore {
       maxId(subscriptions.map((s) => s.id)) + 1,
     ].reduce((a, b) => a > b ? a : b);
 
-    await _persist();
+    try {
+      await _persist();
+    } catch (_) {
+      data.accounts = previousAccounts;
+      data.balances = previousBalances;
+      data.assets = previousAssets;
+      data.subscriptions = previousSubscriptions;
+      data.baseCurrency = previousBaseCurrency;
+      data.nextAccountId = previousNextAccountId;
+      data.nextBalanceId = previousNextBalanceId;
+      data.nextAssetId = previousNextAssetId;
+      data.nextSubscriptionId = previousNextSubscriptionId;
+      rethrow;
+    }
     return snapshot;
   }
 }

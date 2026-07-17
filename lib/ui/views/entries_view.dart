@@ -116,6 +116,7 @@ class _EntriesViewState extends State<EntriesView> {
     var saved = 0;
     var failed = 0;
     var invalid = 0;
+    var errored = 0;
 
     setState(() => _notice = 'Wird gespeichert …');
 
@@ -144,15 +145,21 @@ class _EntriesViewState extends State<EntriesView> {
         continue;
       }
 
-      await app.upsertBalance(
-        accountId: acc.id,
-        period: _period,
-        amountOriginal: amount,
-        currencyOriginal: acc.currency,
-        rate: rate,
-        amountBase: amount * rate,
-      );
-      saved++;
+      try {
+        await app.upsertBalance(
+          accountId: acc.id,
+          period: _period,
+          amountOriginal: amount,
+          currencyOriginal: acc.currency,
+          rate: rate,
+          amountBase: amount * rate,
+        );
+        saved++;
+      } catch (_) {
+        // Keep going for the remaining accounts — one failed write shouldn't
+        // strand the whole batch on "Wird gespeichert …" with nothing saved.
+        errored++;
+      }
     }
 
     if (!mounted) return;
@@ -160,6 +167,7 @@ class _EntriesViewState extends State<EntriesView> {
     final parts = ['$saved ${saved == 1 ? 'Konto' : 'Konten'} gespeichert.'];
     if (failed > 0) parts.add('$failed ohne Kurs übersprungen.');
     if (invalid > 0) parts.add('$invalid mit ungültigem Betrag übersprungen.');
+    if (errored > 0) parts.add('$errored beim Speichern fehlgeschlagen.');
     setState(() => _notice = parts.join(' '));
   }
 
@@ -353,7 +361,7 @@ class _SaveFooter extends StatelessWidget {
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        '${totals.delta >= 0 ? '+' : ''}${fmtMoney(totals.delta, baseCurrency)} ggü. vorherigem Stand',
+                        '${fmtSignedMoney(totals.delta, baseCurrency)} ggü. vorherigem Stand',
                         style: TextStyle(
                           color: totals.delta >= 0 ? kPrimary : kDanger,
                           fontSize: 13,

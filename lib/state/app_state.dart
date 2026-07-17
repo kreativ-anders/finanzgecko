@@ -190,6 +190,16 @@ class AppState extends ChangeNotifier {
     return balances.where((b) => b.period == period && accountIds.contains(b.accountId)).toList();
   }
 
+  /// Sum of all account balances (in base currency) for [period] — the
+  /// dashboard's net-worth figure for a single month.
+  double totalForPeriod(String period) =>
+      balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
+
+  /// All accounts including archived ones — used only where archived
+  /// accounts' historical balances still matter (e.g. the CSV export), not
+  /// for normal display (see [accounts]).
+  List<Account> allAccountsIncludingArchived() => store.getAccounts(includeArchived: true);
+
   // ---------- Vermögenswerte ----------
 
   Future<void> addAsset({required String name, required double value}) async {
@@ -300,10 +310,18 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
+  bool get notificationsEnabled => store.notificationsEnabled;
+
   Future<void> setNotificationsEnabled(bool value) async {
     await store.setNotificationsEnabled(value);
     await _reloadAndNotify();
   }
+
+  DateTime? get lastExportAt => store.lastExportAt;
+
+  /// Where the encrypted database lives on disk — surfaced read-only in
+  /// Einstellungen → Sicherheit, and to open it in the OS file manager.
+  String get dataDirectoryPath => AppStore.resolveDataDirectory().path;
 
   Future<void> markExported() async {
     await store.setLastExportAt(DateTime.now());

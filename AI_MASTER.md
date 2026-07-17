@@ -141,8 +141,25 @@ automatisch über `Provider`.
   `finanzgecko-rates.json` daneben — öffentliche EZB-Referenzkurse sind kein Geheimnis, und so löst ein neu gecachter
   Kurs kein volles Re-Encrypt der ganzen DB aus. Migration: alte Stores mit `ratesCache` in der DB werden beim ersten
   Laden automatisch in die Standalone-Datei übernommen.
-- **Atomare Writes:** immer temp-Datei schreiben → alte Datei löschen → temp-Datei umbenennen (`_persistNow`,
-  `_persistRatesNow`). Verhindert eine halb geschriebene Datei bei einem Crash mitten im Schreibvorgang.
+- **Atomare Writes:** immer temp-Datei schreiben → alte Datei löschen → temp-Datei umbenennen (gemeinsamer Helper
+  `_atomicWrite`, genutzt von `_persistNow` und `_persistRatesNow`). Verhindert eine halb geschriebene Datei bei einem
+  Crash mitten im Schreibvorgang.
+- **Rollback bei fehlgeschlagenem Schreibvorgang:** Jede mutierende `AppStore`-Methode hält vor der Mutation den
+  vorherigen Wert fest und stellt ihn wieder her, falls `_persist()`/`_persistRates()` wirft — Speicher und Disk
+  laufen so nie unbemerkt auseinander. `resetAll()` und `importAllData()` legen zusätzlich **vorher** eine
+  verschlüsselte Sicherung des alten Stands an (`pre-reset-backup-<Zeitstempel>.json` bzw.
+  `pre-import-backup-<Zeitstempel>.json`, gemeinsamer Helper `_writeSnapshotBackup`) — die beiden einzigen
+  Ein-Weg-Aktionen der App (siehe `gherkin/settings.feature` "Zurücksetzen" und `gherkin/backup_restore.feature`
+  "Import").
+- **Fehler aus `AppStore` tragen keinen deutschen UI-Text:** schlanke Exception-Typen (`RecordNotFoundException`,
+  `UnsupportedBackupVersionException`, `AccountImportRejectedException`) transportieren nur Strukturdaten: welcher
+  Datensatz fehlt, welche Schema-Version importiert wurde, welche Bank unbekannt war. Die deutsche
+  Nutzertext-Formulierung passiert ausschließlich in `describeError()` (`ui/widgets/app_snackbar.dart`) — hält die
+  Persistenzschicht sprachneutral, ohne dass sich die tatsächlich angezeigten Meldungen ändern.
+- **Start-Absicherung:** Scheitert die Initialisierung in `main()` (z. B. kein OS-Keychain/Secret-Service verfügbar),
+  zeigt die App statt eines stillen Crashs vor dem ersten Frame einen minimalen Fehlerbildschirm
+  (`_StartupErrorApp`), der bewusst ohne `AppState`/`AppStore` auskommt — genau das, was gerade gescheitert sein
+  könnte.
 - **Serialisierte Write-Queue** (`_writeQueue`/`_enqueueWrite`): verhindert, dass zwei parallele Speicherungen sich
   auf derselben temporären Datei überschneiden. Ein fehlgeschlagener Write vergiftet nicht die Queue für später.
 - **Unlesbare/fremde Dateien werden nie stillschweigend überschrieben** — sie werden zuerst unter
@@ -217,7 +234,11 @@ jeder ohnehin stattfindenden Mutation/Reload sowie beim nächsten App-Start.
 ### 4.5 Reine Analyse-Funktionen (`lib/utils/analysis.dart`)
 
 Bewusst **UI-frei und deterministisch** gehalten, damit sie ohne Flutter-Binding unit-testbar sind (`test/analysis_test.dart`):
-- `monthsBetweenPeriods`, `monthsToYearEnd` — Perioden-Arithmetik auf `"YYYY-MM"`-Strings
+- `monthsBetweenPeriods`, `monthsToYearEnd`, `addMonthsToPeriod` — Perioden-Arithmetik auf `"YYYY-MM"`-Strings
+- `olsTrend` — allgemeiner OLS-Fit (Steigung + Achsenabschnitt) über beliebige (x, y)-Paare, x muss nicht lückenlos
+  sein (eine Lücke zählt einfach als größerer Schritt) — z. B. von `AppLineChart` genutzt, dessen x-Achse Lücken
+  (fehlende Monate) als echte Lücken statt komprimiert behandelt. `trendSlopePerMonth` ist der Spezialfall mit
+  x = 0..n-1.
 - `trendSlopePerMonth` — OLS-Steigung einer Zeitreihe (der statistische Trend fürs Dashboard)
 - `projectionRate` — mischt Trend (primär) mit Fixposten-Netto als Prior, dessen Gewicht mit wachsender Historie
   (`trendPoints`) gegen 0 geht (`priorStrength = 3`). **Nicht** additiv — beide sind Schätzer derselben monatlichen Rate.

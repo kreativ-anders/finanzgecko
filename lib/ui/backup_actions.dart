@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../utils/csv_export.dart';
+import '../utils/formatting.dart';
 import 'app_view.dart';
 import 'theme.dart';
 import 'widgets/app_snackbar.dart';
@@ -32,7 +33,7 @@ const _csvTypeGroups = [
 Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
   final exportData = appState.exportAllData();
-  final suggestedName = 'finanzgecko-backup-${DateTime.now().toIso8601String().substring(0, 10)}.json';
+  final suggestedName = 'finanzgecko-backup-${todayISO()}.json';
 
   final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _backupTypeGroups);
   if (location == null) return; // Dialog abgebrochen
@@ -56,11 +57,11 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
 Future<void> exportBalancesCsv(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
   final csv = buildBalancesCsv(
-    appState.store.getAccounts(includeArchived: true),
+    appState.allAccountsIncludingArchived(),
     appState.balances,
     baseCurrency: appState.baseCurrency,
   );
-  final suggestedName = 'finanzgecko-kontostaende-${DateTime.now().toIso8601String().substring(0, 10)}.csv';
+  final suggestedName = 'finanzgecko-kontostaende-${todayISO()}.csv';
 
   final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _csvTypeGroups);
   if (location == null) return; // Dialog abgebrochen
@@ -104,6 +105,6 @@ Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate
     showSavedSnackBar(context, onNavigate, message: 'Import abgeschlossen.');
   } catch (err) {
     if (!context.mounted) return;
-    showErrorSnackBar(context, 'Import fehlgeschlagen: Datei ist kein gültiges Backup.\n$err');
+    showErrorSnackBar(context, 'Import fehlgeschlagen: ${describeError(err)}');
   }
 }

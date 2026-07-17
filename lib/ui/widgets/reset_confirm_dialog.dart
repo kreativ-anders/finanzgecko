@@ -10,7 +10,15 @@ const String _confirmPhrase = 'ZURÜCKSETZEN';
 /// this destructive.
 Future<bool> confirmReset(BuildContext context) async {
   final ctrl = TextEditingController();
-  final result = await showDialog<bool>(
+  try {
+    return await _showConfirmResetDialog(context, ctrl) == true;
+  } finally {
+    ctrl.dispose();
+  }
+}
+
+Future<bool?> _showConfirmResetDialog(BuildContext context, TextEditingController ctrl) {
+  return showDialog<bool>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) {
@@ -65,5 +73,4 @@ Future<bool> confirmReset(BuildContext context) async {
       },
     ),
   );
-  return result == true;
 }

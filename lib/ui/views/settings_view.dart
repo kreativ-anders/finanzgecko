@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants.dart';
-import '../../data/app_store.dart';
 import '../../state/app_state.dart';
 import '../app_view.dart';
 import '../theme.dart';
@@ -30,7 +29,8 @@ class SettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final lastExport = app.store.lastExportAt;
+    final lastExport = app.lastExportAt;
+    final dataDirectoryPath = app.dataDirectoryPath;
     final modKeyLabel = Platform.isMacOS ? '⌘' : 'Strg';
 
     return SingleChildScrollView(
@@ -105,8 +105,8 @@ class SettingsView extends StatelessWidget {
                 _SecurityMetaRow(label: 'Schlüsselspeicher', value: _keyStoreLabel()),
                 _SecurityMetaRow(
                   label: 'Speicherort',
-                  value: AppStore.resolveDataDirectory().path,
-                  onOpen: () => _openInFileManager(context, AppStore.resolveDataDirectory().path),
+                  value: dataDirectoryPath,
+                  onOpen: () => _openInFileManager(context, dataDirectoryPath),
                 ),
               ],
             ),
@@ -128,7 +128,7 @@ class SettingsView extends StatelessWidget {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: noSelect(const Text('Desktop-Benachrichtigungen')),
-                  value: app.store.notificationsEnabled,
+                  value: app.notificationsEnabled,
                   onChanged: (v) => context.read<AppState>().setNotificationsEnabled(v),
                 ),
               ],
@@ -155,7 +155,10 @@ class SettingsView extends StatelessWidget {
                   children: [
                     ElevatedButton(onPressed: onExport, child: noSelect(const Text('Backup exportieren…'))),
                     const SizedBox(width: 10),
-                    Text('$modKeyLabel+E', style: const TextStyle(color: kMuted, fontSize: 12)),
+                    Text(
+                      '$modKeyLabel+${AppShortcuts.export.letter}',
+                      style: const TextStyle(color: kMuted, fontSize: 12),
+                    ),
                   ],
                 ),
                 const Divider(height: 28, color: kBorder),
@@ -193,7 +196,10 @@ class SettingsView extends StatelessWidget {
                   children: [
                     OutlinedButton(onPressed: onImport, child: noSelect(const Text('Backup importieren…'))),
                     const SizedBox(width: 10),
-                    Text('$modKeyLabel+I', style: const TextStyle(color: kMuted, fontSize: 12)),
+                    Text(
+                      '$modKeyLabel+${AppShortcuts.import_.letter}',
+                      style: const TextStyle(color: kMuted, fontSize: 12),
+                    ),
                   ],
                 ),
               ],
