@@ -1,7 +1,10 @@
 name: Release
 
-# Baut die Desktop-Bundles für Linux, macOS und Windows und hängt sie als
-# Assets an ein GitHub-Release, das zum gepushten Tag passt.
+# Einziger GitHub-Workflow des Repos: baut die Desktop-Bundles für Linux,
+# macOS und Windows und hängt sie als Assets an ein GitHub-Release, das zum
+# gepushten Tag passt. Es gibt bewusst KEINEN separaten Push/PR-CI-Workflow —
+# `flutter analyze`/`flutter test`/`dart format` laufen lokal vor dem Commit
+# (siehe CLAUDE.md), nicht automatisiert bei jedem Push.
 #
 # Flutter braucht für jede Zielplattform einen nativen Build auf dieser
 # Plattform -- daher drei separate Jobs (ubuntu/macos/windows-latest), die
@@ -37,8 +40,8 @@ jobs:
   # Qualitäts-Gate: statische Analyse, Tests und die Icon-Pipeline müssen grün
   # sein, bevor überhaupt ein Plattform-Bundle gebaut oder released wird. Läuft
   # plattformunabhängig auf einem einzelnen ubuntu-Runner; die Build-Jobs unten
-  # warten via `needs: test` darauf.
-  test:
+  # warten via `needs: gate` darauf.
+  gate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,7 +62,7 @@ jobs:
         run: dart run tool/generate_icons.dart
 
   linux:
-    needs: test
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,7 +95,7 @@ jobs:
           files: finanzgecko-linux-x64.zip
 
   macos:
-    needs: test
+    needs: gate
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -122,7 +125,7 @@ jobs:
           files: FinanzGecko-mac.app.zip
 
   windows:
-    needs: test
+    needs: gate
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

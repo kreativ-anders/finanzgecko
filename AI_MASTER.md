@@ -86,9 +86,11 @@ finanzgecko/
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
 └── .github/workflows/
-    ├── ci.yml                     # Push/PR: dart format-Check + flutter analyze + flutter test (schnelles Dev-Gate)
-    └── release.yml                # Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst `test`-Gate (analyze + test +
-                                   #   Icon-Pipeline), dann 3 native Build-Jobs (ubuntu/macos/windows, `needs: test`) → Release-Assets
+    └── release.yml                # einziger Workflow. Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst
+                                   #   `gate`-Job (analyze + test + Icon-Pipeline), dann 3 native Build-Jobs
+                                   #   (ubuntu/macos/windows, `needs: gate`) → Release-Assets. Kein separater
+                                   #   Push/PR-CI-Workflow — `flutter analyze`/`flutter test`/`dart format` laufen
+                                   #   lokal vor dem Commit, nicht automatisiert bei jedem Push.
 ```
 
 ### Die sechs Ansichten (`lib/ui/views/`)
@@ -245,8 +247,10 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 
 - Cross-Platform-Builds sind **nicht möglich** — jede Plattform muss auf ihrem eigenen OS gebaut werden; alle drei
   gleichzeitig nur über GitHub Actions (`.github/workflows/release.yml`, per Tag-Push `v*.*.*` oder manuell über
-  `workflow_dispatch`). Vor den Build-Jobs läuft ein `test`-Gate (analyze + test + Icon-Pipeline); schlägt es fehl,
-  wird kein Bundle gebaut/released.
+  `workflow_dispatch`). Vor den Build-Jobs läuft ein `gate`-Job (analyze + test + Icon-Pipeline); schlägt er fehl,
+  wird kein Bundle gebaut/released. Es gibt bewusst keinen separaten Push/PR-CI-Workflow — `flutter analyze`,
+  `flutter test` und `dart format` laufen lokal vor jedem Commit (siehe CLAUDE.md "Always verify"), release.yml ist
+  der einzige GitHub-Workflow im Repo.
 - Icon-Pipeline: ein einziger 1024×1024-Master (`assets/icon/icon.png`) speist alle Plattform-Formate über
   `dart run tool/generate_icons.dart`.
 - Kein In-App-Auto-Updater — Update = neues Release-Zip laden, altes Bundle ersetzen.
@@ -351,7 +355,7 @@ korrespondierender Dart-Test entstehen (oder zumindest ein TODO-Kommentar mit Ve
 Spezifikation und automatisierte Prüfung nicht auseinanderlaufen.
 
 **Verdrahtung Gherkin ↔ Tests (erzwungen, nicht nur Konvention):** `test/gherkin_sync_test.dart` läuft im normalen
-`flutter test` (und damit im Release-`test`-Gate) und lässt die Pipeline **fehlschlagen**, sobald Spec, Code und
+`flutter test` (und damit im `gate`-Job von release.yml) und lässt die Pipeline **fehlschlagen**, sobald Spec, Code und
 Tests auseinanderlaufen:
 1. Jede `gherkin/*.feature` braucht einen `# Quelle:`-Header, dessen Quellcode-Pfade alle existieren.
 2. Ein Test verlinkt das/die Feature(s), das/die er abdeckt, mit einer Kopfzeile `// Gherkin: gherkin/<x>.feature`
