@@ -99,7 +99,7 @@ finanzgecko/
 
 | Datei | AppView | Deutsches Label | Kernzweck |
 |---|---|---|---|
-| `dashboard_view.dart` | `dashboard` | Dashboard | Übersicht: Gesamtvermögen, Verlauf+Prognose, Verteilung, Zusammensetzung über Zeit, Kennzahlen, Währungsaufteilung, Fixposten-/Vermögenswerte-Summary, Konto-Karten — alles über den Zeitraum-Filter gesteuert |
+| `dashboard_view.dart` | `dashboard` | Dashboard | Übersicht: Gesamtvermögen, Verlauf+Prognose, Verteilung, Zusammensetzung über Zeit, Kennzahlen, Fixposten-/Vermögenswerte-Summary, Konto-Karten — alles über den Zeitraum-Filter gesteuert |
 | `entries_view.dart` | `entries` | Einträge | Monatsbezogene Erfassung/Korrektur von Kontoständen für alle Konten auf einmal |
 | `accounts_view.dart` | `accounts` | Konten | Konten anlegen/bearbeiten/archivieren/wiederherstellen |
 | `subscriptions_view.dart` | `subscriptions` | Fixposten | Wiederkehrende Ein-/Ausgaben anlegen/bearbeiten/löschen |
@@ -245,7 +245,7 @@ Bewusst **UI-frei und deterministisch** gehalten, damit sie ohne Flutter-Binding
 - `contributionMarketSplit` — zerlegt eine Vermögensänderung in "eingezahlt" (Fixposten-Netto × Monatsabstand) vs. "Markt/Sonstiges"
 - `isBalanceAnomaly` — flags einen 10×-Sprung (typisches Tippfehler-Muster: Ziffer zu viel/zu wenig)
 - `computeNetWorthStats` — Bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand, Gesamtveränderung
-  seit Start, aktueller Stand und `drawdownFromPeak` (Abstand zum Höchststand in 0..1)
+  seit Start
 - `periodsForRange` / `availableRanges` / `defaultRange` — der Dashboard-weite **Zeitraum-Filter** als reine Logik
   (`enum HistoryRange { ytd, twelveMonths, lastYear, all }`, `now` injizierbar für Tests). `availableRanges` blendet ein
   Preset aus, solange es dieselbe Menge wie "Alle" ergäbe (Dedup); `defaultRange` = "Dieses Jahr", sonst "Alle".
@@ -280,6 +280,20 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   Asset-Reminder zusätzlich als native OS-Notification, damit man sie auch sieht, wenn das Dashboard gerade nicht
   offen ist. Feuert **episodenbasiert genau einmal** pro neu eintretender Überfälligkeit (nicht bei jedem App-Start
   erneut) und **nur, während die App läuft** — kein Hintergrunddienst, siehe §6 und `gherkin/notifications.feature`.
+- **Maus-Hover auf allen drei Dashboard-Charts** (`AppLineChart`, `AppDonutChart`, `AppStackedAreaChart`, alle in
+  `lib/ui/widgets/`): Verlauf und Zusammensetzung über Zeit zeigen eine senkrechte Hilfslinie + Tooltip (Periode, je
+  Serie Farbpunkt/Name/Betrag, bei der Zusammensetzung zusätzlich der Anteil in %), von Hand gebaut über
+  `MouseRegion`/`setState` statt über fl_charts eigenes Touch-System — letzteres verlor bei kontinuierlicher
+  x-Position (Zeitreihen) nachweislich unvorhersehbar den Hover-Zustand zwischen benachbarten Positionen. Die
+  Verteilungs-Donut nutzt dagegen bewusst fl_charts eigenes `PieTouchData`: dort ist die Touch-Auflösung ein
+  diskreter "welches Segment"-Treffertest ohne die Positions-Interpolation, die beim Liniendiagramm das Problem war;
+  gehovertes Segment wächst leicht, Kontotyp + Anteil erscheinen im leeren Innenkreis. Tooltip-Zeilen mit
+  unterschiedlich langen Labels bekommen für Betrag/Anteil je eine **feste, rechtsbündige Spaltenbreite** statt
+  eines bloßen Texts nach einem `Expanded`-Label — Letzteres erzeugt einen von Zeile zu Zeile unterschiedlich
+  breiten (optisch unruhigen) Abstand vor der Zahl.
+- **Lesbare Zeilenbreite:** Fließtext in einer Dashboard-Karte (z. B. der Fremdwährungs-Rundungshinweis) wird auf
+  eine feste `maxWidth` begrenzt (`ConstrainedBox`), statt über die volle, auf breiten Fenstern sehr lange
+  Karten-/Dashboard-Breite (bis zu 1100px, siehe `navigation_shell.dart`) zu laufen.
 
 ## 6. Plattform-Besonderheiten (siehe auch README für Setup-Details)
 
@@ -311,8 +325,7 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 | Verlauf | Zeitreihen-Chart des Gesamtvermögens über die Zeit, inkl. Prognose |
 | Zusammensetzung über Zeit | Gestapeltes Flächendiagramm: Vermögen nach Kontotyp über alle Monate |
 | Verteilung nach Kontotyp | Donut-Chart für einen einzelnen Monat |
-| Kennzahlen | Gesamtveränderung, bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand, "Unter Höchststand" (Drawdown) |
-| Währungsaufteilung | Anteil des Vermögens je Währung im letzten Monat des Zeitraums (nur bei >1 Währung) |
+| Kennzahlen | Gesamtveränderung, bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand |
 | Zeitraum(-Filter) | Dashboard-weiter Zeitfenster-Filter ("Dieses Jahr" / "12 Monate" / "Letztes Jahr" / "Alle"), steuert alle zeitbasierten Karten |
 | Backup exportieren/importieren | Klartext-JSON-Export/Import über native Dateidialoge (verlustfreier Round-Trip) |
 | CSV-Export | Verlustbehafteter Tabellen-Export der Kontostände (kein Re-Import) |
@@ -326,7 +339,7 @@ Alle Verhaltensspezifikationen auf einen Blick — Einstieg für eine KI, um vom
 
 | Feature | Kurz | Status |
 |---|---|---|
-| `gherkin/dashboard.feature` | Gesamtvermögen, Verlauf+Prognose, Verteilung, Zusammensetzung, Kennzahlen, Währungsaufteilung, Banner, Konto-Karten, Zeitraum-Filter | Unit (`analysis_test`, `app_state_test`) |
+| `gherkin/dashboard.feature` | Gesamtvermögen, Verlauf+Prognose, Verteilung, Zusammensetzung, Kennzahlen, Banner, Konto-Karten, Zeitraum-Filter | Unit (`analysis_test`, `app_state_test`) |
 | `gherkin/balances_entries.feature` | Monatsweise Kontostand-Erfassung/Korrektur, verwaiste Balances | Unit (`entries_view_orphan_test`, `app_state_test`) |
 | `gherkin/accounts.feature` | Konten anlegen/bearbeiten/archivieren; Bank→Farbe | Unit (`account_color_test`, `app_store_ops_test`) |
 | `gherkin/subscriptions.feature` | Fixposten CRUD, Monatsäquivalent | Unit (`app_state_test`, `app_store_ops_test`) |

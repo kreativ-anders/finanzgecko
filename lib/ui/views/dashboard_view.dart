@@ -73,17 +73,6 @@ class _DashboardViewState extends State<DashboardView> {
     final filtered = allPeriods.isEmpty ? <String>[] : periodsForRange(allPeriods, preset);
     final includesLatest = filtered.isNotEmpty && filtered.last == allPeriods.last;
 
-    // Distinct currencies actually held in the window's latest month — the
-    // Währungsaufteilung card only makes sense with more than one.
-    final latestCurrencies = <String>{};
-    if (filtered.isNotEmpty) {
-      for (final b in app.balancesInPeriod(filtered.last)) {
-        if (b.amountBase <= 0) continue;
-        final acc = app.findAccount(b.accountId);
-        if (acc != null) latestCurrencies.add(acc.currency);
-      }
-    }
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -122,10 +111,6 @@ class _DashboardViewState extends State<DashboardView> {
               _CompositionCard(app: app, periods: filtered),
               cardGap,
               _StatsCard(app: app, periods: filtered),
-              cardGap,
-            ],
-            if (latestCurrencies.length >= 2) ...[
-              _CurrencyExposureCard(app: app, latestPeriod: filtered.last),
               cardGap,
             ],
             Row(
@@ -222,7 +207,12 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          // Bottom is deliberately smaller than top: this block isn't inside
+          // a SectionCard (no border of its own), and the next section
+          // already adds cardGap (20) + that card's own 20px top padding —
+          // stacking a full symmetric 16 here on top of that made the gap to
+          // "Verlauf" nearly 5x the gap used between lines within this block.
+          padding: const EdgeInsets.only(top: 16, bottom: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -289,7 +279,12 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                   },
                 ),
               ],
-              const SizedBox(height: 4),
+              // A bit more room than the plain-text lines above use — this
+              // row carries real visual weight (the preset pills are ~36px
+              // tall interactive controls, not another line of caption
+              // text), so it needs more air around it than a 4px "same
+              // paragraph" gap gives it.
+              const SizedBox(height: 12),
               // The "erfasst" caption shares its row with the dashboard-wide
               // range filter (right-aligned) — no separate floating filter row.
               Row(
@@ -316,7 +311,7 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                 ],
               ),
               if (hasForeignCurrencyInTotal) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 12),
                 // Capped to a comfortable reading width — at the dashboard's
                 // full ~1100px content width this line would otherwise
                 // stretch edge to edge, well past a readable line length.
@@ -387,7 +382,11 @@ class _HistoryCard extends StatelessWidget {
     final rate = projectionRate(planRate: planRate, trendRate: trendRate, trendPoints: trendPoints);
 
     final forecast = (months > 0 && rate != null)
-        ? ChartForecast(monthlyDelta: rate, months: months, endLabel: periodLabel(addMonthsToPeriod(filtered.last, months)))
+        ? ChartForecast(
+            monthlyDelta: rate,
+            months: months,
+            endLabel: periodLabel(addMonthsToPeriod(filtered.last, months)),
+          )
         : null;
 
     return SectionCard(
@@ -500,45 +499,6 @@ class _CompositionCard extends StatelessWidget {
   }
 }
 
-/// Share of net worth by currency for the latest month of the active window —
-/// surfaces foreign-currency exposure that the base-currency total hides. Only
-/// shown by the dashboard when more than one currency is actually held.
-class _CurrencyExposureCard extends StatelessWidget {
-  const _CurrencyExposureCard({required this.app, required this.latestPeriod});
-
-  final AppState app;
-  final String latestPeriod;
-
-  @override
-  Widget build(BuildContext context) {
-    final byCurrency = <String, double>{};
-    for (final b in app.balancesInPeriod(latestPeriod)) {
-      final acc = app.findAccount(b.accountId);
-      if (acc == null || b.amountBase <= 0) continue;
-      byCurrency[acc.currency] = (byCurrency[acc.currency] ?? 0) + b.amountBase;
-    }
-    final total = byCurrency.values.fold<double>(0, (sum, v) => sum + v);
-    final entries = byCurrency.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    final cur = app.baseCurrency;
-    return SectionCard(
-      title: 'Währungsaufteilung',
-      child: Wrap(
-        spacing: 32,
-        runSpacing: 12,
-        children: [
-          for (final e in entries)
-            _SummaryItem(
-              label: e.key,
-              value: fmtPercent(total > 0 ? e.value / total * 100 : 0.0),
-              subValue: fmtMoney(e.value, cur),
-              color: e.key == cur ? kPrimary : kTrendUp,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Compact stats over the full net-worth history: best/worst month, average
 /// monthly change, and how often it grew. Hidden with fewer than two months.
 class _StatsCard extends StatelessWidget {
@@ -555,59 +515,131 @@ class _StatsCard extends StatelessWidget {
     final stats = computeNetWorthStats(series);
     if (stats == null) return const SizedBox.shrink();
     final cur = app.baseCurrency;
+    final tiles = [
+      (
+        label: 'Gesamtveränderung',
+        value: fmtSignedMoney(stats.totalGrowth, cur),
+        subValue: 'seit ${periodLabel(stats.startPeriod)}',
+        color: stats.totalGrowth >= 0 ? kPrimary : kDanger,
+      ),
+      (
+        label: 'Bester Monat',
+        value: fmtSignedMoney(stats.best.delta, cur),
+        subValue: periodLabel(stats.best.period),
+        color: stats.best.delta >= 0 ? kPrimary : kDanger,
+      ),
+      (
+        label: 'Schwächster Monat',
+        value: fmtSignedMoney(stats.worst.delta, cur),
+        subValue: periodLabel(stats.worst.period),
+        color: stats.worst.delta >= 0 ? kPrimary : kDanger,
+      ),
+      (
+        label: 'Ø Veränderung/Monat',
+        value: fmtSignedMoney(stats.averageChange, cur),
+        subValue: '${stats.changeCount} Monate',
+        color: stats.averageChange >= 0 ? kPrimary : kDanger,
+      ),
+      (
+        label: 'Monate im Plus',
+        value: '${stats.monthsUp}/${stats.changeCount}',
+        subValue: fmtPercent(stats.upShare * 100),
+        color: kPrimary,
+      ),
+      (
+        label: 'Höchststand',
+        value: fmtMoney(stats.peak, cur),
+        subValue: periodLabel(stats.peakPeriod),
+        color: kPrimary,
+      ),
+    ];
     return SectionCard(
       title: 'Kennzahlen',
-      child: Wrap(
+      child: _BalancedMetricsGrid(
+        itemWidths: [
+          for (final t in tiles) _metricTileWidth(context, label: t.label, value: t.value, subValue: t.subValue),
+        ],
         spacing: 32,
         runSpacing: 12,
         children: [
-          _SummaryItem(
-            label: 'Gesamtveränderung',
-            value: fmtSignedMoney(stats.totalGrowth, cur),
-            subValue: 'seit ${periodLabel(stats.startPeriod)}',
-            color: stats.totalGrowth >= 0 ? kPrimary : kDanger,
-          ),
-          _SummaryItem(
-            label: 'Bester Monat',
-            value: fmtSignedMoney(stats.best.delta, cur),
-            subValue: periodLabel(stats.best.period),
-            color: stats.best.delta >= 0 ? kPrimary : kDanger,
-          ),
-          _SummaryItem(
-            label: 'Schwächster Monat',
-            value: fmtSignedMoney(stats.worst.delta, cur),
-            subValue: periodLabel(stats.worst.period),
-            color: stats.worst.delta >= 0 ? kPrimary : kDanger,
-          ),
-          _SummaryItem(
-            label: 'Ø Veränderung/Monat',
-            value: fmtSignedMoney(stats.averageChange, cur),
-            subValue: '${stats.changeCount} Monate',
-            color: stats.averageChange >= 0 ? kPrimary : kDanger,
-          ),
-          _SummaryItem(
-            label: 'Monate im Plus',
-            value: '${stats.monthsUp}/${stats.changeCount}',
-            subValue: fmtPercent(stats.upShare * 100),
-            color: kPrimary,
-          ),
-          _SummaryItem(
-            label: 'Höchststand',
-            value: fmtMoney(stats.peak, cur),
-            subValue: periodLabel(stats.peakPeriod),
-            color: kPrimary,
-          ),
-          _SummaryItem(
-            label: 'Unter Höchststand',
-            value: stats.drawdownFromPeak > 0 ? '-${fmtPercent(stats.drawdownFromPeak * 100)}' : '±0 %',
-            subValue: stats.drawdownFromPeak > 0 ? 'vs. ${periodLabel(stats.peakPeriod)}' : 'am Höchststand',
-            color: stats.drawdownFromPeak > 0 ? kDanger : kPrimary,
-            hint: 'Abstand des aktuellen Stands zum bisherigen Höchststand',
-          ),
+          for (final t in tiles) _SummaryItem(label: t.label, value: t.value, subValue: t.subValue, color: t.color),
         ],
       ),
     );
   }
+}
+
+/// Flows metric tiles left-to-right at their own natural width — like [Wrap]
+/// — reflowing live as the available width changes (window resize). The one
+/// difference from a plain [Wrap]: a trailing row of exactly one tile is
+/// avoided by pulling the last tile of the previous row forward into it, so a
+/// resize never stops on a single tile stranded by itself.
+class _BalancedMetricsGrid extends StatelessWidget {
+  const _BalancedMetricsGrid({
+    required this.itemWidths,
+    required this.spacing,
+    required this.runSpacing,
+    required this.children,
+  });
+
+  /// Natural (unpadded) width of each entry in [children], same order.
+  final List<double> itemWidths;
+  final double spacing;
+  final double runSpacing;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final rows = _packRows(itemWidths, constraints.maxWidth, spacing);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var r = 0; r < rows.length; r++) ...[
+              if (r > 0) SizedBox(height: runSpacing),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var c = 0; c < rows[r].length; c++) ...[
+                    if (c > 0) SizedBox(width: spacing),
+                    children[rows[r][c]],
+                  ],
+                ],
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Greedily packs item indices into rows that fit within [maxWidth] — the
+/// same line-breaking a [Wrap] does — then, if that leaves exactly one item
+/// alone in the final row, borrows the previous row's last item to join it.
+List<List<int>> _packRows(List<double> widths, double maxWidth, double spacing) {
+  final rows = <List<int>>[];
+  var current = <int>[];
+  var currentWidth = 0.0;
+  for (var i = 0; i < widths.length; i++) {
+    final withThis = current.isEmpty ? widths[i] : currentWidth + spacing + widths[i];
+    if (current.isNotEmpty && withThis > maxWidth) {
+      rows.add(current);
+      current = [i];
+      currentWidth = widths[i];
+    } else {
+      current.add(i);
+      currentWidth = withThis;
+    }
+  }
+  if (current.isNotEmpty) rows.add(current);
+
+  if (rows.length > 1 && rows.last.length == 1) {
+    rows.last.insert(0, rows[rows.length - 2].removeLast());
+  }
+  return rows;
 }
 
 class _PresetSelector extends StatelessWidget {
@@ -997,19 +1029,17 @@ class _SubscriptionsSection extends StatelessWidget {
   }
 }
 
+const _metricLabelStyle = TextStyle(color: kMuted, fontSize: 13);
+const _metricValueStyle = TextStyle(fontSize: 20, fontWeight: FontWeight.bold);
+const _metricSubValueStyle = TextStyle(color: kMuted, fontSize: 12);
+
 class _SummaryItem extends StatelessWidget {
-  const _SummaryItem({required this.label, required this.value, this.subValue, required this.color, this.hint});
+  const _SummaryItem({required this.label, required this.value, this.subValue, required this.color});
 
   final String label;
   final String value;
   final String? subValue;
   final Color color;
-
-  /// Optional plain-language explainer for a label that isn't self-evident
-  /// (e.g. "Unter Höchststand" reads as jargon without context) — shown as a
-  /// hoverable info icon rather than permanent text, so it doesn't add
-  /// weight for readers who already know the term.
-  final String? hint;
 
   @override
   Widget build(BuildContext context) {
@@ -1017,25 +1047,32 @@ class _SummaryItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
-            if (hint != null) ...[
-              const SizedBox(width: 4),
-              Tooltip(
-                message: hint!,
-                child: const Icon(Icons.info_outline, size: 12, color: kMuted),
-              ),
-            ],
-          ],
-        ),
-        Text(
-          value,
-          style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        if (subValue != null) Text(subValue!, style: const TextStyle(color: kMuted, fontSize: 12)),
+        Text(label, style: _metricLabelStyle),
+        Text(value, style: _metricValueStyle.copyWith(color: color)),
+        if (subValue != null) Text(subValue!, style: _metricSubValueStyle),
       ],
     );
   }
+}
+
+/// Natural width a single metric tile needs (the widest of its label, value,
+/// and subValue text) — measured from the real text/style rather than
+/// guessed, so [_BalancedMetricsGrid] packs rows as tightly as the content
+/// actually allows instead of leaving unused space behind an oversized guess.
+double _metricTileWidth(BuildContext context, {required String label, required String value, String? subValue}) {
+  final scaler = MediaQuery.textScalerOf(context);
+  double measure(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+    )..layout();
+    return painter.width;
+  }
+
+  return [
+    measure(label, _metricLabelStyle),
+    measure(value, _metricValueStyle),
+    if (subValue != null) measure(subValue, _metricSubValueStyle),
+  ].reduce((a, b) => a > b ? a : b);
 }

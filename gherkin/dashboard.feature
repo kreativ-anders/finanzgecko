@@ -72,6 +72,8 @@ Feature: Dashboard — Vermögensübersicht
       Given mindestens ein Konto der aktuellen Periode hat eine von der Basiswährung abweichende Währung
       Then erscheint ein Hinweis, dass die Summe durch Wechselkurs-Rundung um wenige Cent von der Summe der einzeln
         angezeigten Kontostände abweichen kann
+      And dieser Hinweistext bleibt auf eine lesbare Zeilenbreite begrenzt statt über die volle (auf breiten Fenstern
+        sehr lange) Dashboard-Breite zu laufen
 
   Rule: Verlauf & Prognose
 
@@ -99,8 +101,8 @@ Feature: Dashboard — Vermögensübersicht
     Scenario: Zusammensetzung über Zeit zeigt beim Hover eine Monats-Tooltip
       Given der Mauszeiger steht über einem Monat der Zusammensetzungs-Karte
       Then erscheint eine senkrechte Hilfslinie an diesem Monat
-      And ein Tooltip listet jeden im Stapel enthaltenen Kontotyp mit Farbpunkt, Name und Betrag für genau diesen
-        Monat auf
+      And ein Tooltip listet jeden im Stapel enthaltenen Kontotyp mit Farbpunkt, Name, Betrag und Anteil (in Prozent
+        der Monatssumme) für genau diesen Monat auf
       And der Tooltip verschwindet, sobald der Mauszeiger die Karte verlässt
 
     Scenario: Verteilungs-Donut zeigt nur den aktuellsten Monat des aktiven Zeitraums
@@ -111,13 +113,6 @@ Feature: Dashboard — Vermögensübersicht
       Then wächst dieses Segment sichtbar leicht nach außen
       And im leeren Innenkreis des Donuts erscheinen der Kontotyp und sein Prozentanteil
       And die Anzeige verschwindet, sobald der Mauszeiger das Segment verlässt
-
-    Scenario: Währungsaufteilung nur bei mehr als einer Währung
-      Given im letzten Monat des aktiven Zeitraums werden positive Beträge in mehr als einer Währung gehalten
-      Then zeigt eine Karte "Währungsaufteilung" je Währung ihren Anteil am Vermögen (in Basiswährung
-        umgerechnet) und den Betrag
-      Given im letzten Monat wird nur eine einzige Währung gehalten
-      Then erscheint keine Währungsaufteilungs-Karte
 
     Scenario: Konzentrationsrisiko-Hinweis
       Given mindestens zwei Kontotypen mit positiver Summe existieren
@@ -133,9 +128,15 @@ Feature: Dashboard — Vermögensübersicht
       Then wird keine Kennzahlen-Karte angezeigt
       Given mindestens zwei Monate mit Daten liegen vor
       Then zeigt die Karte: Gesamtveränderung seit Startmonat, bester Monat, schwächster Monat,
-        Ø-Veränderung/Monat, Monate im Plus (Anzahl und Anteil), Höchststand und dessen Monat,
-        sowie "Unter Höchststand" (Abstand des aktuellen Stands zum Höchststand in Prozent, "±0 %"/"am
-        Höchststand" wenn der aktuelle Stand selbst der Höchststand ist)
+        Ø-Veränderung/Monat, Monate im Plus (Anzahl und Anteil) sowie Höchststand und dessen Monat
+
+    Scenario: Kennzahlen-Kacheln fließen zeilenweise gemäß verfügbarer Breite
+      Given die Kennzahlen-Karte ist schmaler als für alle Kacheln in einer Zeile nötig
+      Then füllt sich jede Zeile mit so vielen Kacheln in ihrer natürlichen Breite, wie hineinpassen,
+        und ordnet sich beim Ändern der Fensterbreite live neu an
+      Given das Zeilenumbrechen würde eine einzelne Kachel allein in der letzten Zeile zurücklassen
+      Then wird stattdessen die letzte Kachel der vorherigen Zeile in die letzte Zeile übernommen, sodass
+        keine Zeile allein dasteht
 
   Rule: Reminder-Banner (Reihenfolge ist bewusst gewählt)
 

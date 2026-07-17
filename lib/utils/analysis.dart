@@ -132,9 +132,6 @@ class NetWorthStats {
   final double peak;
   final String peakPeriod;
 
-  /// The most recent total in the series.
-  final double current;
-
   const NetWorthStats({
     required this.best,
     required this.worst,
@@ -145,15 +142,10 @@ class NetWorthStats {
     required this.startPeriod,
     required this.peak,
     required this.peakPeriod,
-    required this.current,
   });
 
   /// Share of considered months that grew, in 0..1.
   double get upShare => changeCount == 0 ? 0 : monthsUp / changeCount;
-
-  /// How far the current total sits below the all-time high, in 0..1 (0 = at
-  /// the peak). Zero when the peak is non-positive (no meaningful reference).
-  double get drawdownFromPeak => peak > 0 ? ((peak - current) / peak).clamp(0.0, 1.0).toDouble() : 0.0;
 }
 
 /// Computes [NetWorthStats] from a period-ordered [series] of totals. Returns
@@ -191,7 +183,6 @@ NetWorthStats? computeNetWorthStats(List<({String period, double total})> series
     startPeriod: series.first.period,
     peak: peak,
     peakPeriod: peakPeriod,
-    current: series.last.total,
   );
 }
 

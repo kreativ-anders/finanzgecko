@@ -177,15 +177,6 @@ void main() {
       expect(stats.startPeriod, '2026-01');
       expect(stats.peak, 1500); // high was Feb, not the last month
       expect(stats.peakPeriod, '2026-02');
-      expect(stats.current, 1400);
-      expect(stats.drawdownFromPeak, closeTo((1500 - 1400) / 1500, 1e-9));
-    });
-
-    test('drawdown is zero at an all-time high', () {
-      final stats = computeNetWorthStats([(period: '2026-01', total: 1000), (period: '2026-02', total: 1200)])!;
-      expect(stats.peak, 1200);
-      expect(stats.current, 1200);
-      expect(stats.drawdownFromPeak, 0);
     });
   });
 

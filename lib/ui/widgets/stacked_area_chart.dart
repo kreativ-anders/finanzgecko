@@ -133,6 +133,7 @@ class AppStackedAreaChart extends StatelessWidget {
                           height: constraints.maxHeight,
                           periodLabels: periodLabels,
                           active: active,
+                          totals: totals,
                           currency: currency,
                         ),
                       ),
@@ -181,6 +182,7 @@ class _StackedHoverLayer extends StatefulWidget {
     required this.height,
     required this.periodLabels,
     required this.active,
+    required this.totals,
     required this.currency,
   });
 
@@ -188,6 +190,11 @@ class _StackedHoverLayer extends StatefulWidget {
   final double height;
   final List<String> periodLabels;
   final List<StackedSeries> active;
+
+  /// Cumulative total per period (same order/length as [periodLabels]) —
+  /// the tooltip's per-series share is each series' value at the hovered
+  /// period divided by this.
+  final List<double> totals;
   final String currency;
 
   @override
@@ -229,8 +236,11 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
 
     // Only series with a nonzero value at this period are worth listing.
     final rows = widget.active.where((s) => s.values[index] > 0).toList();
+    final total = widget.totals[index];
 
-    const tooltipWidth = 170.0;
+    const tooltipWidth = 220.0;
+    const valueColumnWidth = 78.0;
+    const percentColumnWidth = 40.0;
     const gap = 10.0;
     final maxLeft = (widget.width - tooltipWidth).clamp(0.0, widget.width);
     final tooltipLeft = (x - tooltipWidth / 2).clamp(0.0, maxLeft);
@@ -265,10 +275,14 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
                     widget.periodLabels[index],
                     style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
+                  // Value and percent each get a fixed-width, right-aligned
+                  // column so both line up across rows regardless of label
+                  // length — a bare trailing Text after a flexible label
+                  // left a ragged, row-to-row-varying gap instead.
                   for (final s in rows)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.only(top: 4),
                       child: Row(
                         children: [
                           Container(
@@ -285,12 +299,27 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
                               style: const TextStyle(color: kMuted, fontSize: 11),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            widget.currency.isEmpty
-                                ? s.values[index].toStringAsFixed(0)
-                                : fmtMoney(s.values[index], widget.currency),
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          SizedBox(
+                            width: valueColumnWidth,
+                            child: Text(
+                              widget.currency.isEmpty
+                                  ? s.values[index].toStringAsFixed(0)
+                                  : fmtMoney(s.values[index], widget.currency),
+                              textAlign: TextAlign.right,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          SizedBox(
+                            width: percentColumnWidth,
+                            child: Text(
+                              fmtPercent(total > 0 ? s.values[index] / total * 100 : 0.0),
+                              textAlign: TextAlign.right,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: kMuted, fontSize: 11),
+                            ),
                           ),
                         ],
                       ),
