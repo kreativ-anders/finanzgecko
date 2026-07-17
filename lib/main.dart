@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'data/app_data.dart';
+import 'data/app_schema.dart';
 import 'data/app_store.dart';
 import 'state/app_state.dart';
-import 'ui/app_shell.dart';
+import 'ui/navigation_shell.dart';
 import 'ui/splash_screen.dart';
 import 'ui/theme.dart';
 
@@ -86,7 +86,7 @@ class FinanzGeckoApp extends StatelessWidget {
         title: 'FinanzGecko',
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
-        home: const SelectionArea(child: SplashScreen(child: AppShell())),
+        home: const SelectionArea(child: SplashScreen(child: NavigationShell())),
       ),
     );
   }

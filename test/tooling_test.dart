@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:finanzgecko/constants.dart';
-import 'package:finanzgecko/data/app_data.dart';
+import 'package:finanzgecko/data/app_schema.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
@@ -36,7 +36,7 @@ void main() {
     test('writes an importable demo file', () {
       final file = File('demo/finanzgecko-demo.json');
       expect(file.existsSync(), isTrue);
-      final data = AppData.fromDynamic(jsonDecode(file.readAsStringSync()));
+      final data = AppSchema.fromDynamic(jsonDecode(file.readAsStringSync()));
       expect(data, isNotNull);
       expect(data!.accounts, hasLength(6));
       expect(data.balances, hasLength(19 * 6));
@@ -89,7 +89,7 @@ void main() {
     });
 
     test('round-trips through export -> import', () {
-      final reparsed = AppData.fromDynamic(AppData.fromDynamic(backup)!.toExportJson())!;
+      final reparsed = AppSchema.fromDynamic(AppSchema.fromDynamic(backup)!.toExportJson())!;
       expect(reparsed.balances, hasLength(19 * 6));
       expect(reparsed.subscriptions, hasLength(8));
     });

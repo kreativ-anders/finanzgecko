@@ -1,4 +1,5 @@
 # Quelle: lib/ui/views/entries_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/balance.dart
+# Implementierung: lib/ui/views/entries_view.dart
 @balances @entries
 Feature: Monatliche Kontostände erfassen
   Als Nutzer:in erfasse ich monatlich die Kontostände all meiner Konten an einer Stelle, damit das Dashboard einen

@@ -1,4 +1,5 @@
 # Quelle: lib/services/currency_service.dart, lib/ui/widgets/manual_rate_dialog.dart, lib/data/app_store.dart
+# Implementierung: lib/services/currency_service.dart
 @currency
 Feature: Wechselkurse — Abruf, Cache und manueller Fallback
   Als Nutzer:in mit Konten/Fixposten in Fremdwährung möchte ich, dass die App automatisch aktuelle Wechselkurse

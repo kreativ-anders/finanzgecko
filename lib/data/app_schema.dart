@@ -27,7 +27,7 @@ class WindowPrefs {
 /// In-memory representation of the whole app database — a single JSON file
 /// on disk, matching the schema of existing exports/backups so they stay
 /// readable.
-class AppData {
+class AppSchema {
   int schemaVersion;
   String baseCurrency;
   List<Account> accounts;
@@ -42,7 +42,7 @@ class AppData {
   DateTime? lastExportAt;
   WindowPrefs window;
 
-  AppData({
+  AppSchema({
     required this.schemaVersion,
     required this.baseCurrency,
     required this.accounts,
@@ -58,7 +58,7 @@ class AppData {
     required this.window,
   });
 
-  factory AppData.defaults() => AppData(
+  factory AppSchema.defaults() => AppSchema(
     schemaVersion: currentSchemaVersion,
     baseCurrency: 'EUR',
     accounts: [],
@@ -75,9 +75,9 @@ class AppData {
   );
 
   /// Parses a decoded JSON value. Returns null if it isn't a usable object
-  /// at all (caller then falls back to fresh [AppData.defaults]). Individual
+  /// at all (caller then falls back to fresh [AppSchema.defaults]). Individual
   /// malformed list entries are skipped rather than failing the whole file.
-  static AppData? fromDynamic(dynamic parsed) {
+  static AppSchema? fromDynamic(dynamic parsed) {
     if (parsed is! Map) return null;
     final json = parsed;
 
@@ -120,7 +120,7 @@ class AppData {
 
     final lastExportAtRaw = meta['lastExportAt'];
 
-    return AppData(
+    return AppSchema(
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? currentSchemaVersion,
       baseCurrency: json['baseCurrency'] is String ? json['baseCurrency'] as String : 'EUR',
       accounts: parseList('accounts', Account.fromJson),

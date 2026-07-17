@@ -1,15 +1,11 @@
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../state/app_state.dart';
-import '../utils/csv_export.dart';
 import 'app_view.dart';
+import 'backup_actions.dart';
 import 'theme.dart';
 import 'views/accounts_view.dart';
 import 'views/assets_view.dart';
@@ -17,105 +13,22 @@ import 'views/dashboard_view.dart';
 import 'views/entries_view.dart';
 import 'views/settings_view.dart';
 import 'views/subscriptions_view.dart';
-import 'widgets/app_snackbar.dart';
 
-const _backupTypeGroups = [
-  XTypeGroup(label: 'JSON-Backup', extensions: ['json']),
-];
-
-const _csvTypeGroups = [
-  XTypeGroup(label: 'CSV', extensions: ['csv']),
-];
-
-class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+/// Navigations-Shell der App: Top-Navigation über die sechs Ansichten,
+/// In-App-"Datei"-Menü-Ersatz und globale Tastenkürzel. Der Backup-Fluss selbst
+/// liegt in `backup_actions.dart`; hier wird er nur verdrahtet (Feature
+/// `navigation` vs. `backup_restore`).
+class NavigationShell extends StatefulWidget {
+  const NavigationShell({super.key});
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  State<NavigationShell> createState() => _NavigationShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _NavigationShellState extends State<NavigationShell> {
   AppView _view = AppView.dashboard;
 
   void _navigate(AppView view) => setState(() => _view = view);
-
-  Future<void> _handleExport() async {
-    final appState = context.read<AppState>();
-    final exportData = appState.exportAllData();
-    final suggestedName = 'finanzgecko-backup-${DateTime.now().toIso8601String().substring(0, 10)}.json';
-
-    final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _backupTypeGroups);
-    if (location == null) return; // Dialog abgebrochen
-
-    try {
-      final jsonStr = const JsonEncoder.withIndent('  ').convert(exportData);
-      await File(location.path).writeAsString(jsonStr);
-      await appState.markExported();
-      if (!mounted) return;
-      showSavedSnackBar(context, _navigate, message: 'Backup exportiert.');
-    } catch (err) {
-      if (!mounted) return;
-      showErrorSnackBar(context, 'Export fehlgeschlagen: $err');
-    }
-  }
-
-  /// Exports the Kontostände as a CSV table (for spreadsheets). Unlike the JSON
-  /// backup this is lossy and read-only, so it deliberately does NOT count as a
-  /// backup (no `markExported`, doesn't reset the Backup-Reminder).
-  Future<void> _handleExportCsv() async {
-    final appState = context.read<AppState>();
-    final csv = buildBalancesCsv(
-      appState.store.getAccounts(includeArchived: true),
-      appState.balances,
-      baseCurrency: appState.baseCurrency,
-    );
-    final suggestedName = 'finanzgecko-kontostaende-${DateTime.now().toIso8601String().substring(0, 10)}.csv';
-
-    final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _csvTypeGroups);
-    if (location == null) return; // Dialog abgebrochen
-
-    try {
-      // Leading BOM so Excel opens the UTF-8 file with correct umlauts.
-      await File(location.path).writeAsString('\u{FEFF}$csv');
-      if (!mounted) return;
-      showSavedSnackBar(context, _navigate, message: 'CSV exportiert.');
-    } catch (err) {
-      if (!mounted) return;
-      showErrorSnackBar(context, 'CSV-Export fehlgeschlagen: $err');
-    }
-  }
-
-  Future<void> _handleImport() async {
-    final appState = context.read<AppState>();
-    final file = await openFile(acceptedTypeGroups: _backupTypeGroups);
-    if (file == null) return; // Dialog abgebrochen
-
-    if (!mounted) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Backup importieren'),
-        content: const Text('Import ersetzt ALLE aktuellen Daten. Fortfahren?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
-          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Importieren'))),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    try {
-      final raw = await file.readAsString();
-      final imported = jsonDecode(raw) as Map<String, dynamic>;
-      await appState.importAllData(imported);
-      if (!mounted) return;
-      setState(() => _view = AppView.dashboard);
-      showSavedSnackBar(context, _navigate, message: 'Import abgeschlossen.');
-    } catch (err) {
-      if (!mounted) return;
-      showErrorSnackBar(context, 'Import fehlgeschlagen: Datei ist kein gültiges Backup.\n$err');
-    }
-  }
 
   Future<void> _handleQuit() async {
     await windowManager.close();
@@ -128,8 +41,8 @@ class _AppShellState extends State<AppShell> {
 
     return CallbackShortcuts(
       bindings: {
-        LogicalKeySet(modKey, LogicalKeyboardKey.keyE): _handleExport,
-        LogicalKeySet(modKey, LogicalKeyboardKey.keyI): _handleImport,
+        LogicalKeySet(modKey, LogicalKeyboardKey.keyE): () => exportBackup(context, _navigate),
+        LogicalKeySet(modKey, LogicalKeyboardKey.keyI): () => importBackup(context, _navigate),
         LogicalKeySet(modKey, LogicalKeyboardKey.keyQ): _handleQuit,
       },
       child: Focus(
@@ -165,9 +78,9 @@ class _AppShellState extends State<AppShell> {
         return SubscriptionsView(onNavigate: _navigate);
       case AppView.settings:
         return SettingsView(
-          onExport: _handleExport,
-          onExportCsv: _handleExportCsv,
-          onImport: _handleImport,
+          onExport: () => exportBackup(context, _navigate),
+          onExportCsv: () => exportBalancesCsv(context, _navigate),
+          onImport: () => importBackup(context, _navigate),
           onNavigate: _navigate,
         );
     }

@@ -1,4 +1,5 @@
 # Quelle: lib/ui/views/accounts_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/account.dart
+# Implementierung: lib/ui/views/accounts_view.dart
 @accounts
 Feature: Konten verwalten
   Als Nutzer:in verwalte ich meine Konten (Girokonto, Tagesgeld, Depot, Bargeld, Krypto, …), damit ich darauf

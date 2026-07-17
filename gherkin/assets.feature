@@ -1,4 +1,5 @@
 # Quelle: lib/ui/views/assets_view.dart, lib/state/app_state.dart, lib/models/asset.dart, lib/constants.dart
+# Implementierung: lib/ui/views/assets_view.dart
 @assets
 Feature: Vermögenswerte (Sachwerte) verwalten
   Als Nutzer:in erfasse ich Sachwerte wie Elektronik, Möbel oder Fahrzeuge mit ihrem aktuellen Wert, getrennt von den

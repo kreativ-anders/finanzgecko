@@ -1,8 +1,8 @@
 // Gherkin: gherkin/backup_restore.feature
-import 'package:finanzgecko/data/app_data.dart';
+import 'package:finanzgecko/data/app_schema.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Hardening for the backup export/import JSON contract at the [AppData] level
+/// Hardening for the backup export/import JSON contract at the [AppSchema] level
 /// (no keychain needed). Store-level concerns — schema-version rejection,
 /// encrypted round-trip — live in test/app_store_ops_test.dart.
 void main() {
@@ -54,9 +54,9 @@ void main() {
   };
 
   test('a full backup round-trips through export -> import with every section intact', () {
-    final parsed = AppData.fromDynamic(fullBackup())!;
+    final parsed = AppSchema.fromDynamic(fullBackup())!;
     // Simulate: user exports, then re-imports the exported file.
-    final reparsed = AppData.fromDynamic(parsed.toExportJson())!;
+    final reparsed = AppSchema.fromDynamic(parsed.toExportJson())!;
     expect(reparsed.baseCurrency, 'CHF');
     expect(reparsed.accounts.single.name, 'Girokonto');
     expect(reparsed.balances.single.amountBase, 2500.0);
@@ -72,7 +72,7 @@ void main() {
       {'id': 2}, // missing required accountId/period -> skipped
       'not-a-map', // wrong type -> skipped
     ];
-    final parsed = AppData.fromDynamic(backup)!;
+    final parsed = AppSchema.fromDynamic(backup)!;
     expect(parsed.balances, hasLength(1)); // the valid one survives
     expect(parsed.accounts, hasLength(1));
     expect(parsed.assets, hasLength(1));
@@ -80,17 +80,17 @@ void main() {
   });
 
   test('unknown top-level keys are ignored, not fatal', () {
-    final parsed = AppData.fromDynamic({...fullBackup(), 'somethingFromAnotherTool': 42})!;
+    final parsed = AppSchema.fromDynamic({...fullBackup(), 'somethingFromAnotherTool': 42})!;
     expect(parsed.accounts, hasLength(1));
   });
 
   test('a non-string baseCurrency falls back to EUR', () {
-    final parsed = AppData.fromDynamic({...fullBackup(), 'baseCurrency': 123})!;
+    final parsed = AppSchema.fromDynamic({...fullBackup(), 'baseCurrency': 123})!;
     expect(parsed.baseCurrency, 'EUR');
   });
 
   test('a missing schemaVersion defaults to the current version', () {
     final backup = fullBackup()..remove('schemaVersion');
-    expect(AppData.fromDynamic(backup)!.schemaVersion, currentSchemaVersion);
+    expect(AppSchema.fromDynamic(backup)!.schemaVersion, currentSchemaVersion);
   });
 }

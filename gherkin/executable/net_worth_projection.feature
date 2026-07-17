@@ -1,4 +1,5 @@
 # Quelle: lib/utils/analysis.dart
+# Implementierung: lib/utils/analysis.dart
 # Ausführbar: test/bdd/analysis_bdd_test.dart (Runner: test/support/gherkin_runner.dart)
 @executable @dashboard
 Feature: Vermögensprognose und Kennzahlen (reine Logik)

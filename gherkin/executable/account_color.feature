@@ -1,4 +1,5 @@
 # Quelle: lib/constants.dart
+# Implementierung: lib/constants.dart
 # Ausführbar: test/bdd/account_color_bdd_test.dart (Runner: test/support/gherkin_runner.dart)
 @executable @accounts
 Feature: Konto-Akzentfarbe wird aus der Bank abgeleitet

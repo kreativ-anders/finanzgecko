@@ -13,6 +13,10 @@ discussing it first.
 **Navigate, don't scan.** To change a behavior: find it in AI_MASTER **§8 Feature-Übersicht** → open that feature's
 `# Quelle:` files → find its test via the §8 table or `grep "// Gherkin: <feature>"`. Edit only that narrow set.
 
+**Regenerate a feature:** rewrite only its `# Implementierung:` file (the primary target named in the feature header)
+against the feature's scenarios + its test; treat the other `# Quelle:` files (shared `app_state`/`app_store` facades)
+as fixed context. See AI_MASTER "Regenerierung eines Features". Pure-logic (`@executable`) features are true 1:1.
+
 **Keep the layering.** Pure, testable logic lives in `lib/utils/analysis.dart` and `lib/constants.dart`; views stay
 thin. For new pure behavior, add a `Scenario` in `gherkin/executable/*.feature` + one `s.step(...)` in `test/bdd/`.
 

@@ -1,4 +1,5 @@
-# Quelle: lib/ui/app_shell.dart, lib/data/app_store.dart, lib/data/app_data.dart
+# Quelle: lib/ui/backup_actions.dart, lib/ui/navigation_shell.dart, lib/data/app_store.dart, lib/data/app_schema.dart
+# Implementierung: lib/ui/backup_actions.dart
 @backup
 Feature: Backup exportieren und importieren
   Als Nutzer:in kann ich meine gesamten Daten als Klartext-JSON exportieren (z. B. für einen Rechnerwechsel oder als

@@ -1,4 +1,5 @@
-# Quelle: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_data.dart
+# Quelle: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_schema.dart
+# Implementierung: lib/data/app_store.dart
 @security @persistence
 Feature: Datenspeicherung, Verschlüsselung und Integrität
   Als Nutzer:in erwarte ich, dass meine Vermögensdaten ausschließlich lokal, verschlüsselt und robust gegenüber

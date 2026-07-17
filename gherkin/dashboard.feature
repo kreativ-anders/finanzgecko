@@ -1,4 +1,5 @@
 # Quelle: lib/ui/views/dashboard_view.dart, lib/state/app_state.dart, lib/utils/analysis.dart, lib/constants.dart
+# Implementierung: lib/ui/views/dashboard_view.dart
 @dashboard
 Feature: Dashboard — Vermögensübersicht
   Als Nutzer:in sehe ich auf einen Blick mein Gesamtvermögen, dessen Verlauf und Prognose, die Verteilung nach

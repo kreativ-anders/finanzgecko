@@ -1,4 +1,5 @@
 # Quelle: lib/ui/views/subscriptions_view.dart, lib/state/app_state.dart, lib/models/subscription.dart, lib/constants.dart
+# Implementierung: lib/ui/views/subscriptions_view.dart
 @subscriptions
 Feature: Fixposten (wiederkehrende Ein-/Ausgaben) verwalten
   Als Nutzer:in erfasse ich wiederkehrende Ein- und Ausgaben (Gehalt, Miete, Abos, Dividenden), damit die App meinen

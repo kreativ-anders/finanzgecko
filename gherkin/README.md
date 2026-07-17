@@ -35,7 +35,10 @@ Spezifikation, aus der die App **nahezu identisch neu generiert** oder konsisten
 | `settings.feature` | Basiswährung, Sicherheits-Info, Reset |
 | `backup_restore.feature` | Export/Import von Backups |
 | `data_security.feature` | Verschlüsselung, Dateiintegrität, Migration |
-| `window_and_navigation.feature` | Fensterverhalten, In-App-Menü, Tastenkürzel, Navigation |
+| `window.feature` | Fensterverhalten (Größe/Maximiert), Standard-/Mindestgröße, Splash |
+| `navigation.feature` | Top-Navigation, Banner-Sprünge, In-App-Datei-Menü, Tastenkürzel, Textauswahl |
+| `executable/account_color.feature` | (ausführbar) Konto-Akzentfarbe aus der Bank ableiten |
+| `executable/net_worth_projection.feature` | (ausführbar) Trend/Prognose/Kennzahlen/Anomalie |
 
 ## Pflicht bei Änderungen
 

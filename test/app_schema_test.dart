@@ -1,5 +1,5 @@
 // Gherkin: gherkin/data_security.feature
-import 'package:finanzgecko/data/app_data.dart';
+import 'package:finanzgecko/data/app_schema.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _account(int id, {String name = 'Konto'}) => {
@@ -14,15 +14,15 @@ Map<String, dynamic> _account(int id, {String name = 'Konto'}) => {
 };
 
 void main() {
-  group('AppData.fromDynamic', () {
+  group('AppSchema.fromDynamic', () {
     test('returns null for non-map input', () {
-      expect(AppData.fromDynamic('nope'), isNull);
-      expect(AppData.fromDynamic(<dynamic>[]), isNull);
-      expect(AppData.fromDynamic(null), isNull);
+      expect(AppSchema.fromDynamic('nope'), isNull);
+      expect(AppSchema.fromDynamic(<dynamic>[]), isNull);
+      expect(AppSchema.fromDynamic(null), isNull);
     });
 
     test('fills defaults for an empty map', () {
-      final data = AppData.fromDynamic(<String, dynamic>{})!;
+      final data = AppSchema.fromDynamic(<String, dynamic>{})!;
       expect(data.baseCurrency, 'EUR');
       expect(data.accounts, isEmpty);
       expect(data.schemaVersion, currentSchemaVersion);
@@ -30,7 +30,7 @@ void main() {
     });
 
     test('skips malformed list entries but keeps valid ones', () {
-      final data = AppData.fromDynamic({
+      final data = AppSchema.fromDynamic({
         'accounts': [
           _account(1, name: 'Gut'),
           {'name': 'Kein-ID'}, // missing required id -> skipped
@@ -41,7 +41,7 @@ void main() {
     });
 
     test('reads id counters from the meta block', () {
-      final data = AppData.fromDynamic({
+      final data = AppSchema.fromDynamic({
         'meta': {'nextAccountId': 7, 'nextBalanceId': 3},
       })!;
       expect(data.nextAccountId, 7);
@@ -49,7 +49,7 @@ void main() {
     });
 
     test('parses only numeric legacy ratesCache entries', () {
-      final data = AppData.fromDynamic({
+      final data = AppSchema.fromDynamic({
         'ratesCache': {'USD_EUR_2025-01-31': 0.92, 'bad': 'x'},
       })!;
       expect(data.ratesCache['USD_EUR_2025-01-31'], 0.92);
@@ -59,12 +59,12 @@ void main() {
 
   group('serialization', () {
     test('toJson no longer embeds the rate cache', () {
-      final data = AppData.defaults()..ratesCache['USD_EUR'] = 0.9;
+      final data = AppSchema.defaults()..ratesCache['USD_EUR'] = 0.9;
       expect(data.toJson().containsKey('ratesCache'), isFalse);
     });
 
     test('toExportJson excludes internal-only state', () {
-      final json = AppData.defaults().toExportJson();
+      final json = AppSchema.defaults().toExportJson();
       expect(json.containsKey('meta'), isFalse);
       expect(json.containsKey('window'), isFalse);
       expect(json.containsKey('ratesCache'), isFalse);
@@ -73,7 +73,7 @@ void main() {
     });
 
     test('toExportJson omits the derived account color, keeping bank + tag', () {
-      final parsed = AppData.fromDynamic({
+      final parsed = AppSchema.fromDynamic({
         'accounts': [_account(1)], // _account carries a color
       })!;
       final acc = (parsed.toExportJson()['accounts'] as List).single as Map;
@@ -83,8 +83,8 @@ void main() {
     });
 
     test('round-trips accounts through toJson -> fromDynamic', () {
-      final original = AppData.defaults();
-      final parsed = AppData.fromDynamic({
+      final original = AppSchema.defaults();
+      final parsed = AppSchema.fromDynamic({
         ...original.toJson(),
         'accounts': [_account(5, name: 'Wieder da')],
       })!;

@@ -57,7 +57,7 @@ finanzgecko/
 │   ├── constants.dart            # Domänen-Konstanten: Tags/Kontotypen, Farben, Banken-Liste, Währungen, Schwellwerte
 │   ├── data/
 │   │   ├── app_store.dart        # Persistenzschicht: Verschlüsselung, atomare Writes, Write-Queue, Export/Import
-│   │   ├── app_data.dart         # In-Memory-Schema der JSON-Datei (schemaVersion, Listen, meta, window)
+│   │   ├── app_schema.dart       # In-Memory-Schema der JSON-Datei (Klasse AppSchema: schemaVersion, Listen, meta, window)
 │   │   └── secure_key_store.dart # AES-Schlüssel im OS-Keychain (flutter_secure_storage)
 │   ├── models/                   # Datenklassen mit fromJson/toJson: Account, Balance, Asset, Subscription
 │   ├── services/
@@ -69,7 +69,8 @@ finanzgecko/
 │   │   ├── csv_export.dart       # Reiner CSV-Builder für den Kontostände-Export (verlustbehaftet, kein Re-Import)
 │   │   └── formatting.dart       # Geld-/Prozent-/Datumsformatierung, Zahlen-Parsing, Perioden-Helper, Hex→Color
 │   └── ui/
-│       ├── app_shell.dart        # Navigation, In-App-"Datei"-Menü, Tastenkürzel, Export-/Import-Dialoge
+│       ├── navigation_shell.dart # Navigation-Shell: Top-Nav, In-App-"Datei"-Menü, Tastenkürzel-Wiring (→ backup_actions)
+│       ├── backup_actions.dart   # Backup-Fluss: Export-/Import-/CSV-Datei-Dialoge, Sicherheitsabfrage, Snackbars
 │       ├── app_view.dart         # enum AppView (die 6 Ansichten) + deutsche Labels
 │       ├── splash_screen.dart    # Splash beim Start
 │       ├── theme.dart            # Farb-Konstanten (dark theme), ThemeData, `noSelect()`-Helper
@@ -101,7 +102,7 @@ finanzgecko/
 | `assets_view.dart` | `assets` | Vermögenswerte | Sachwerte (kein Zeitverlauf) anlegen/inline bearbeiten/löschen |
 | `settings_view.dart` | `settings` | Einstellungen | Basiswährung, Sicherheits-Info, Backup-Export/Import, CSV-Export, Reset |
 
-Navigation ist **kein Router**, sondern ein einfacher `enum`-Switch in `app_shell.dart` (`_content()`), gesteuert über
+Navigation ist **kein Router**, sondern ein einfacher `enum`-Switch in `navigation_shell.dart` (`_content()`), gesteuert über
 `ValueChanged<AppView> onNavigate`, das jede View nach oben durchreicht (z. B. für "Jetzt erfassen"-Buttons in
 Bannern, die zu einer anderen View springen).
 
@@ -111,7 +112,7 @@ Bannern, die zu einer anderen View springen).
 AppStore (Persistenz, Verschlüsselung, Write-Queue)
    │  liest/schreibt
    ▼
-AppData (In-Memory-Schema, JSON-Serialisierung)
+AppSchema (In-Memory-Schema, JSON-Serialisierung)
    │  wird gekapselt von
    ▼
 AppState extends ChangeNotifier (CRUD-Fassade + berechnete Werte)
@@ -164,9 +165,9 @@ automatisch über `Provider`.
     sonst virtualisiert macOS `$HOME` auf einen Container-Pfad und `resolveDataDirectory()` würde am dokumentierten
     Pfad vorbeischreiben.
 
-### 4.2 Schema (`lib/data/app_data.dart`)
+### 4.2 Schema (`lib/data/app_schema.dart`)
 
-`AppData` ist das komplette In-Memory-Abbild der JSON-Datei: `schemaVersion`, `baseCurrency`, Listen (`accounts`,
+`AppSchema` ist das komplette In-Memory-Abbild der JSON-Datei: `schemaVersion`, `baseCurrency`, Listen (`accounts`,
 `balances`, `assets`, `subscriptions`), `ratesCache` (Legacy-Migrationspfad, s.o.), Auto-Increment-IDs
 (`nextAccountId` etc.), `lastExportAt`, `window` (`WindowPrefs`). `fromDynamic()` ist **fehlertolerant pro Eintrag**:
 eine kaputte Zeile in einer Liste wird übersprungen statt die ganze Datei unlesbar zu machen. `toExportJson()` ist
@@ -290,23 +291,53 @@ Alle Verhaltensspezifikationen auf einen Blick — Einstieg für eine KI, um vom
 | `gherkin/assets.feature` | Vermögenswerte CRUD, 6-Monats-Reminder | Unit (`app_store_ops_test`) |
 | `gherkin/settings.feature` | Basiswährung, Sicherheit, Backup-Export/Import, CSV-Export, Reset | Unit (`csv_export_test`) |
 | `gherkin/backup_restore.feature` | Export/Import (JSON), Schemaprüfung, Bank→Farbe-Import, Fehlertoleranz | Unit (`app_store_ops_test`, `backup_hardening_test`) |
-| `gherkin/data_security.feature` | AES-256-GCM, OS-Keychain, Quarantäne, Schema-Parsing | Unit (`app_data_test`, `app_store_encryption_test`) |
+| `gherkin/data_security.feature` | AES-256-GCM, OS-Keychain, Quarantäne, Schema-Parsing | Unit (`app_schema_test`, `app_store_encryption_test`) |
 | `gherkin/currency_exchange.feature` | Wechselkurse (frankfurter.dev), Cache, Offline-Fallback, manueller Kurs | nur UI/Integration (kein Unit-Test) |
-| `gherkin/window_and_navigation.feature` | Fenstergröße/Maximiert, Navigation, Splash, Tastenkürzel | nur UI/Integration (kein Unit-Test) |
+| `gherkin/window.feature` | Fenstergröße/Maximiert-Status, Standard-/Mindestgröße, Splash | nur UI/Integration (kein Unit-Test) |
+| `gherkin/navigation.feature` | Top-Navigation (6 Ansichten), Banner-Sprünge, In-App-Datei-Menü, Tastenkürzel, Textauswahl | nur UI/Integration (kein Unit-Test) |
 | `gherkin/executable/account_color.feature` | resolveAccountColor-Regeln | **ausführbar** (`test/bdd/account_color_bdd_test.dart`) |
 | `gherkin/executable/net_worth_projection.feature` | Trend/Prognose/Kennzahlen/Anomalie | **ausführbar** (`test/bdd/analysis_bdd_test.dart`) |
+
+### Regenerierung eines Features (1 Feature → 1 Primär-Datei)
+
+Jede Feature-Datei nennt im Kopf zwei Pfad-Header:
+- **`# Implementierung:`** — die **eine** Datei, die das Feature primär umsetzt und das **Regenerierungsziel** ist
+  (die `*_view.dart` einer Ansicht, das Fassaden-File bei Infrastruktur-Features, oder das reine Modul bei
+  ausführbaren Features).
+- **`# Quelle:`** — **alle** berührten Dateien: die Primär-Datei **plus** geteilte Infrastruktur.
+
+**Rezept „Feature X neu erzeugen":** die `# Implementierung:`-Datei löschen/neu schreiben; Vertrag sind die
+Szenarien der Feature-Datei **und** ihr Test (via Tabelle unten bzw. `grep "// Gherkin: <feature>"`). Die übrigen
+`# Quelle:`-Dateien sind **fixer, geteilter Kontext** — lesen und höchstens um den Feature-Slice erweitern, nicht als
+Ganzes neu erzeugen.
+
+**Warum nicht strikt 1:1 für alles:** Die Fassaden `app_state.dart` (State) und `app_store.dart` (Persistenz) werden
+bewusst von je ~6 Features geteilt (Schichtenarchitektur, Abschnitt 4 — eine einzige verschlüsselte JSON-Datei, keine
+Pro-Feature-Duplizierung); sie sind nie das alleinige Ausgabe-File eines Features. **Echtes 1:1** gibt es bei den
+**ausführbaren** Features (`analysis.dart`, `resolveAccountColor` in `constants.dart`): dort ist das Verhalten durch
+Feature + Step-Defs vollständig festgezurrt — die Primär-Datei lässt sich löschen und allein aus Spec + BDD-Tests neu
+erzeugen. Neues rein-fachliches Verhalten deshalb bevorzugt dort ansiedeln.
+
+Wo zwei Features sonst dieselbe Primär-Datei beanspruchen würden, wird bewusst getrennt: der reine Backup-Fluss
+(Datei-Dialoge, Sicherheitsabfrage, Snackbars) liegt in `backup_actions.dart` (Primär von `backup_restore`), während
+`navigation_shell.dart` nur noch Navigations-Shell ist (Primär von `navigation`) und die Kürzel/Menü-Einträge lediglich an
+`backup_actions` weiterreicht. Die eigentliche Persistenz/Schemaprüfung bleibt in `app_store.dart` (geteilter
+`# Quelle:`-Kontext, siehe oben).
+
+`test/gherkin_sync_test.dart` (Invariante 5) erzwingt: jede Feature-Datei hat eine `# Implementierung:`, die existiert
+und in `# Quelle:` gelistet ist.
 
 ### Testdateien
 
 | Testdatei | Deckt ab | Zugehöriges Feature |
 |---|---|---|
 | `test/analysis_test.dart` | Reine Berechnungen (Trend, Prognose, Anomalie, Kennzahlen) | `gherkin/dashboard.feature` |
-| `test/app_data_test.dart` | Schema-Parsing, Fehlertoleranz, Export-Shape | `gherkin/data_security.feature` |
+| `test/app_schema_test.dart` | Schema-Parsing, Fehlertoleranz, Export-Shape | `gherkin/data_security.feature` |
 | `test/app_state_test.dart` | AppState-CRUD & abgeleitete Werte (Reminder, Summen) | mehrere Features |
 | `test/app_store_encryption_test.dart` | Envelope-Verschlüsselung, Quarantäne unlesbarer Dateien | `gherkin/data_security.feature` |
 | `test/app_store_ops_test.dart` | Store-CRUD, Export/Import, Schema-Versionsprüfung, Import-Bank→Farbe-Regel | `gherkin/backup_restore.feature` |
 | `test/account_color_test.dart` | `resolveAccountColor` (bekannte Bank → Markenfarbe, leer → Kontotyp, unbekannt → Fehler) | `gherkin/accounts.feature`, `gherkin/backup_restore.feature` |
-| `test/backup_hardening_test.dart` | Backup-Export→Import-Round-Trip & Fehlertoleranz (AppData-Ebene) | `gherkin/backup_restore.feature` |
+| `test/backup_hardening_test.dart` | Backup-Export→Import-Round-Trip & Fehlertoleranz (AppSchema-Ebene) | `gherkin/backup_restore.feature` |
 | `test/csv_export_test.dart` | CSV-Export (Trennzeichen, Dezimalkomma, Sortierung, Quoting) | `gherkin/settings.feature` |
 | `test/tooling_test.dart` | **Regeneriert beim Testlauf** die Demodaten (`buildDemoBackup` → `demo/…json`) und die Linux-Hicolor-Icons (`generateLinuxIcons`) und validiert sie (Schema, Referenzen, Domänenwerte, Icon-Größen) | Dev-Tooling (kein Feature) |
 | `test/entries_view_orphan_test.dart` | Verwaiste Balances archivierter Konten | `gherkin/balances_entries.feature` |
@@ -325,10 +356,13 @@ Tests auseinanderlaufen:
 1. Jede `gherkin/*.feature` braucht einen `# Quelle:`-Header, dessen Quellcode-Pfade alle existieren.
 2. Ein Test verlinkt das/die Feature(s), das/die er abdeckt, mit einer Kopfzeile `// Gherkin: gherkin/<x>.feature`
    (mehrere kommagetrennt). Jeder Marker muss auf eine existierende Feature-Datei zeigen.
-3. Genau die im Test hinterlegte Allow-List (`featuresWithoutUnitTest`, aktuell `currency_exchange` +
-   `window_and_navigation`) darf ohne Unit-Test sein — jede Abweichung (neues ungetestetes Feature, oder ein jetzt
+3. Genau die im Test hinterlegte Allow-List (`featuresWithoutUnitTest`, aktuell `currency_exchange`, `window` +
+   `navigation`) darf ohne Unit-Test sein — jede Abweichung (neues ungetestetes Feature, oder ein jetzt
    getestetes Feature) bricht den Testlauf ab und erzwingt entweder einen Test-Marker oder eine bewusste Anpassung
    der Allow-List. So bleibt `gherkin/` kein isoliertes Doku-Silo, sondern hängt am Testlauf.
+4. Jede Feature-Datei ist in AI_MASTER.md indexiert (Feature-Übersicht).
+5. Jede Feature-Datei hat eine `# Implementierung:` (Regenerierungsziel), die existiert und in `# Quelle:` steht
+   (siehe „Regenerierung eines Features" oben).
 
 ### Zwei Sorten Features — deklarativ vs. ausführbar
 
@@ -395,8 +429,8 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    praktikabel — mindestens aber **spätestens im selben Schritt wie die Implementierung**, nie danach "irgendwann".
 
 7. **Reihenfolge für eine komplette Neu-Generierung** (z. B. mit einem anderen KI-Modell von Null): Datenmodelle
-   (`lib/models/`) → `AppData`/`AppStore` (Persistenz+Verschlüsselung) → `CurrencyService` → `AppState` →
-   `theme.dart`/`constants.dart` → Widgets (`lib/ui/widgets/`) → Views (`lib/ui/views/`) → `app_shell.dart` →
+   (`lib/models/`) → `AppSchema`/`AppStore` (Persistenz+Verschlüsselung) → `CurrencyService` → `AppState` →
+   `theme.dart`/`constants.dart` → Widgets (`lib/ui/widgets/`) → Views (`lib/ui/views/`) → `navigation_shell.dart` →
    `main.dart`. Jede Stufe gegen das jeweilige `gherkin/*.feature` verifizieren, bevor die nächste beginnt.
 
 8. **Nicht-funktionale Anforderungen nie vergessen**, auch wenn sie in keinem einzelnen Gherkin-Szenario explizit

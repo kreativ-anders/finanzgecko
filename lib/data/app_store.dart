@@ -9,7 +9,7 @@ import '../models/account.dart';
 import '../models/asset.dart';
 import '../models/balance.dart';
 import '../models/subscription.dart';
-import 'app_data.dart';
+import 'app_schema.dart';
 import 'secure_key_store.dart';
 
 const String _applicationId = 'de.finanzgecko.app';
@@ -55,7 +55,7 @@ class AppStore {
 
   final Directory? _dataDirectoryOverride;
   final bool persistToDisk;
-  AppData? _data;
+  AppSchema? _data;
   String? _filePath;
   String? _ratesFilePath;
   final Map<String, double> _ratesCache = {};
@@ -90,7 +90,7 @@ class AppStore {
     return path;
   }
 
-  AppData get _requireData {
+  AppSchema get _requireData {
     final data = _data;
     if (data == null) {
       throw StateError('Store not initialized. Call ensureInitialized() first.');
@@ -200,7 +200,7 @@ class AppStore {
     // In-memory mode (widget tests): no directory, no file reads/writes —
     // just start from defaults. Every persist below is a no-op too.
     if (!persistToDisk) {
-      _data = AppData.defaults();
+      _data = AppSchema.defaults();
       _initialized = true;
       return;
     }
@@ -232,16 +232,16 @@ class AppStore {
         // Not an encrypted envelope — an unexpected or foreign file shape.
         // Preserve it before overwriting so nothing is silently destroyed.
         await _quarantineUnreadable(file);
-        _data = AppData.defaults();
+        _data = AppSchema.defaults();
         await _persist();
       } else {
         final parsed = jsonDecode(await _decryptEnvelope(decoded as Map));
-        final validated = AppData.fromDynamic(parsed);
+        final validated = AppSchema.fromDynamic(parsed);
         if (validated != null) {
           _data = validated;
         } else {
           await _quarantineUnreadable(file);
-          _data = AppData.defaults();
+          _data = AppSchema.defaults();
           await _persist();
         }
       }
@@ -252,7 +252,7 @@ class AppStore {
       // since the next line would otherwise silently overwrite the user's
       // only copy of their data with empty defaults.
       if (fileExisted) await _quarantineUnreadable(file);
-      _data = AppData.defaults();
+      _data = AppSchema.defaults();
       await _persist();
     }
 
@@ -655,7 +655,7 @@ class AppStore {
   /// and resetting it would just move/resize the window unexpectedly.
   Future<void> resetAll() async {
     final window = _requireData.window;
-    _data = AppData.defaults()..window = window;
+    _data = AppSchema.defaults()..window = window;
     await _persist();
   }
 
@@ -705,7 +705,7 @@ class AppStore {
     final snapshot = exportAllData();
     await _backupBeforeImport(snapshot);
 
-    // Mirrors AppData.fromDynamic's per-entry recovery: one malformed row in
+    // Mirrors AppSchema.fromDynamic's per-entry recovery: one malformed row in
     // an otherwise-valid backup (e.g. from a slightly different schema
     // version) should be skipped, not abort the whole import.
     List<T> parseList<T>(String key, T Function(Map<String, dynamic>) fromJson) {

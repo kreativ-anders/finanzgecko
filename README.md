@@ -233,11 +233,12 @@ bauen.
 | `pubspec.yaml` | Paketname, Version, Dependencies (provider, http, file_selector, window_manager, fl_chart, intl, url_launcher) |
 | `lib/main.dart` | Einstiegspunkt: Fenster-Setup (`window_manager`), Store-Initialisierung, `runApp()` |
 | `lib/data/app_store.dart` | **Ersetzt store.js.** Persistiert die komplette App-Datenbank als JSON-Datei im System-Datenverzeichnis, atomar geschrieben (temp-Datei + rename) |
-| `lib/data/app_data.dart` | In-Memory-Schema der JSON-Datei (Accounts, Balances, Assets, Subscriptions, Settings, Rate-Cache) |
+| `lib/data/app_schema.dart` | In-Memory-Schema der JSON-Datei (Klasse `AppSchema`: Accounts, Balances, Assets, Subscriptions, Settings, Rate-Cache) |
 | `lib/models/` | Datenklassen (`Account`, `Balance`, `Asset`, `Subscription`) mit `fromJson`/`toJson` |
 | `lib/services/currency_service.dart` | Unverändert in der Logik: Frankfurter.app-Anbindung mit Cache |
 | `lib/state/app_state.dart` | Zentraler `ChangeNotifier` (Provider) — lädt den Store, exponiert CRUD-Methoden + berechnete Werte (Perioden, Fixposten-Summen, Reminder) an die UI |
-| `lib/ui/app_shell.dart` | Navigation, In-App-Menü ("Datei"), Tastenkürzel, Export/Import-Dialoge |
+| `lib/ui/navigation_shell.dart` | Navigations-Shell: Top-Navigation, In-App-Menü ("Datei"), Tastenkürzel |
+| `lib/ui/backup_actions.dart` | Backup-Fluss: Export-/Import-/CSV-Datei-Dialoge, Sicherheitsabfrage, Snackbars |
 | `lib/ui/views/` | Die sieben Ansichten: Dashboard, Erfassen, Einträge, Konten, Vermögenswerte, Fixposten, Einstellungen |
 | `lib/ui/widgets/` | Wiederverwendbare Bausteine: Linienchart/Donut (`fl_chart`), Monatsauswahl, Vorzeichen-Umschalter, Banner |
 | `packaging/linux/` | `.desktop`-Datei + `install.sh` für Startmenü-/Taskleisten-Icon unter Wayland/X11 |

@@ -22,7 +22,8 @@ void main() {
   // update this set, on purpose.
   const featuresWithoutUnitTest = {
     'gherkin/currency_exchange.feature',
-    'gherkin/window_and_navigation.feature',
+    'gherkin/window.feature',
+    'gherkin/navigation.feature',
   };
 
   // Built at runtime so this test can never self-match its own doc comment.
@@ -118,6 +119,23 @@ void main() {
         isTrue,
         reason: '${basename(f.path)} fehlt in AI_MASTER.md (Feature-Übersicht in Abschnitt 8).',
       );
+    }
+  });
+
+  test('5) jede Feature hat ein # Implementierung: (Regenerierungsziel) aus # Quelle:', () {
+    for (final f in featureFiles) {
+      final lines = f.readAsLinesSync();
+      String headerValue(String key) {
+        final line = lines.firstWhere((l) => l.trimLeft().startsWith(key), orElse: () => '');
+        return line.isEmpty ? '' : line.trim().substring(key.length).trim();
+      }
+
+      final impl = headerValue('# Implementierung:');
+      final quelle = headerValue('# Quelle:').split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet();
+      final where = basename(f.path);
+      expect(impl, isNotEmpty, reason: '$where braucht eine Kopfzeile "# Implementierung: <Datei>" (Regenerierungsziel).');
+      expect(File(impl).existsSync(), isTrue, reason: '$where: Implementierung "$impl" existiert nicht.');
+      expect(quelle, contains(impl), reason: '$where: "$impl" muss auch in "# Quelle:" stehen.');
     }
   });
 }

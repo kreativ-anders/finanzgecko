@@ -1,4 +1,5 @@
 # Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/ui/widgets/reset_confirm_dialog.dart
+# Implementierung: lib/ui/views/settings_view.dart
 @settings
 Feature: Einstellungen
   Als Nutzer:in steuere ich die Basiswährung, sehe Sicherheits-Informationen zur Verschlüsselung und kann die App
