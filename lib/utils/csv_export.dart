@@ -11,13 +11,14 @@ import '../models/balance.dart';
 /// [accounts] including archived ones so historical rows keep their names.
 String buildBalancesCsv(List<Account> accounts, List<Balance> balances, {required String baseCurrency}) {
   final accountsById = {for (final a in accounts) a.id: a};
-  final rows = [...balances]..sort((a, b) {
-    final byPeriod = a.period.compareTo(b.period);
-    if (byPeriod != 0) return byPeriod;
-    final an = accountsById[a.accountId]?.name ?? '';
-    final bn = accountsById[b.accountId]?.name ?? '';
-    return an.compareTo(bn);
-  });
+  final rows = [...balances]
+    ..sort((a, b) {
+      final byPeriod = a.period.compareTo(b.period);
+      if (byPeriod != 0) return byPeriod;
+      final an = accountsById[a.accountId]?.name ?? '';
+      final bn = accountsById[b.accountId]?.name ?? '';
+      return an.compareTo(bn);
+    });
 
   String dec(double v, int decimals) => v.toStringAsFixed(decimals).replaceAll('.', ',');
 

@@ -133,13 +133,21 @@ void main() {
 
     test('normalizes a known bank to its brand color, ignoring the file color', () async {
       final store = await bootStore();
-      await store.importAllData(_backup(accounts: [_account(1, bank: 'DKB', color: '#ffffff')]));
+      await store.importAllData(
+        _backup(
+          accounts: [_account(1, bank: 'DKB', color: '#ffffff')],
+        ),
+      );
       expect(store.getAccounts().single.color, bankColorHex('DKB'));
     });
 
     test('an empty bank keeps the Kontotyp fallback color', () async {
       final store = await bootStore();
-      await store.importAllData(_backup(accounts: [_account(1, bank: '', tag: 'Depot')]));
+      await store.importAllData(
+        _backup(
+          accounts: [_account(1, bank: '', tag: 'Depot')],
+        ),
+      );
       expect(store.getAccounts().single.color, tagColorHex('Depot'));
     });
   });

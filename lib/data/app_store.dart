@@ -735,7 +735,11 @@ class AppStore {
     final normalizedAccounts = <Account>[];
     for (final a in accounts) {
       try {
-        normalizedAccounts.add(a.copyWith(color: resolveAccountColor(bank: a.bank, tag: a.tag)));
+        normalizedAccounts.add(
+          a.copyWith(
+            color: resolveAccountColor(bank: a.bank, tag: a.tag),
+          ),
+        );
       } on FormatException catch (e) {
         throw Exception('Import abgebrochen bei Konto "${a.name}": ${e.message}');
       }

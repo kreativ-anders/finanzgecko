@@ -244,8 +244,10 @@ class AppLineChart extends StatelessWidget {
           )
         : null;
 
-    final chartMaxX = (useForecast ? forecastEndX! : (hasTrend ? projectedX : lastIndex.toDouble()))
-        .clamp(0.0, double.infinity);
+    final chartMaxX = (useForecast ? forecastEndX! : (hasTrend ? projectedX : lastIndex.toDouble())).clamp(
+      0.0,
+      double.infinity,
+    );
     final axisMinY = chartMin - padY;
     final axisMaxY = chartMax + padY;
 

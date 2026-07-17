@@ -243,10 +243,7 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                     const SizedBox(width: 12),
                     const Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 13)),
                     const SizedBox(width: 8),
-                    Switch(
-                      value: _includeAssets,
-                      onChanged: (v) => setState(() => _includeAssets = v),
-                    ),
+                    Switch(value: _includeAssets, onChanged: (v) => setState(() => _includeAssets = v)),
                   ],
                 ],
               ),
@@ -271,19 +268,21 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
               // shown only when there are Fixposten to base it on.
               if (delta != null && prevPeriod != null && app.subscriptions.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Builder(builder: (context) {
-                  final split = contributionMarketSplit(
-                    delta: delta,
-                    monthlyNet: app.computeSubscriptionTotals().net,
-                    monthGap: monthsBetweenPeriods(prevPeriod, latestPeriod),
-                  );
-                  final cur = app.baseCurrency;
-                  String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
-                  return Text(
-                    'geschätzt: davon ~${signed(split.contributions)} eingezahlt · ~${signed(split.market)} Markt & Sonstiges',
-                    style: const TextStyle(color: kMuted, fontSize: 12),
-                  );
-                }),
+                Builder(
+                  builder: (context) {
+                    final split = contributionMarketSplit(
+                      delta: delta,
+                      monthlyNet: app.computeSubscriptionTotals().net,
+                      monthGap: monthsBetweenPeriods(prevPeriod, latestPeriod),
+                    );
+                    final cur = app.baseCurrency;
+                    String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
+                    return Text(
+                      'geschätzt: davon ~${signed(split.contributions)} eingezahlt · ~${signed(split.market)} Markt & Sonstiges',
+                      style: const TextStyle(color: kMuted, fontSize: 12),
+                    );
+                  },
+                ),
               ],
               const SizedBox(height: 4),
               // The "erfasst" caption shares its row with the dashboard-wide
@@ -303,7 +302,11 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                     const SizedBox(width: 16),
                     const Text('Zeitraum', style: TextStyle(color: kMuted, fontSize: 13)),
                     const SizedBox(width: 12),
-                    _PresetSelector(options: widget.options, selected: widget.selected, onChanged: widget.onRangeChanged),
+                    _PresetSelector(
+                      options: widget.options,
+                      selected: widget.selected,
+                      onChanged: widget.onRangeChanged,
+                    ),
                   ],
                 ],
               ),
@@ -352,8 +355,7 @@ class _HistoryCard extends StatelessWidget {
   final AppState app;
   final bool includesLatest;
 
-  double _totalForPeriod(String period) =>
-      app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
+  double _totalForPeriod(String period) => app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
 
   /// "YYYY-MM" [months] after [period] (DateTime handles year rollover).
   String _periodPlus(String period, int months) {
@@ -383,11 +385,7 @@ class _HistoryCard extends StatelessWidget {
     final rate = projectionRate(planRate: planRate, trendRate: trendRate, trendPoints: trendPoints);
 
     final forecast = (months > 0 && rate != null)
-        ? ChartForecast(
-            monthlyDelta: rate,
-            months: months,
-            endLabel: periodLabel(_periodPlus(filtered.last, months)),
-          )
+        ? ChartForecast(monthlyDelta: rate, months: months, endLabel: periodLabel(_periodPlus(filtered.last, months)))
         : null;
 
     return SectionCard(
@@ -406,25 +404,27 @@ class _HistoryCard extends StatelessWidget {
           ),
           if (forecast != null) ...[
             const SizedBox(height: 8),
-            Builder(builder: (context) {
-              final rate = forecast.monthlyDelta;
-              final delta = rate * forecast.months;
-              final total = _totalForPeriod(filtered.last) + delta;
-              final cur = app.baseCurrency;
-              String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
-              final String basis;
-              if (trendRate != null && planRate != null) {
-                basis = 'Prognose aus $trendPoints Monaten Verlauf, mit Fixposten geglättet';
-              } else if (trendRate != null) {
-                basis = 'Prognose aus $trendPoints Monaten Verlauf';
-              } else {
-                basis = 'Prognose aus den Fixposten (noch wenig Verlauf)';
-              }
-              return Text(
-                '$basis: ${signed(rate)}/Monat → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${signed(delta)}).',
-                style: const TextStyle(color: kMuted, fontSize: 12),
-              );
-            }),
+            Builder(
+              builder: (context) {
+                final rate = forecast.monthlyDelta;
+                final delta = rate * forecast.months;
+                final total = _totalForPeriod(filtered.last) + delta;
+                final cur = app.baseCurrency;
+                String signed(double v) => '${v >= 0 ? '+' : ''}${fmtMoney(v, cur)}';
+                final String basis;
+                if (trendRate != null && planRate != null) {
+                  basis = 'Prognose aus $trendPoints Monaten Verlauf, mit Fixposten geglättet';
+                } else if (trendRate != null) {
+                  basis = 'Prognose aus $trendPoints Monaten Verlauf';
+                } else {
+                  basis = 'Prognose aus den Fixposten (noch wenig Verlauf)';
+                }
+                return Text(
+                  '$basis: ${signed(rate)}/Monat → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${signed(delta)}).',
+                  style: const TextStyle(color: kMuted, fontSize: 12),
+                );
+              },
+            ),
           ],
         ],
       ),
@@ -535,8 +535,7 @@ class _StatsCard extends StatelessWidget {
   /// All periods with data, sorted ascending.
   final List<String> periods;
 
-  double _totalForPeriod(String period) =>
-      app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
+  double _totalForPeriod(String period) => app.balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
 
   @override
   Widget build(BuildContext context) {
@@ -839,22 +838,24 @@ class _AccountCard extends StatelessWidget {
             // Month-over-month change for this account, so each card shows
             // direction at a glance, not just the current figure.
             if (latest != null)
-              Builder(builder: (context) {
-                final prev = app.previousBalance(acc.id, latest.period);
-                if (prev == null) return const SizedBox.shrink();
-                final delta = latest.amountBase - prev.amountBase;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    '${delta >= 0 ? '+' : ''}${fmtMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
-                    style: TextStyle(
-                      color: delta >= 0 ? kPrimary : kDanger,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+              Builder(
+                builder: (context) {
+                  final prev = app.previousBalance(acc.id, latest.period);
+                  if (prev == null) return const SizedBox.shrink();
+                  final delta = latest.amountBase - prev.amountBase;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '${delta >= 0 ? '+' : ''}${fmtMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
+                      style: TextStyle(
+                        color: delta >= 0 ? kPrimary : kDanger,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             const SizedBox(height: 8),
             AppLineChart(points: points, color: colorFromHex(acc.color), height: 70),
           ],

@@ -34,12 +34,11 @@ void main() {
   String posix(String path) => path.replaceAll('\\', '/');
 
   // Recursive: also catches executable specs in gherkin/executable/.
-  final featureFiles = Directory('gherkin')
-      .listSync(recursive: true)
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.feature'))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final featureFiles =
+      Directory(
+          'gherkin',
+        ).listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.feature')).toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
   final featurePaths = {for (final f in featureFiles) posix(f.path)};
 
   // Recursive: also catches BDD tests in test/bdd/.
@@ -71,10 +70,7 @@ void main() {
   group('1) "# Quelle:" verweist nur auf existierenden Code', () {
     for (final f in featureFiles) {
       test(basename(f.path), () {
-        final header = f.readAsLinesSync().firstWhere(
-          (l) => l.trimLeft().startsWith('# Quelle:'),
-          orElse: () => '',
-        );
+        final header = f.readAsLinesSync().firstWhere((l) => l.trimLeft().startsWith('# Quelle:'), orElse: () => '');
         expect(header, isNotEmpty, reason: '${basename(f.path)} braucht einen "# Quelle:"-Header.');
         final paths = header
             .replaceFirst(RegExp(r'^\s*#\s*Quelle:\s*'), '')
@@ -101,7 +97,8 @@ void main() {
       featuresWithoutUnitTest,
       reason:
           'Abweichung. Features ohne Test = $uncovered.\n'
-          'Entweder einen Test mit der Zeile "// ' 'Gherkin: <feature>" ergänzen '
+          'Entweder einen Test mit der Zeile "// '
+          'Gherkin: <feature>" ergänzen '
           'oder featuresWithoutUnitTest in diesem Test bewusst anpassen.',
     );
     expect(
@@ -133,7 +130,11 @@ void main() {
       final impl = headerValue('# Implementierung:');
       final quelle = headerValue('# Quelle:').split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet();
       final where = basename(f.path);
-      expect(impl, isNotEmpty, reason: '$where braucht eine Kopfzeile "# Implementierung: <Datei>" (Regenerierungsziel).');
+      expect(
+        impl,
+        isNotEmpty,
+        reason: '$where braucht eine Kopfzeile "# Implementierung: <Datei>" (Regenerierungsziel).',
+      );
       expect(File(impl).existsSync(), isTrue, reason: '$where: Implementierung "$impl" existiert nicht.');
       expect(quelle, contains(impl), reason: '$where: "$impl" muss auch in "# Quelle:" stehen.');
     }
