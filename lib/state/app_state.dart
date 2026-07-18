@@ -8,6 +8,7 @@ import '../models/balance.dart';
 import '../models/subscription.dart';
 import '../services/currency_service.dart';
 import '../services/notification_service.dart';
+import '../utils/analysis.dart';
 import '../utils/formatting.dart';
 
 class BackupReminder {
@@ -45,6 +46,31 @@ class AppState extends ChangeNotifier {
   List<Asset> assets = [];
   List<Subscription> subscriptions = [];
   String baseCurrency = 'EUR';
+
+  // Dashboard UI preferences (range filter, account-card sort, "inkl.
+  // Sachwerte" toggle). Held here rather than as local State in
+  // DashboardView so they survive navigating to another view and back —
+  // AppState lives for the whole session, the view doesn't. Deliberately
+  // in-memory only, not part of AppSchema/persisted to disk (session-only,
+  // see gherkin/dashboard.feature).
+  HistoryRange? dashboardRangePreset;
+  AccountSortOrder accountSortOrder = AccountSortOrder.standard;
+  bool includeAssetsInTotal = false;
+
+  void setDashboardRangePreset(HistoryRange preset) {
+    dashboardRangePreset = preset;
+    notifyListeners();
+  }
+
+  void setAccountSortOrder(AccountSortOrder order) {
+    accountSortOrder = order;
+    notifyListeners();
+  }
+
+  void setIncludeAssetsInTotal(bool value) {
+    includeAssetsInTotal = value;
+    notifyListeners();
+  }
 
   Future<void> init() async {
     await store.ensureInitialized();

@@ -14,33 +14,14 @@ import '../widgets/line_chart.dart';
 import '../widgets/section_card.dart';
 import '../widgets/stacked_area_chart.dart';
 
-class DashboardView extends StatefulWidget {
+class DashboardView extends StatelessWidget {
   const DashboardView({super.key, required this.onNavigate});
 
   final ValueChanged<AppView> onNavigate;
 
   @override
-  State<DashboardView> createState() => _DashboardViewState();
-}
-
-class _DashboardViewState extends State<DashboardView> {
-  // Dashboard-wide time window. Affects the headline, the Verlauf chart and its
-  // projection, the composition chart, the distribution donut, and the
-  // Kennzahlen — everything time-based. Null until the user picks one; a
-  // sensible default ("Dieses Jahr" when available) is derived from the data.
-  // Range filtering itself is pure and lives in utils/analysis.dart
-  // (availableRanges / periodsForRange / defaultRange) so it's unit-testable.
-  HistoryRange? _preset;
-
-  // Konto-Karten sort order, also dashboard-local (not persisted) like
-  // [_preset] — "standard" keeps today's creation-order behavior so nobody's
-  // grid silently reorders until they pick something.
-  AccountSortOrder _accountSort = AccountSortOrder.standard;
-
-  @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final onNavigate = widget.onNavigate;
     final allPeriods = app.allPeriodsSorted();
     final backupReminder = app.getBackupReminder();
     final assetReminder = app.getAssetReminder();
@@ -74,7 +55,10 @@ class _DashboardViewState extends State<DashboardView> {
     // Resolve the active window once and thread it through every time-based
     // card below, so the filter genuinely drives the whole dashboard.
     final available = availableRanges(allPeriods);
-    final preset = (_preset != null && available.contains(_preset)) ? _preset! : defaultRange(available);
+    final storedPreset = app.dashboardRangePreset;
+    final preset = (storedPreset != null && available.contains(storedPreset))
+        ? storedPreset
+        : defaultRange(available);
     final filtered = allPeriods.isEmpty ? <String>[] : periodsForRange(allPeriods, preset);
     final includesLatest = filtered.isNotEmpty && filtered.last == allPeriods.last;
 
@@ -99,7 +83,7 @@ class _DashboardViewState extends State<DashboardView> {
               app: app,
               options: available,
               selected: preset,
-              onRangeChanged: (p) => setState(() => _preset = p),
+              onRangeChanged: app.setDashboardRangePreset,
             ),
             cardGap,
             _HistoryCard(periods: filtered, app: app, includesLatest: includesLatest),
@@ -121,10 +105,7 @@ class _DashboardViewState extends State<DashboardView> {
             Row(
               children: [
                 Expanded(child: Text('Konten', style: Theme.of(context).textTheme.titleLarge)),
-                _AccountSortSelector(
-                  selected: _accountSort,
-                  onChanged: (order) => setState(() => _accountSort = order),
-                ),
+                _AccountSortSelector(selected: app.accountSortOrder, onChanged: app.setAccountSortOrder),
                 const SizedBox(width: 12),
                 OutlinedButton(
                   onPressed: () => onNavigate(AppView.entries),
@@ -133,7 +114,7 @@ class _DashboardViewState extends State<DashboardView> {
               ],
             ),
             const SizedBox(height: 12),
-            _AccountCards(app: app, sortOrder: _accountSort),
+            _AccountCards(app: app, sortOrder: app.accountSortOrder),
           ],
         ],
       ),
@@ -163,7 +144,7 @@ class _EmptyDashboard extends StatelessWidget {
   }
 }
 
-class _TotalsOverview extends StatefulWidget {
+class _TotalsOverview extends StatelessWidget {
   const _TotalsOverview({
     required this.periods,
     required this.app,
@@ -181,16 +162,7 @@ class _TotalsOverview extends StatefulWidget {
   final ValueChanged<HistoryRange> onRangeChanged;
 
   @override
-  State<_TotalsOverview> createState() => _TotalsOverviewState();
-}
-
-class _TotalsOverviewState extends State<_TotalsOverview> {
-  bool _includeAssets = false;
-
-  @override
   Widget build(BuildContext context) {
-    final app = widget.app;
-    final periods = widget.periods;
     final latestPeriod = periods.last;
     final prevPeriod = periods.length > 1 ? periods[periods.length - 2] : null;
 
@@ -209,7 +181,7 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
     // the contribution/market split (both account-based) are unaffected.
     final assetsTotal = app.assets.fold<double>(0, (sum, a) => sum + a.value);
     final hasAssets = app.assets.isNotEmpty;
-    final withAssets = _includeAssets && hasAssets;
+    final withAssets = app.includeAssetsInTotal && hasAssets;
     final displayTotal = currentTotal + (withAssets ? assetsTotal : 0);
 
     return Column(
@@ -257,7 +229,10 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                         children: [
                           Transform.scale(
                             scale: 0.8,
-                            child: Switch(value: _includeAssets, onChanged: (v) => setState(() => _includeAssets = v)),
+                            child: Switch(
+                              value: app.includeAssetsInTotal,
+                              onChanged: app.setIncludeAssetsInTotal,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           const Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 12)),
@@ -356,9 +331,9 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
                 ),
               ),
               // Global range filter, pinned top-right above the Verlauf card.
-              if (widget.options.length > 1) ...[
+              if (options.length > 1) ...[
                 const SizedBox(width: 16),
-                _PresetSelector(options: widget.options, selected: widget.selected, onChanged: widget.onRangeChanged),
+                _PresetSelector(options: options, selected: selected, onChanged: onRangeChanged),
               ],
             ],
           ),

@@ -42,6 +42,14 @@ Feature: Dashboard — Vermögensübersicht
       Given ich wähle ein Preset, dessen letzter Monat der neueste insgesamt erfasste Monat ist
       Then wird eine Prognose bis zum Jahresende gezeichnet (im Dezember: ein volles Jahr vorausprojiziert)
 
+    Scenario: Zeitraum-Filter, Sortierung und "inkl. Sachwerte" bleiben beim Wechseln der Ansicht erhalten
+      Given ich wähle im Zeitraum-Filter ein anderes Preset als das voreingestellte, ändere die Konto-Karten-Sortierung
+        und schalte "inkl. Sachwerte" ein
+      When ich zu einer anderen Ansicht wechsle und zum Dashboard zurückkehre
+      Then sind Zeitraum-Preset, Konto-Karten-Sortierung und "inkl. Sachwerte" weiterhin wie zuletzt gewählt
+      And diese drei Einstellungen leben nur im laufenden `AppState` (nicht in `AppSchema`/auf Festplatte) und
+        setzen sich beim nächsten Start der App auf ihre Vorgaben zurück
+
   Rule: Gesamtvermögens-Kopfzeile
 
     Scenario: Vermögenswerte sind standardmäßig nicht in der Summe enthalten
@@ -191,4 +199,6 @@ Feature: Dashboard — Vermögensübersicht
       And "Standard" (Erstellungsreihenfolge der Konten) ist voreingestellt
       And Konten ohne Kontostand bzw. ohne Vormonat sortieren bei Betrag- bzw.
         Veränderungs-Sortierung ans Ende, statt an den Anfang zu springen
-      And die Auswahl gilt nur für die aktuelle Sitzung (nicht persistiert)
+      And die Auswahl bleibt für die restliche Sitzung erhalten (siehe "Zeitraum-Filter, Sortierung und
+        'inkl. Sachwerte' bleiben beim Wechseln der Ansicht erhalten"), wird aber nicht auf Festplatte
+        gespeichert und setzt sich bei einem Neustart der App zurück
