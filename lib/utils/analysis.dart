@@ -232,3 +232,47 @@ List<HistoryRange> availableRanges(List<String> all, {DateTime? now}) {
 /// "Alle".
 HistoryRange defaultRange(List<HistoryRange> available) =>
     available.contains(HistoryRange.ytd) ? HistoryRange.ytd : HistoryRange.all;
+
+/// Sort order for the dashboard's Konto-Karten grid. German labels/icons live
+/// in the UI; `standard` keeps whatever order the caller's list is already
+/// in (account creation order) and is a no-op for [sortAccounts].
+enum AccountSortOrder { standard, nameAsc, amountDesc, amountAsc, changeDesc, changeAsc }
+
+/// Sorts [items] per [order]. Kept generic (rather than importing the
+/// `Account` model) so it stays dependency-free like the rest of this file;
+/// [nameFor]/[amountFor]/[changeFor] resolve the sort keys from each item —
+/// the latter two return null when an item has no balance/previous balance
+/// yet, in which case that item sorts last. Ties (including all of
+/// [AccountSortOrder.standard]) preserve the original relative order.
+List<T> sortAccounts<T>(
+  List<T> items,
+  AccountSortOrder order, {
+  required String Function(T item) nameFor,
+  required double? Function(T item) amountFor,
+  required double? Function(T item) changeFor,
+}) {
+  if (order == AccountSortOrder.standard) return items;
+
+  int compareNullsLast(double? a, double? b, {required bool descending}) {
+    if (a == null && b == null) return 0;
+    if (a == null) return 1;
+    if (b == null) return -1;
+    return descending ? b.compareTo(a) : a.compareTo(b);
+  }
+
+  int keyCompare(T a, T b) => switch (order) {
+    AccountSortOrder.standard => 0,
+    AccountSortOrder.nameAsc => nameFor(a).toLowerCase().compareTo(nameFor(b).toLowerCase()),
+    AccountSortOrder.amountDesc => compareNullsLast(amountFor(a), amountFor(b), descending: true),
+    AccountSortOrder.amountAsc => compareNullsLast(amountFor(a), amountFor(b), descending: false),
+    AccountSortOrder.changeDesc => compareNullsLast(changeFor(a), changeFor(b), descending: true),
+    AccountSortOrder.changeAsc => compareNullsLast(changeFor(a), changeFor(b), descending: false),
+  };
+
+  final indexed = items.indexed.toList()
+    ..sort((a, b) {
+      final byKey = keyCompare(a.$2, b.$2);
+      return byKey != 0 ? byKey : a.$1.compareTo(b.$1);
+    });
+  return [for (final (_, item) in indexed) item];
+}

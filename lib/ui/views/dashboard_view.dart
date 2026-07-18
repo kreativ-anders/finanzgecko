@@ -32,6 +32,11 @@ class _DashboardViewState extends State<DashboardView> {
   // (availableRanges / periodsForRange / defaultRange) so it's unit-testable.
   HistoryRange? _preset;
 
+  // Konto-Karten sort order, also dashboard-local (not persisted) like
+  // [_preset] — "standard" keeps today's creation-order behavior so nobody's
+  // grid silently reorders until they pick something.
+  AccountSortOrder _accountSort = AccountSortOrder.standard;
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -114,9 +119,13 @@ class _DashboardViewState extends State<DashboardView> {
               cardGap,
             ],
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Konten', style: Theme.of(context).textTheme.titleLarge),
+                Expanded(child: Text('Konten', style: Theme.of(context).textTheme.titleLarge)),
+                _AccountSortSelector(
+                  selected: _accountSort,
+                  onChanged: (order) => setState(() => _accountSort = order),
+                ),
+                const SizedBox(width: 12),
                 OutlinedButton(
                   onPressed: () => onNavigate(AppView.entries),
                   child: noSelect(const Text('Einträge verwalten')),
@@ -124,7 +133,7 @@ class _DashboardViewState extends State<DashboardView> {
               ],
             ),
             const SizedBox(height: 12),
-            _AccountCards(app: app),
+            _AccountCards(app: app, sortOrder: _accountSort),
           ],
         ],
       ),
@@ -349,11 +358,7 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
               // Global range filter, pinned top-right above the Verlauf card.
               if (widget.options.length > 1) ...[
                 const SizedBox(width: 16),
-                _PresetSelector(
-                  options: widget.options,
-                  selected: widget.selected,
-                  onChanged: widget.onRangeChanged,
-                ),
+                _PresetSelector(options: widget.options, selected: widget.selected, onChanged: widget.onRangeChanged),
               ],
             ],
           ),
@@ -718,6 +723,87 @@ class _PresetChip extends StatelessWidget {
   }
 }
 
+/// Sort control for the Konto-Karten grid, sitting directly left of "Einträge
+/// verwalten" above the grid. A single compact popup (rather than a
+/// [_PresetChip] row like the range filter) since six options would crowd
+/// the header; each entry pairs its label with a directional icon so the
+/// meaning is scannable without reading the text.
+class _AccountSortSelector extends StatelessWidget {
+  const _AccountSortSelector({required this.selected, required this.onChanged});
+
+  final AccountSortOrder selected;
+  final ValueChanged<AccountSortOrder> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<AccountSortOrder>(
+      tooltip: 'Sortierung ändern',
+      onSelected: onChanged,
+      itemBuilder: (context) => [
+        for (final order in AccountSortOrder.values)
+          PopupMenuItem(
+            value: order,
+            child: Row(
+              children: [
+                Icon(order.icon, size: 18, color: order == selected ? kPrimary : kMuted),
+                const SizedBox(width: 10),
+                Text(
+                  order.label,
+                  style: TextStyle(
+                    color: order == selected ? kPrimary : null,
+                    fontWeight: order == selected ? FontWeight.w600 : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: kBorder),
+        ),
+        child: noSelect(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(selected.icon, size: 16, color: kMuted),
+              const SizedBox(width: 6),
+              Text(
+                selected.label,
+                style: const TextStyle(fontSize: 12, color: kMuted, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 2),
+              const Icon(Icons.expand_more, size: 16, color: kMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+extension on AccountSortOrder {
+  String get label => switch (this) {
+    AccountSortOrder.standard => 'Standard',
+    AccountSortOrder.nameAsc => 'Name (A–Z)',
+    AccountSortOrder.amountDesc => 'Betrag (hoch → niedrig)',
+    AccountSortOrder.amountAsc => 'Betrag (niedrig → hoch)',
+    AccountSortOrder.changeDesc => 'Veränderung (größter Zuwachs)',
+    AccountSortOrder.changeAsc => 'Veränderung (größter Rückgang)',
+  };
+
+  IconData get icon => switch (this) {
+    AccountSortOrder.standard => Icons.reorder_rounded,
+    AccountSortOrder.nameAsc => Icons.sort_by_alpha_rounded,
+    AccountSortOrder.amountDesc => Icons.south_rounded,
+    AccountSortOrder.amountAsc => Icons.north_rounded,
+    AccountSortOrder.changeDesc => Icons.trending_up_rounded,
+    AccountSortOrder.changeAsc => Icons.trending_down_rounded,
+  };
+}
+
 /// A compact, non-interactive chip used in the header to break the total change
 /// into "eingezahlt" vs. "Markt". [tint] drives both the (faint) fill and the
 /// icon/text color, so a chip reads as a quiet label rather than a button.
@@ -732,10 +818,7 @@ class _SplitChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: tint.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: tint.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -849,9 +932,10 @@ class _SummaryRow extends StatelessWidget {
 }
 
 class _AccountCards extends StatelessWidget {
-  const _AccountCards({required this.app});
+  const _AccountCards({required this.app, required this.sortOrder});
 
   final AppState app;
+  final AccountSortOrder sortOrder;
 
   static const double _spacing = 16;
   static const double _minCardWidth = 220;
@@ -859,6 +943,19 @@ class _AccountCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accounts = sortAccounts(
+      app.accounts,
+      sortOrder,
+      nameFor: (acc) => acc.name,
+      amountFor: (acc) => app.latestBalanceForAccount(acc.id)?.amountBase,
+      changeFor: (acc) {
+        final latest = app.latestBalanceForAccount(acc.id);
+        if (latest == null) return null;
+        final prev = app.previousBalance(acc.id, latest.period);
+        if (prev == null) return null;
+        return latest.amountBase - prev.amountBase;
+      },
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = ((constraints.maxWidth + _spacing) / (_minCardWidth + _spacing)).floor().clamp(1, _maxColumns);
@@ -867,7 +964,7 @@ class _AccountCards extends StatelessWidget {
           spacing: _spacing,
           runSpacing: _spacing,
           children: [
-            for (final acc in app.accounts)
+            for (final acc in accounts)
               SizedBox(
                 width: cardWidth,
                 child: _AccountCard(acc: acc, app: app),

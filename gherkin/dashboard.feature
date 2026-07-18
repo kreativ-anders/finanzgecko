@@ -182,3 +182,13 @@ Feature: Dashboard — Vermögensübersicht
         Kontos, und — falls ein Vormonat existiert — die Veränderung dagegen (grün/rot)
       Given ein Konto hat noch keinen erfassten Kontostand
       Then zeigt seine Karte "—" statt eines Betrags und keinen Verlauf
+
+    Scenario: Konto-Karten sind sortierbar
+      Given der Nutzer öffnet die Sortierauswahl über den Konto-Karten
+      Then stehen die Optionen "Standard", "Name (A–Z)", "Betrag (hoch → niedrig)",
+        "Betrag (niedrig → hoch)", "Veränderung (größter Zuwachs)" und
+        "Veränderung (größter Rückgang)" zur Auswahl
+      And "Standard" (Erstellungsreihenfolge der Konten) ist voreingestellt
+      And Konten ohne Kontostand bzw. ohne Vormonat sortieren bei Betrag- bzw.
+        Veränderungs-Sortierung ans Ende, statt an den Anfang zu springen
+      And die Auswahl gilt nur für die aktuelle Sitzung (nicht persistiert)

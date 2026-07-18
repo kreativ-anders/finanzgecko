@@ -231,4 +231,46 @@ void main() {
       expect(defaultRange([HistoryRange.lastYear, HistoryRange.all]), HistoryRange.all);
     });
   });
+
+  group('sortAccounts', () {
+    // Simple (name, amount, change) tuples stand in for Account so this stays
+    // dependency-free, matching sortAccounts' own generic signature.
+    final items = <(String, double, double?)>[
+      ('Girokonto', 100.0, -5.0),
+      ('Tagesgeld', 300.0, 20.0),
+      ('Depot', 300.0, null),
+    ];
+
+    List<(String, double, double?)> sort(AccountSortOrder order) =>
+        sortAccounts(items, order, nameFor: (t) => t.$1, amountFor: (t) => t.$2, changeFor: (t) => t.$3);
+
+    test('standard returns the list unchanged (no-op)', () {
+      expect(sort(AccountSortOrder.standard), same(items));
+    });
+
+    test('nameAsc sorts case-insensitively by name', () {
+      final result = sort(AccountSortOrder.nameAsc).map((t) => t.$1).toList();
+      expect(result, ['Depot', 'Girokonto', 'Tagesgeld']);
+    });
+
+    test('amountDesc sorts largest first, ties keep original order', () {
+      final result = sort(AccountSortOrder.amountDesc).map((t) => t.$1).toList();
+      expect(result, ['Tagesgeld', 'Depot', 'Girokonto']);
+    });
+
+    test('amountAsc sorts smallest first', () {
+      final result = sort(AccountSortOrder.amountAsc).map((t) => t.$1).toList();
+      expect(result, ['Girokonto', 'Tagesgeld', 'Depot']);
+    });
+
+    test('changeDesc sorts the biggest gain first, null change last', () {
+      final result = sort(AccountSortOrder.changeDesc).map((t) => t.$1).toList();
+      expect(result, ['Tagesgeld', 'Girokonto', 'Depot']);
+    });
+
+    test('changeAsc sorts the biggest drop first, null change still last', () {
+      final result = sort(AccountSortOrder.changeAsc).map((t) => t.$1).toList();
+      expect(result, ['Girokonto', 'Tagesgeld', 'Depot']);
+    });
+  });
 }
