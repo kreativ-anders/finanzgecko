@@ -21,6 +21,8 @@ Feature: Dashboard — Vermögensübersicht
       Then sind die Presets "Dieses Jahr", "12 Monate", "Letztes Jahr" und "Alle" verfügbar,
         jedes nur, wenn es eine vom Gesamtzeitraum ("Alle") unterscheidbare, nicht-leere Untermenge ergibt
       And "Alle" ist immer verfügbar
+      And die Presets sitzen als globales Steuerelement oben rechts in der Kopfzeile (auf Höhe der Überschrift,
+        über der Verlauf-Karte) statt auf einer Zeile mit einem Beschriftungstext
 
     Scenario: Standard-Preset ist "Dieses Jahr", wenn verfügbar
       Given "Dieses Jahr" liefert eine vom Gesamtzeitraum unterscheidbare Teilmenge
@@ -60,18 +62,23 @@ Feature: Dashboard — Vermögensübersicht
 
     Scenario: Geschätzte Aufteilung in Einzahlungen vs. Markt
       Given es gibt Fixposten und einen Vormonat
-      Then wird die Veränderung zusätzlich in "eingezahlt" (Fixposten-Netto × Monatsabstand) und
-        "Markt & Sonstiges" (Rest) aufgeteilt, jeweils als Schätzung gekennzeichnet
+      Then wird die Veränderung direkt unter der Delta-Zeile in zwei kompakte Chips aufgeteilt: "… eingezahlt"
+        (Fixposten-Netto × Monatsabstand) und "… Markt" (Rest)
+      And die Chip-Beträge sind auf ganze Währungseinheiten gerundet, weil die Aufteilung eine Schätzung ist und
+        Cent-Genauigkeit Scheingenauigkeit wäre
       Given es gibt keine Fixposten
-      Then entfällt diese Zusatzzeile
+      Then entfallen diese Chips
 
-    Scenario: Erfassungsstand des aktuellen Monats
-      Then zeigt die Kopfzeile "Für diesen Monat sind X von Y Konten erfasst"
+    Scenario: Erfassungsstand des aktuellen Monats nur bei Unvollständigkeit
+      Given für den aktuellen Monat sind alle Konten erfasst (X = Y)
+      Then erscheint kein Erfassungsstand-Hinweis (die Anzahl ist ohnehin im Verlauf-Diagramm sichtbar)
+      Given für den aktuellen Monat fehlen Konten (X < Y)
+      Then erscheint ein amberfarbener Warnhinweis "Nur X von Y Konten für diesen Monat erfasst — Summe evtl.
+        unvollständig."
 
     Scenario: Hinweis auf Rundungsdifferenzen bei Fremdwährungskonten
       Given mindestens ein Konto der aktuellen Periode hat eine von der Basiswährung abweichende Währung
-      Then erscheint ein Hinweis, dass die Summe durch Wechselkurs-Rundung um wenige Cent von der Summe der einzeln
-        angezeigten Kontostände abweichen kann
+      Then erscheint ein kurzer Hinweis "Fremdwährungskonten: Rundungsdifferenzen von wenigen Cent möglich."
       And dieser Hinweistext bleibt auf eine lesbare Zeilenbreite begrenzt statt über die volle (auf breiten Fenstern
         sehr lange) Dashboard-Breite zu laufen
 

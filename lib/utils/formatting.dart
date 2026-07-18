@@ -20,6 +20,21 @@ String fmtPercent(double value) => '${NumberFormat('#,##0.0', 'de_DE').format(va
 /// unsigned). Used throughout for month-over-month and forecast deltas.
 String fmtSignedMoney(double value, String currency) => '${value >= 0 ? '+' : ''}${fmtMoney(value, currency)}';
 
+/// [fmtMoney] rounded to whole currency units (no cents). For estimated
+/// figures where cent precision would be false precision — e.g. the
+/// contribution/market split in the dashboard header.
+String fmtMoneyRounded(double value, String currency) {
+  try {
+    return NumberFormat.simpleCurrency(locale: 'de_DE', name: currency, decimalDigits: 0).format(value);
+  } catch (_) {
+    return '${value.toStringAsFixed(0)} $currency';
+  }
+}
+
+/// [fmtMoneyRounded] with an explicit leading "+" for non-negative values.
+String fmtSignedMoneyRounded(double value, String currency) =>
+    '${value >= 0 ? '+' : ''}${fmtMoneyRounded(value, currency)}';
+
 /// Formats a number for prefilling an editable amount field: German grouping
 /// and decimal separators (matching fmtMoney's look), trailing zeros trimmed.
 /// Stays a plain numeric string (no currency symbol) so it round-trips

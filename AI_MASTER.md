@@ -259,7 +259,9 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 ## 5. UI-Konventionen
 
 - **Dark Theme only**, Konstanten in `lib/ui/theme.dart`: `kBackground`, `kSurface`, `kBorder`, `kMuted`, `kPrimary`
-  (`#00C878`, Markenfarbe), `kDanger` (`#FF6B6B`), `kTrendUp/Down/Neutral` (Prognose-Linie, bewusst blasser als
+  (`#00C878`, Markenfarbe), `kDanger` (`#FF6B6B`), `kWarning` (`#E0A030`, Amber für unkritische Warnungen wie den
+  Erfassungsstand-Hinweis — abgegrenzt von `kDanger`, das einen echten Fehler/Verlust signalisiert),
+  `kTrendUp/Down/Neutral` (Prognose-Linie, bewusst blasser als
   Primary/Danger). Diese Hex-Werte sind mit `kPrimaryHex`/`kDangerHex` in `constants.dart` synchron zu halten
   (String-Form fürs on-disk Kontofarben-Feld vs. `Color`-Form fürs Theme).
 - **Kein natives Menü** unter Linux/Windows (Flutters `PlatformMenuBar` nur macOS) → In-App-"Datei"-Bereich im

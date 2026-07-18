@@ -213,124 +213,146 @@ class _TotalsOverviewState extends State<_TotalsOverview> {
           // stacking a full symmetric 16 here on top of that made the gap to
           // "Verlauf" nearly 5x the gap used between lines within this block.
           padding: const EdgeInsets.only(top: 16, bottom: 4),
-          child: Column(
+          // The headline stack (overline, total, delta, split, notes) fills the
+          // row; the dashboard-wide range filter is a global control, so it sits
+          // top-right — anchored to the top of the block, above the "Verlauf"
+          // card — instead of sharing a baseline with a caption line.
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Overline stands alone now — the "inkl. Sachwerte" switch used to
-              // share this row and compete with it at nearly the same visual
-              // weight. It now sits right under the number it controls instead.
-              Text(
-                withAssets
-                    ? 'GESAMTVERMÖGEN INKL. SACHWERTE · STAND ${periodLabel(latestPeriod).toUpperCase()}'
-                    : 'GESAMTVERMÖGEN · STAND ${periodLabel(latestPeriod).toUpperCase()}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                fmtMoney(displayTotal, app.baseCurrency),
-                maxLines: 1,
-                style: const TextStyle(color: kPrimary, fontSize: 44, fontWeight: FontWeight.bold),
-              ),
-              if (hasAssets) ...[
-                const SizedBox(height: 2),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Transform.scale(
-                      scale: 0.8,
-                      child: Switch(value: _includeAssets, onChanged: (v) => setState(() => _includeAssets = v)),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 12)),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 2),
-              if (delta != null)
-                Text(
-                  '${fmtSignedMoney(delta, app.baseCurrency)}'
-                  '${pct != null ? ' (${delta >= 0 ? '+' : ''}${fmtPercent(pct)})' : ''}'
-                  ' ggü. ${periodLabel(prevPeriod!)}',
-                  style: TextStyle(color: delta >= 0 ? kPrimary : kDanger, fontWeight: FontWeight.w600),
-                )
-              else
-                const Text('Noch kein Vergleichsmonat', style: TextStyle(color: kMuted)),
-              // Split the change into what you added vs. what the market did:
-              // contributions are estimated from the Fixposten net (scaled by
-              // the month gap), the rest is market/other movement. Estimate —
-              // shown only when there are Fixposten to base it on.
-              if (delta != null && prevPeriod != null && app.subscriptions.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Builder(
-                  builder: (context) {
-                    final split = contributionMarketSplit(
-                      delta: delta,
-                      monthlyNet: app.computeSubscriptionTotals().net,
-                      monthGap: monthsBetweenPeriods(prevPeriod, latestPeriod),
-                    );
-                    final cur = app.baseCurrency;
-                    return Text(
-                      'geschätzt: davon ~${fmtSignedMoney(split.contributions, cur)} eingezahlt · '
-                      '~${fmtSignedMoney(split.market, cur)} Markt & Sonstiges',
-                      style: const TextStyle(color: kMuted, fontSize: 12),
-                    );
-                  },
-                ),
-              ],
-              // A bit more room than the plain-text lines above use — this
-              // row carries real visual weight (the preset pills are ~36px
-              // tall interactive controls, not another line of caption
-              // text), so it needs more air around it than a 4px "same
-              // paragraph" gap gives it.
-              const SizedBox(height: 12),
-              // The "erfasst" caption shares its row with the dashboard-wide
-              // range filter (right-aligned) — no separate floating filter row.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
+                    // Overline stands alone — the "inkl. Sachwerte" switch sits
+                    // right under the number it controls instead of competing
+                    // with this line at nearly the same visual weight.
+                    Text(
                       withAssets
-                          ? 'Für diesen Monat sind $entriesInLatest von ${app.accounts.length} Konten erfasst · plus ${fmtMoney(assetsTotal, app.baseCurrency)} Sachwerte.'
-                          : 'Für diesen Monat sind $entriesInLatest von ${app.accounts.length} Konten erfasst.',
-                      style: const TextStyle(color: kMuted, fontSize: 13),
+                          ? 'GESAMTVERMÖGEN INKL. SACHWERTE · STAND ${periodLabel(latestPeriod).toUpperCase()}'
+                          : 'GESAMTVERMÖGEN · STAND ${periodLabel(latestPeriod).toUpperCase()}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
                     ),
-                  ),
-                  if (widget.options.length > 1) ...[
-                    const SizedBox(width: 16),
-                    const Text('Zeitraum', style: TextStyle(color: kMuted, fontSize: 13)),
-                    const SizedBox(width: 12),
-                    _PresetSelector(
-                      options: widget.options,
-                      selected: widget.selected,
-                      onChanged: widget.onRangeChanged,
+                    const SizedBox(height: 4),
+                    Text(
+                      fmtMoney(displayTotal, app.baseCurrency),
+                      maxLines: 1,
+                      style: const TextStyle(color: kPrimary, fontSize: 44, fontWeight: FontWeight.bold),
                     ),
-                  ],
-                ],
-              ),
-              if (hasForeignCurrencyInTotal) ...[
-                const SizedBox(height: 12),
-                // Capped to a comfortable reading width — at the dashboard's
-                // full ~1100px content width this line would otherwise
-                // stretch edge to edge, well past a readable line length.
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.info_outline, size: 13, color: kMuted),
-                      const SizedBox(width: 6),
-                      const Flexible(
-                        child: Text(
-                          'Enthält Konten in Fremdwährung: Die Summe kann durch Rundung beim Wechselkurs um wenige Cent von der '
-                          'Summe der einzeln angezeigten Kontostände abweichen.',
-                          style: TextStyle(color: kMuted, fontSize: 12),
+                    if (hasAssets) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Transform.scale(
+                            scale: 0.8,
+                            child: Switch(value: _includeAssets, onChanged: (v) => setState(() => _includeAssets = v)),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 12)),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    if (delta != null)
+                      Text(
+                        '${fmtSignedMoney(delta, app.baseCurrency)}'
+                        '${pct != null ? ' (${delta >= 0 ? '+' : ''}${fmtPercent(pct)})' : ''}'
+                        ' ggü. ${periodLabel(prevPeriod!)}',
+                        style: TextStyle(color: delta >= 0 ? kPrimary : kDanger, fontWeight: FontWeight.w600),
+                      )
+                    else
+                      const Text('Noch kein Vergleichsmonat', style: TextStyle(color: kMuted)),
+                    // Split the change into what you added vs. what the market
+                    // did, as two compact chips right under the delta:
+                    // contributions are estimated from the Fixposten net (scaled
+                    // by the month gap), the rest is market/other movement.
+                    // Rounded to whole units — the split is an estimate, so
+                    // showing cents would be false precision.
+                    if (delta != null && prevPeriod != null && app.subscriptions.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Builder(
+                        builder: (context) {
+                          final split = contributionMarketSplit(
+                            delta: delta,
+                            monthlyNet: app.computeSubscriptionTotals().net,
+                            monthGap: monthsBetweenPeriods(prevPeriod, latestPeriod),
+                          );
+                          final cur = app.baseCurrency;
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              _SplitChip(
+                                icon: Icons.savings_outlined,
+                                label: '${fmtSignedMoneyRounded(split.contributions, cur)} eingezahlt',
+                                tint: kPrimary,
+                              ),
+                              _SplitChip(
+                                icon: Icons.show_chart,
+                                label: '${fmtSignedMoneyRounded(split.market, cur)} Markt',
+                                tint: kMuted,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                    // Data-completeness warning — shown ONLY when the latest
+                    // month is missing accounts. At full coverage this line is
+                    // noise (the count is already visible in the Verlauf chart
+                    // below), so it stays hidden; when incomplete it's a real
+                    // "your total is understated" flag and gets an amber accent.
+                    if (entriesInLatest < app.accounts.length) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, size: 14, color: kWarning),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Nur $entriesInLatest von ${app.accounts.length} Konten für diesen Monat erfasst — Summe evtl. unvollständig.',
+                              style: const TextStyle(color: kWarning, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (hasForeignCurrencyInTotal) ...[
+                      const SizedBox(height: 12),
+                      // Capped to a comfortable reading width — at the
+                      // dashboard's full ~1100px content width this line would
+                      // otherwise stretch well past a readable line length.
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline, size: 13, color: kMuted),
+                            const SizedBox(width: 6),
+                            const Flexible(
+                              child: Text(
+                                'Fremdwährungskonten: Rundungsdifferenzen von wenigen Cent möglich.',
+                                style: TextStyle(color: kMuted, fontSize: 12),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
+                  ],
+                ),
+              ),
+              // Global range filter, pinned top-right above the Verlauf card.
+              if (widget.options.length > 1) ...[
+                const SizedBox(width: 16),
+                _PresetSelector(
+                  options: widget.options,
+                  selected: widget.selected,
+                  onChanged: widget.onRangeChanged,
                 ),
               ],
             ],
@@ -691,6 +713,36 @@ class _PresetChip extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A compact, non-interactive chip used in the header to break the total change
+/// into "eingezahlt" vs. "Markt". [tint] drives both the (faint) fill and the
+/// icon/text color, so a chip reads as a quiet label rather than a button.
+class _SplitChip extends StatelessWidget {
+  const _SplitChip({required this.icon, required this.label, required this.tint});
+
+  final IconData icon;
+  final String label;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: tint),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: tint, fontSize: 13)),
+        ],
       ),
     );
   }

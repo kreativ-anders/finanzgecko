@@ -9,6 +9,9 @@ const Color kMuted = Color(0xFF7C8A83);
 // form needed for widget themes/const constructors).
 const Color kPrimary = Color(0xFF00C878);
 const Color kDanger = Color(0xFFFF6B6B);
+// Amber, for non-critical warnings (e.g. an incomplete month in the dashboard
+// header) — distinct from kDanger, which signals an actual error/loss.
+const Color kWarning = Color(0xFFE0A030);
 
 // Trend-line direction colors (see AppLineChart) — deliberately lighter/more
 // muted than kPrimary/kDanger so the dashed projection stays visually

@@ -70,6 +70,22 @@ void main() {
     });
   });
 
+  group('fmtMoneyRounded / fmtSignedMoneyRounded', () {
+    test('rounds to whole units — no decimal separator', () {
+      final s = fmtMoneyRounded(1721.67, 'EUR');
+      expect(s.contains(','), isFalse, reason: 'cents dropped: $s');
+      expect(s.contains('1.722'), isTrue, reason: 'rounded + German grouping: $s');
+    });
+
+    test('signed variant prefixes + only for non-negative values', () {
+      expect(fmtSignedMoneyRounded(1355.61, 'EUR').startsWith('+'), isTrue);
+      final neg = fmtSignedMoneyRounded(-1355.61, 'EUR');
+      expect(neg.startsWith('+'), isFalse);
+      expect(neg.contains('-'), isTrue);
+      expect(neg.contains('1.356'), isTrue);
+    });
+  });
+
   group('periodLabel', () {
     test('maps YYYY-MM to a German short month + year', () {
       expect(periodLabel('2025-01'), 'Jan 2025');
