@@ -8,15 +8,18 @@ name: Release
 #
 # Flutter braucht für jede Zielplattform einen nativen Build auf dieser
 # Plattform -- daher drei separate Build-Jobs (ubuntu/macos/windows-latest),
-# die je ihr Zip nur als Workflow-Artifact hochladen. Das eigentliche
+# die je ihr Paket nur als Workflow-Artifact hochladen. Das eigentliche
 # GitHub-Release entsteht erst danach, atomar, in einem einzigen `release`-
 # Job (`needs: [linux, macos, windows]`): schlägt einer der drei Builds fehl,
 # lädt `release` gar nicht erst hoch — kein Release mit fehlendem Plattform-
-# Zip, wie es bei drei unabhängig veröffentlichenden Jobs passieren könnte.
+# Paket, wie es bei drei unabhängig veröffentlichenden Jobs passieren könnte.
 #
 # Jeder Build ist ein ganzer Ordner (Executable + data/ + Bibliotheken),
-# kein self-contained Single-File-Binary -- deswegen wird jeweils der
-# komplette Bundle-Ordner gezippt.
+# kein self-contained Single-File-Binary. Damit Endnutzer trotzdem EINE Datei
+# bekommen, wird das Bundle je Plattform verpackt: Windows -> Inno-Setup-
+# Installer (FinanzGecko-Setup.exe), Linux -> AppImage
+# (FinanzGecko-x86_64.AppImage), macOS -> gezipptes .app-Bundle (das der
+# Finder ohnehin als eine Einheit behandelt).
 #
 # Ablauf für ein Release — zwei gleichwertige Wege:
 #   A) Manuell: Version in pubspec.yaml (version:) hochzählen und committen,
@@ -24,13 +27,14 @@ name: Release
 #   B) Automatisch: im Actions-Tab "Run workflow" mit "bump" = patch/minor/
 #      major (oder "version" für eine exakte Zielversion) starten — siehe
 #      "Versions-Bump per Knopfdruck" unten.
-# In beiden Fällen lädt dieser Workflow alle drei Plattform-Zips automatisch
-# als Release-Assets hoch.
+# In beiden Fällen lädt dieser Workflow alle drei Plattform-Pakete (Windows-
+# Installer, Linux-AppImage, macOS-.app-Zip) automatisch als Release-Assets
+# hoch.
 #
 # Ad-hoc-Builds für alle drei Plattformen ohne Tag/Release (z. B. um einen
 # Branch vorab zu testen): im Actions-Tab diesen Workflow manuell über
 # "Run workflow" (workflow_dispatch) starten, Feld "bump" auf "none" lassen.
-# Die drei Zips landen dann nur als Workflow-Artifacts am Run (Reiter
+# Die drei Pakete landen dann nur als Workflow-Artifacts am Run (Reiter
 # "Summary"), es wird kein GitHub-Release angelegt.
 #
 # Versions-Bump per Knopfdruck: "Run workflow" mit "bump" = patch/minor/major
@@ -177,14 +181,18 @@ jobs:
       - run: flutter pub get
       - run: flutter build linux --release
 
-      - name: Bundle zippen
-        working-directory: build/linux/x64/release/bundle
-        run: zip -r ../../../../../finanzgecko-linux-x64.zip .
+      # Statt des rohen Bundle-Ordners ein einzelnes ausführbares AppImage:
+      # eine Datei, die Testnutzer per Doppelklick starten (kein Entpacken,
+      # nichts, das beim Löschen einzelner Dateien den Start bricht).
+      - name: AppImage bauen
+        run: |
+          chmod +x packaging/linux/build_appimage.sh
+          ./packaging/linux/build_appimage.sh
 
       - uses: actions/upload-artifact@v7
         with:
-          name: finanzgecko-linux-x64
-          path: finanzgecko-linux-x64.zip
+          name: FinanzGecko-linux-x86_64
+          path: FinanzGecko-x86_64.AppImage
 
   macos:
     needs: [gate, bump-version]
@@ -235,13 +243,24 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
 
-      - name: Bundle zippen
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath finanzgecko-windows-x64.zip
+      # Statt des rohen Bundle-Ordners (Executable + data/ + DLLs) einen
+      # einzigen Installer FinanzGecko-Setup.exe: Doppelklick → Next/Finish →
+      # Start-Menü-Eintrag + Uninstaller, alle Dateien versteckt in Program
+      # Files. Inno Setup ist auf windows-latest vorinstalliert (ISCC).
+      - name: Inno Setup bereitstellen
+        run: choco install innosetup --no-progress -y
+
+      - name: Installer bauen
+        shell: pwsh
+        run: |
+          $ver = ((Select-String -Path pubspec.yaml -Pattern '^version:').Line -replace '^version:\s*','' -replace '\+.*','')
+          $buildDir = "$PWD\build\windows\x64\runner\Release"
+          & "iscc" "/DMyAppVersion=$ver" "/DBuildDir=$buildDir" packaging\windows\finanzgecko.iss
 
       - uses: actions/upload-artifact@v7
         with:
-          name: finanzgecko-windows-x64
-          path: finanzgecko-windows-x64.zip
+          name: FinanzGecko-windows-x64
+          path: packaging/windows/FinanzGecko-Setup.exe
 
   # Veröffentlicht das GitHub-Release erst, wenn ALLE drei Plattform-Builds
   # erfolgreich waren — bewusst ein einziger, atomarer Schritt statt dass
