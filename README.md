@@ -432,6 +432,22 @@ nachholen (siehe "Einmalig einrichten" oben).
 direkt aus `build/` gestarteten Bundle, siehe "Als Desktop-Anwendung
 installieren" oben — `./packaging/linux/install.sh` ausführen.
 
+**Windows: App startet, zeigt aber kein Icon in Taskleiste/Titelleiste (auch
+nach `dart run tool/generate_icons.dart` + Neubau):** Liegt in aller Regel
+**nicht** an der `.ico`-Datei selbst, sondern an einer verwaisten
+Verknüpfung. `local_notifier` registriert beim ersten Start eine
+Windows-App-User-Model-ID samt Startmenü-Verknüpfung
+(`%APPDATA%\Microsoft\Windows\Start Menu\Programs\FinanzGecko.lnk`) — Windows
+löst das Taskleisten-Icon einer laufenden, AUMID-registrierten App über genau
+diese Verknüpfung auf, nicht über das Icon-Handle des laufenden Fensters.
+Wurde die App vorher von einem anderen Pfad aus gestartet (z. B. ein
+entpacktes Release-Zip, das seitdem gelöscht/verschoben wurde), zeigt die
+Verknüpfung ins Leere und die Taskleiste bleibt für **jeden** späteren Build
+leer, egal wie korrekt dessen `.ico` ist. Beheben: `finanzgecko.exe` beenden,
+`FinanzGecko.lnk` unter obigem Pfad löschen, App neu starten — `local_notifier`
+erkennt die fehlende Verknüpfung und legt sie mit dem aktuell laufenden Pfad
+neu an.
+
 **`flutter build windows` bricht mit einem CMake-/MSBuild-Fehler ab:** Die
 Visual-Studio-Workload "Desktop development with C++" fehlt — siehe
 "Einmalig einrichten → Windows" oben. Ein `flutter doctor` sollte danach bei
