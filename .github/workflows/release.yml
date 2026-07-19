@@ -247,6 +247,9 @@ jobs:
   # erfolgreich waren — bewusst ein einziger, atomarer Schritt statt dass
   # jeder Build-Job unabhängig sein eigenes Release-Asset anhängt: schlägt
   # z. B. nur "linux" fehl, entsteht so kein Release, dem das Linux-Zip fehlt.
+  # Aktualisiert dabei zusätzlich CHANGELOG.md (Commits seit dem letzten Tag,
+  # oben angehängt) — bewusst nur hier statt in einem eigenen Push/PR-Workflow
+  # (s. o.), damit die "ein einziger Workflow"-Entscheidung bestehen bleibt.
   release:
     needs: [bump-version, linux, macos, windows]
     if: |
@@ -256,6 +259,45 @@ jobs:
       (needs.bump-version.result == 'success' || startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Changelog aktualisieren
+        env:
+          TAG: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
+        run: |
+          prev_tag="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")"
+          if [ -n "$prev_tag" ]; then
+            range="${prev_tag}..${TAG}"
+          else
+            range="${TAG}"
+          fi
+
+          {
+            echo "## ${TAG} - $(date +%Y-%m-%d)"
+            echo
+            git log "$range" --no-merges --pretty=format:"- %s (%h)"
+            echo
+            echo
+          } > new_entry.md
+
+          if [ -f CHANGELOG.md ]; then
+            tail -n +2 CHANGELOG.md > rest.md
+          else
+            : > rest.md
+          fi
+          { echo "# Changelog"; echo; cat new_entry.md; cat rest.md; } > CHANGELOG.md
+          rm -f new_entry.md rest.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet || git commit -m "📝 Changelog für ${TAG}"
+          git push origin HEAD:main
+
       - uses: actions/download-artifact@v8
         with:
           path: dist

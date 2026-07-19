@@ -41,6 +41,23 @@ Feature: Datenspeicherung, Verschlüsselung und Integrität
     Given am erwarteten Pfad existiert noch keine Datei
     Then startet die App mit Standardwerten, ohne eine Quarantäne-Kopie anzulegen (nichts zu verlieren)
 
+  Scenario: Datendatei aus einer neueren Schema-Version wird bewahrt, nicht überschrieben
+    Given die Datendatei trägt eine "schemaVersion" größer als die von diesem Build unterstützte Version
+      (z. B. weil eine neuere App-Version lief und die App danach herabgestuft wurde)
+    When die App startet
+    Then wird die Datei NICHT fehlertolerant eingelesen (das würde unbekannte Felder stillschweigend verwerfen)
+    And sie wird zuerst unverändert als Kopie unter "<dateiname>.newer-version-<Zeitstempel>" gesichert
+    And erst danach startet die App mit Standardwerten — die neuere Datei bleibt vollständig erhalten, sodass
+      ein Update der App die Daten wieder lesbar macht
+
+  Scenario: Datendatei aus einer älteren Schema-Version wird migriert — mit vorheriger Sicherung
+    Given die Datendatei trägt eine "schemaVersion" kleiner als die aktuell unterstützte Version
+    When die App startet
+    Then wird zuerst eine unveränderte, verschlüsselte Kopie der bisherigen Datei als
+      "pre-migrate-backup-<Zeitstempel>.json" im Datenverzeichnis abgelegt
+    And erst danach wird die Datei im aktuellen Format neu geschrieben und mit der aktuellen Schema-Version gestempelt
+    And ein Fehler bei dieser Sicherung darf den Start nicht verhindern (best effort)
+
   Scenario: Einzelne fehlerhafte Datensätze gefährden nicht die ganze Datei
     Given die Datenbank enthält eine Liste (Konten/Kontostände/Vermögenswerte/Fixposten) mit einem einzelnen
       fehlerhaften Eintrag

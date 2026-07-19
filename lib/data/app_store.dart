@@ -271,18 +271,46 @@ class AppStore {
       if (!_isEnvelope(decoded)) {
         // Not an encrypted envelope — an unexpected or foreign file shape.
         // Preserve it before overwriting so nothing is silently destroyed.
-        await _quarantineUnreadable(file);
+        await _quarantineFile(file, 'unreadable');
         _data = AppSchema.defaults();
         await _persist();
       } else {
         final parsed = jsonDecode(await _decryptEnvelope(decoded as Map));
+        final onDiskVersion = (parsed is Map && parsed['schemaVersion'] is num)
+            ? parsed['schemaVersion'] as num
+            : null;
         final validated = AppSchema.fromDynamic(parsed);
-        if (validated != null) {
-          _data = validated;
-        } else {
-          await _quarantineUnreadable(file);
+        if (validated == null) {
+          await _quarantineFile(file, 'unreadable');
           _data = AppSchema.defaults();
           await _persist();
+        } else if (onDiskVersion != null && onDiskVersion > currentSchemaVersion) {
+          // Downgrade guard: this file was written by a NEWER build. Parsing it
+          // here would silently drop fields this older build doesn't understand
+          // and then overwrite the user's only copy with a lossy re-write.
+          // Preserve the newer file verbatim and start fresh instead — the
+          // kept copy lets the user recover by updating the app. Mirrors the
+          // import-side check ([UnsupportedBackupVersionException]) for the
+          // everyday load path, which otherwise had no version guard at all.
+          await _quarantineFile(file, 'newer-version');
+          _data = AppSchema.defaults();
+          await _persist();
+        } else {
+          final needsMigration = onDiskVersion != null && onDiskVersion < currentSchemaVersion;
+          if (needsMigration) {
+            // Snapshot the pre-migration file byte-for-byte (it's already an
+            // encrypted envelope) BEFORE this build ever rewrites it in the new
+            // format, so a botched forward-migration is always recoverable.
+            await _writePreMigrationBackup(file);
+          }
+          // This build now owns the data: stamp it with the current version so
+          // subsequent persists/exports carry it.
+          validated.schemaVersion = currentSchemaVersion;
+          _data = validated;
+          // Make the upgraded shape + version bump durable immediately, rather
+          // than waiting for the user's next mutation, so the on-disk file and
+          // its pre-migration backup can't drift apart across restarts.
+          if (needsMigration) await _persist();
         }
       }
     } catch (_) {
@@ -291,7 +319,7 @@ class AppStore {
       // envelope decryption, ...) -> preserve it under a new name first,
       // since the next line would otherwise silently overwrite the user's
       // only copy of their data with empty defaults.
-      if (fileExisted) await _quarantineUnreadable(file);
+      if (fileExisted) await _quarantineFile(file, 'unreadable');
       _data = AppSchema.defaults();
       await _persist();
     }
@@ -335,12 +363,24 @@ class AppStore {
   /// snapshots).
   static String _timestampSuffix() => DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
 
-  /// Best-effort copy of a store file that failed to parse, so a corrupt or
-  /// unexpectedly-shaped file never gets silently destroyed by [_persist]
-  /// writing fresh defaults over it. A failed backup must not block startup.
-  Future<void> _quarantineUnreadable(File file) async {
+  /// Best-effort copy of a store file that this build won't adopt, so a corrupt,
+  /// unexpectedly-shaped, or newer-schema file never gets silently destroyed by
+  /// [_persist] writing fresh defaults over it. [reason] becomes part of the
+  /// side-file name (`<file>.<reason>-<timestamp>`): `unreadable` for corrupt/
+  /// foreign/undecryptable files, `newer-version` for a file written by a newer
+  /// build (downgrade guard). A failed copy must not block startup.
+  Future<void> _quarantineFile(File file, String reason) async {
     try {
-      await file.copy('${file.path}.unreadable-${_timestampSuffix()}');
+      await file.copy('${file.path}.$reason-${_timestampSuffix()}');
+    } catch (_) {}
+  }
+
+  /// Byte-for-byte copy of the encrypted store file, taken before a forward
+  /// schema migration rewrites it in the new format, so a botched migration
+  /// stays recoverable. Best-effort — a failed copy must not block startup.
+  Future<void> _writePreMigrationBackup(File file) async {
+    try {
+      await file.copy(p.join(file.parent.path, 'pre-migrate-backup-${_timestampSuffix()}.json'));
     } catch (_) {}
   }
 

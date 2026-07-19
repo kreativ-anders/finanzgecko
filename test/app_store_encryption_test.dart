@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:finanzgecko/data/app_schema.dart';
 import 'package:finanzgecko/data/app_store.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -190,6 +191,83 @@ void main() {
     expect(store.getCachedRate('CHF_EUR_2026-02-28'), 1.04);
     final rates = jsonDecode(await ratesFile().readAsString()) as Map<String, dynamic>;
     expect(rates['CHF_EUR_2026-02-28'], 1.04);
+  });
+
+  // Writes an encrypted envelope holding [payload] under a fresh key, and
+  // installs a fake keychain carrying that same key, so a store opened on
+  // [tempDir] can decrypt it. Mirrors the legacy-ratesCache test's setup.
+  Future<void> seedEncryptedStore(Map<String, dynamic> payload) async {
+    final cipher = AesGcm.with256bits();
+    final key = await cipher.newSecretKey();
+    final keyBytes = await key.extractBytes();
+    _FakeSecureStorage({'finanzgecko_dek': base64Encode(keyBytes)}).install();
+
+    final box = await cipher.encrypt(utf8.encode(jsonEncode(payload)), secretKey: key);
+    tempDir.createSync(recursive: true);
+    await storeFile().writeAsString(
+      jsonEncode({
+        'v': 1,
+        'nonce': base64Encode(box.nonce),
+        'cipherText': base64Encode(box.cipherText),
+        'mac': base64Encode(box.mac.bytes),
+      }),
+    );
+  }
+
+  Map<String, dynamic> payloadWithVersion(num version) => {
+    'schemaVersion': version,
+    'baseCurrency': 'EUR',
+    'accounts': [
+      {
+        'id': 1,
+        'name': 'Wichtiges Konto',
+        'bank': '',
+        'tag': 'giro',
+        'currency': 'EUR',
+        'color': '#00c878',
+        'archived': false,
+        'createdAt': DateTime.now().toIso8601String(),
+      },
+    ],
+    'balances': <dynamic>[],
+    'assets': <dynamic>[],
+    'subscriptions': <dynamic>[],
+    'meta': {'nextAccountId': 2, 'nextBalanceId': 1, 'nextAssetId': 1, 'nextSubscriptionId': 1},
+  };
+
+  test('a store file from a NEWER schema version is preserved, not adopted or overwritten in place', () async {
+    // Simulate a downgrade: a future build wrote schemaVersion 999.
+    await seedEncryptedStore(payloadWithVersion(999));
+
+    final store = AppStore(dataDirectory: tempDir);
+    await store.ensureInitialized();
+
+    // The newer data is NOT tolerantly parsed into this older build...
+    expect(store.getAccounts(), isEmpty);
+    // ...it's preserved verbatim under a clearly-labelled side-file...
+    final preserved = tempDir.listSync().where((f) => f.path.contains('.newer-version-'));
+    expect(preserved, isNotEmpty, reason: 'the newer file must be kept, not destroyed');
+    // ...and the live file is a fresh, current-version envelope.
+    final onDisk = jsonDecode(await storeFile().readAsString());
+    expect(onDisk['cipherText'], isA<String>());
+  });
+
+  test('a store file from an OLDER schema version is migrated after a pre-migration backup', () async {
+    // schemaVersion 0 is older than the current version -> forward migration.
+    await seedEncryptedStore(payloadWithVersion(0));
+
+    final store = AppStore(dataDirectory: tempDir);
+    await store.ensureInitialized();
+
+    // Data survives the migration...
+    expect(store.getAccounts().map((a) => a.name), ['Wichtiges Konto']);
+    // ...a byte-for-byte backup of the pre-migration file was written first...
+    final backups = tempDir.listSync().where((f) => f.path.contains('pre-migrate-backup-'));
+    expect(backups, isNotEmpty, reason: 'the old file must be snapshotted before rewrite');
+    // ...and the live file has been re-stamped with the current schema version.
+    final reopened = AppStore(dataDirectory: tempDir);
+    await reopened.ensureInitialized();
+    expect(reopened.exportAllData()['schemaVersion'], currentSchemaVersion);
   });
 
   test('a tampered envelope is quarantined and the store falls back to defaults', () async {

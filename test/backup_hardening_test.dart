@@ -1,4 +1,7 @@
 // Gherkin: gherkin/backup_restore.feature
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:finanzgecko/data/app_schema.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -92,5 +95,25 @@ void main() {
   test('a missing schemaVersion defaults to the current version', () {
     final backup = fullBackup()..remove('schemaVersion');
     expect(AppSchema.fromDynamic(backup)!.schemaVersion, currentSchemaVersion);
+  });
+
+  // Golden-file guard: a real, checked-in v1 backup (test/fixtures/backup_v1.json)
+  // must keep loading losslessly on every future build. When currentSchemaVersion
+  // is bumped, DON'T edit this fixture — add a new backup_v<n>.json fixture and a
+  // sibling test, so "a newer app can no longer read older data" fails CI here
+  // before it can ship.
+  test('the frozen v1 backup fixture still loads with every section intact', () {
+    final raw = File('test/fixtures/backup_v1.json').readAsStringSync();
+    final parsed = AppSchema.fromDynamic(jsonDecode(raw))!;
+
+    expect(parsed.baseCurrency, 'CHF');
+    expect(parsed.accounts.map((a) => a.name), ['Girokonto', 'Bargeld']);
+    expect(parsed.balances.single.period, '2026-01');
+    expect(parsed.balances.single.amountBase, 2500.0);
+    expect(parsed.balances.single.note, 'Startstand');
+    expect(parsed.assets.single.name, 'MacBook');
+    expect(parsed.assets.single.value, 1200.0);
+    expect(parsed.subscriptions.single.interval, 'monthly');
+    expect(parsed.subscriptions.single.amountBase, 3200.0);
   });
 }

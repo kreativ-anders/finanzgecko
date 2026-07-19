@@ -47,6 +47,7 @@ nutzbar).
 ```
 finanzgecko/
 ├── AI_MASTER.md                  # ← dieses Dokument
+├── CHANGELOG.md                  # generiert vom release-Job in release.yml (Commits seit letztem Tag, oben angehängt) — nicht von Hand pflegen
 ├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (deklarativ)
 │   └── executable/               # ← ausführbare Features (@executable), laufen via test/support/gherkin_runner.dart
 ├── templates/                    # ← Import-Vorlage (import-template.json) + Feld-Doku für die Datenmigration aus Fremdtools
@@ -90,7 +91,8 @@ finanzgecko/
 └── .github/workflows/
     └── release.yml                # einziger Workflow. Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst
                                    #   `gate`-Job (analyze + test + Icon-Pipeline), dann 3 native Build-Jobs
-                                   #   (ubuntu/macos/windows, `needs: gate`) → Release-Assets. Kein separater
+                                   #   (ubuntu/macos/windows, `needs: gate`) → Release-Assets, danach `release`-Job
+                                   #   (aktualisiert zusätzlich CHANGELOG.md, s. u.). Kein separater
                                    #   Push/PR-CI-Workflow — `flutter analyze`/`flutter test`/`dart format` laufen
                                    #   lokal vor dem Commit, nicht automatisiert bei jedem Push.
 ```
@@ -163,7 +165,19 @@ automatisch über `Provider`.
 - **Serialisierte Write-Queue** (`_writeQueue`/`_enqueueWrite`): verhindert, dass zwei parallele Speicherungen sich
   auf derselben temporären Datei überschneiden. Ein fehlgeschlagener Write vergiftet nicht die Queue für später.
 - **Unlesbare/fremde Dateien werden nie stillschweigend überschrieben** — sie werden zuerst unter
-  `*.unreadable-<timestamp>` gesichert (`_quarantineUnreadable`), erst danach startet die App mit Standardwerten.
+  `*.unreadable-<timestamp>` gesichert (`_quarantineFile(file, 'unreadable')`), erst danach startet die App mit
+  Standardwerten.
+- **Schema-Versionsschutz auf dem Ladepfad (nicht nur beim Import):** Beim Start prüft `ensureInitialized()` die
+  `schemaVersion` der entschlüsselten Datendatei gegen `currentSchemaVersion`:
+  - *Neuer als dieser Build* (Downgrade) → die Datei wird NICHT fehlertolerant eingelesen (das würde unbekannte
+    Felder verwerfen und danach die einzige Kopie der Nutzerdaten lossy überschreiben), sondern unverändert unter
+    `*.newer-version-<timestamp>` bewahrt (`_quarantineFile(file, 'newer-version')`); die App startet mit
+    Standardwerten. Ein App-Update macht die Daten wieder lesbar. Spiegelt die Import-Prüfung
+    (`UnsupportedBackupVersionException`) für den Alltags-Ladepfad, der bisher gar keinen Versions-Guard hatte.
+  - *Älter als dieser Build* (Vorwärts-Migration) → zuerst eine byte-genaue Kopie der (bereits verschlüsselten) Datei
+    als `pre-migrate-backup-<timestamp>.json` (`_writePreMigrationBackup`), dann wird das In-Memory-Schema auf
+    `currentSchemaVersion` gestempelt und sofort neu geschrieben, damit Datei und Backup über Neustarts nicht
+    auseinanderlaufen. Eine botchte Migration bleibt so wiederherstellbar.
 - **Import erzwingt die Bank→Farbe-Regel:** In `importAllData` wird `account.color` über
   `resolveAccountColor(bank, tag)` (`constants.dart`) neu gesetzt — bekannte Bank → Markenfarbe, leere Bank
   (Bargeld/Krypto) → Kontotyp-Farbe. Eine unbekannte, nicht-leere Bank **bricht den gesamten Import ab** (kein
@@ -198,8 +212,12 @@ bewusst schlanker als `toJson()` (kein `ratesCache`/`meta`/`window` — internes
 eines Backups) **und ohne `account.color`** (`Account.toExportJson`): die Farbe ist aus der Bank ableitbar und wird
 beim Import über `resolveAccountColor` neu gesetzt — kleinere Backups, gehärteter Import.
 
-`currentSchemaVersion = 1` — bei jeder inkompatiblen Schemaänderung hochzählen und die Import-Prüfung in
-`AppStore.importAllData()` beachten (lehnt Backups aus einer *neueren* Version ab, mit klarer Fehlermeldung).
+`currentSchemaVersion = 1` — bei jeder inkompatiblen Schemaänderung hochzählen. Betroffen sind dann **zwei** Pfade:
+(1) die Import-Prüfung in `AppStore.importAllData()` (lehnt Backups aus einer *neueren* Version ab, mit klarer
+Fehlermeldung) und (2) der Start-Ladepfad in `ensureInitialized()` (Downgrade-Guard + automatische
+`pre-migrate-backup`-Sicherung, s. §4.1). **Beim Hochzählen NICHT** die eingefrorene Golden-File-Fixture
+`test/fixtures/backup_v1.json` ändern — stattdessen eine neue `backup_v<n>.json` + Test ergänzen, damit „eine neuere
+App kann alte Daten nicht mehr lesen" in der CI auffällt, bevor es ausgeliefert wird.
 
 ### 4.3 Datenmodelle (`lib/models/`)
 
@@ -308,6 +326,10 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 - Icon-Pipeline: ein einziger 1024×1024-Master (`assets/icon/icon.png`) speist alle Plattform-Formate über
   `dart run tool/generate_icons.dart`.
 - Kein In-App-Auto-Updater — Update = neues Release-Zip laden, altes Bundle ersetzen.
+- **`CHANGELOG.md`** wird ausschließlich vom `release`-Job in `release.yml` gepflegt: bei jedem tatsächlichen Release
+  (Tag-Push oder Version-Bump-Dispatch, nicht bei einem reinen Testbuild mit `bump: none`) wird ein Abschnitt mit den
+  Commit-Messages seit dem vorherigen Tag oben angehängt und direkt nach `main` gepusht. Bewusst **kein** eigener
+  Push/PR-Workflow dafür — das würde die obige "ein einziger Workflow"-Entscheidung aufweichen.
 
 ## 7. Domänen-Glossar (verbindlich)
 
@@ -479,6 +501,9 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    - App-Sandbox deaktiviert auf macOS — Abschnitt 4.1.
    - Fensterposition wird bewusst nicht gespeichert — Abschnitt 4.3.
    - Keine DB-Engine, eine einzige JSON-Datei — Abschnitt 2.
+   - Schema-Versionsschutz auf dem Start-Ladepfad (Downgrade-Guard + `pre-migrate-backup` + Golden-File-Fixture) —
+     Abschnitt 4.1/4.2. Die Datendatei ist die einzige Quelle der Wahrheit; kein neuer Build darf bestehende Daten
+     unlesbar machen oder verlustbehaftet überschreiben.
    - Eigener Gherkin-Runner statt `flutter_gherkin` — Abschnitt 8.
    Diese Punkte tauchen typischerweise auch als Kommentar im Code auf; wer den Kommentar entfernt, muss auch hier
    den entsprechenden Absatz anpassen (oder umgekehrt).
