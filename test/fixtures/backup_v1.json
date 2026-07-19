@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-01-15T09:00:00.000",
+  "baseCurrency": "CHF",
+  "accounts": [
+    {
+      "id": 1,
+      "name": "Girokonto",
+      "bank": "DKB",
+      "tag": "Girokonto",
+      "currency": "EUR",
+      "archived": false,
+      "createdAt": "2026-01-15T09:00:00.000"
+    },
+    {
+      "id": 2,
+      "name": "Bargeld",
+      "bank": "",
+      "tag": "Depot",
+      "currency": "EUR",
+      "archived": false,
+      "createdAt": "2026-01-15T09:00:00.000"
+    }
+  ],
+  "balances": [
+    {
+      "id": 1,
+      "accountId": 1,
+      "period": "2026-01",
+      "amountOriginal": 2500.0,
+      "currencyOriginal": "EUR",
+      "rate": 1.0,
+      "amountBase": 2500.0,
+      "note": "Startstand",
+      "enteredAt": "2026-01-15T09:00:00.000"
+    }
+  ],
+  "assets": [
+    {
+      "id": 1,
+      "name": "MacBook",
+      "value": 1200.0,
+      "createdAt": "2026-01-15T09:00:00.000",
+      "lastEvaluatedAt": "2026-01-15T09:00:00.000"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": 1,
+      "name": "Gehalt",
+      "interval": "monthly",
+      "amountOriginal": 3200.0,
+      "currencyOriginal": "EUR",
+      "rate": 1.0,
+      "amountBase": 3200.0,
+      "createdAt": "2026-01-15T09:00:00.000"
+    }
+  ]
+}
