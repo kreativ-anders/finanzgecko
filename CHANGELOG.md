@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.3.2 - 2026-07-19
+
+- 🔖 Version 1.3.2+8 (70be6e0)
+- 🐛 Document Windows taskbar icon fix (fc9fdc9)
+- 📝 Changelog für v1.3.1 (b5d8e86)
+
+
 ## v1.3.1 - 2026-07-19
 
 - 🔖 Version 1.3.1+7 (250c22b)
