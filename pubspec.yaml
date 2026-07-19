@@ -106,12 +106,15 @@ flutter:
 
 # Icon-Pipeline: ein 1024x1024-Master (assets/icon/icon.png) speist alle
 # Plattformen, ein einziger Befehl deckt alle drei ab:
-# `dart run tool/generate_icons.dart` (ruft dieses Package für macOS/Windows
-# auf und skaliert den Master zusätzlich für Linux). Details siehe README.
+# `dart run tool/generate_icons.dart` (ruft dieses Package für macOS auf und
+# baut Windows- (Multi-Size-.ico) und Linux-Icons selbst aus dem Master).
+# Details siehe README. Windows ist hier bewusst deaktiviert: das Package
+# schreibt fürs Windows-Target nur eine einzige 256px-Größe ins .ico, was in
+# Explorer/Taskleiste/Startmenü als fehlendes Icon endet — siehe
+# generateWindowsIcon() in tool/generate_icons.dart.
 flutter_launcher_icons:
   image_path: "assets/icon/icon.png"
   macos:
     generate: true
   windows:
-    generate: true
-    icon_size: 256
+    generate: false

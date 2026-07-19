@@ -263,7 +263,7 @@ bauen.
 | `packaging/windows/` | `finanzgecko.iss` — Inno-Setup-Skript, das aus dem Windows-Bundle einen einzigen Installer `FinanzGecko-Setup.exe` erzeugt |
 | `.github/workflows/release.yml` | CI: baut bei jedem Tag-Push je Plattform ein fertiges Paket (Windows-Installer, Linux-AppImage, macOS-.app-Zip; je ein nativer Runner pro OS) und hängt sie ans GitHub-Release |
 | `assets/icon/icon.png` | App-Icon-Master (1024×1024), Quelle für alle Plattform-Icons (siehe "App-Icon aktualisieren") |
-| `tool/generate_icons.dart` | Einziger Befehl für die komplette Icon-Pipeline: macOS/Windows via `flutter_launcher_icons`, Linux-Hicolor-Icons per Skalierung aus dem Master |
+| `tool/generate_icons.dart` | Einziger Befehl für die komplette Icon-Pipeline: macOS via `flutter_launcher_icons`, Windows-`.ico` (Multi-Size) und Linux-Hicolor-Icons per eigener Skalierung aus dem Master |
 
 ## App-Icon aktualisieren
 
@@ -284,15 +284,20 @@ Master, aus dem alles generiert wird:
 
   Ruft intern
   [`flutter_launcher_icons`](https://pub.dev/packages/flutter_launcher_icons)
-  auf (Konfiguration am Ende von `pubspec.yaml`) und schreibt direkt nach
-  `macos/Runner/Assets.xcassets/AppIcon.appiconset/` und
-  `windows/runner/resources/app_icon.ico`. Skaliert denselben Master
-  anschließend zusätzlich auf die Linux-Hicolor-Größen
-  (`icons/icon-512.png`, `icons/icon-192.png`) — dafür gibt es in
-  `flutter_launcher_icons` kein eigenes Target, das Taskleisten-/
-  Startmenü-Icon läuft dort stattdessen über `packaging/linux/install.sh`
-  (siehe "Als Desktop-Anwendung installieren" oben), das die generierten
-  PNGs beim nächsten Lauf installiert.
+  nur für macOS auf (Konfiguration am Ende von `pubspec.yaml`, schreibt nach
+  `macos/Runner/Assets.xcassets/AppIcon.appiconset/`). Windows
+  (`windows/runner/resources/app_icon.ico`) und Linux
+  (`icons/icon-512.png`, `icons/icon-192.png`) generiert das Skript
+  stattdessen selbst aus dem Master (`generateWindowsIcon`/
+  `generateLinuxIcons`) — für Windows bewusst **nicht** über
+  `flutter_launcher_icons`: dessen Windows-Target schreibt nur eine einzige
+  256px-Größe ins `.ico`, was nach der Installation in Explorer, Taskleiste
+  und Startmenü als fehlendes Icon endet statt herunterskaliert zu werden;
+  `generateWindowsIcon` baut stattdessen ein echtes Multi-Size-`.ico`
+  (16–256px). Das Taskleisten-/Startmenü-Icon unter Linux läuft weiterhin
+  über `packaging/linux/install.sh` (siehe "Als Desktop-Anwendung
+  installieren" oben), das die generierten PNGs beim nächsten Lauf
+  installiert.
 
 Nach jedem Austausch von `assets/icon/icon.png` einmal ausführen und die
 generierten Dateien mit committen — sie werden nicht automatisch im Build

@@ -326,7 +326,12 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   `flutter test` und `dart format` laufen lokal vor jedem Commit (siehe CLAUDE.md "Always verify"), release.yml ist
   der einzige GitHub-Workflow im Repo.
 - Icon-Pipeline: ein einziger 1024×1024-Master (`assets/icon/icon.png`) speist alle Plattform-Formate über
-  `dart run tool/generate_icons.dart`.
+  `dart run tool/generate_icons.dart` — `flutter_launcher_icons` nur noch für macOS (`pubspec.yaml`,
+  `windows.generate: false`); Windows-`.ico` und Linux-Hicolor-Icons baut `tool/generate_icons.dart` selbst
+  (`generateWindowsIcon`/`generateLinuxIcons`, beide reine Funktionen, auch von `flutter test` ausgeführt). Grund:
+  `flutter_launcher_icons`' eigener Windows-Generator schreibt nur eine einzige 256px-Größe ins `.ico`
+  (`icon_size`-Konfig), was Explorer/Taskleiste/Startmenü nach der Installation ohne Icon lässt statt
+  herunterzuskalieren — `generateWindowsIcon` erzeugt stattdessen ein echtes Multi-Size-`.ico` (16–256px).
 - Release-Artefakte sind **fertige Pakete statt roher Bundle-Ordner** (die Testnutzer verwirrten und beim Löschen
   einzelner Dateien den Start brachen): Windows → Inno-Setup-Installer `FinanzGecko-Setup.exe`
   (`packaging/windows/finanzgecko.iss`, gebaut mit `iscc` im `windows`-Job), Linux → einzelnes ausführbares AppImage
