@@ -42,9 +42,10 @@ ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 SetupIconFile=..\..\windows\runner\resources\app_icon.ico
 
+; Nur Deutsch — die App ist durchgängig deutsch. Mit einer einzigen Sprache
+; zeigt Inno Setup keinen Sprachauswahl-Dialog beim Start des Installers.
 [Languages]
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
-Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
