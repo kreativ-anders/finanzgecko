@@ -26,6 +26,20 @@ class CurrencyService {
 
   String _cacheKey(String from, String to, String dateStr) => '${from}_${to}_$dateStr';
 
+  /// Live reachability probe for Einstellungen → "Hilfe" (debug info) —
+  /// separate from [getExchangeRate]'s cache-fallback path so it reflects
+  /// the connection right now rather than "was there ever a successful call".
+  /// Hits the cheapest endpoint (currency list, no params) with a short
+  /// timeout instead of reusing a real conversion request.
+  Future<bool> isApiReachable({Duration timeout = const Duration(seconds: 3)}) async {
+    try {
+      final res = await http.get(Uri.parse('$_apiBase/currencies')).timeout(timeout);
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// dateStr must be "YYYY-MM-DD". Returns null only if neither the API nor
   /// the cache can supply a rate (caller then asks the user for a manual one).
   Future<RateResult?> getExchangeRate(String from, String to, String dateStr) async {

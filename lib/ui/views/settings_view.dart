@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -206,6 +209,8 @@ class SettingsView extends StatelessWidget {
             ),
           ),
           cardGap,
+          const _HelpSection(),
+          cardGap,
           Container(
             decoration: BoxDecoration(
               color: kSurface,
@@ -285,6 +290,139 @@ Future<void> _openInFileManager(BuildContext context, String path) async {
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ordner konnte nicht geöffnet werden.')));
   }
+}
+
+/// "Hilfe" section: system diagnostics useful when reporting a bug —
+/// version+build come from [PackageInfo], which reads them from the native
+/// package metadata each platform build embeds from pubspec.yaml's
+/// `version:` (bumped by the release workflow's bump-version job before the
+/// platform builds run), so this always reflects the actual installed
+/// release rather than a hardcoded string. Screen/window geometry comes from
+/// `dart:ui` (`PlatformDispatcher.displays` + `MediaQuery`) — useful for
+/// layout bug reports and to tell a multi-monitor setup from a single
+/// built-in display. The API reachability check is a live probe (not the
+/// cached "last successful rate" state), because it doubles as the privacy
+/// answer: the Wechselkurs-API is the app's only external network
+/// destination, no telemetry/analytics of any kind.
+class _HelpSection extends StatelessWidget {
+  const _HelpSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final displays = ui.PlatformDispatcher.instance.displays;
+    final displayLabel = displays
+        .map((d) => '${(d.size.width / d.devicePixelRatio).round()}×${(d.size.height / d.devicePixelRatio).round()}')
+        .join(' · ');
+    final windowSize = MediaQuery.sizeOf(context);
+
+    return SectionCard(
+      title: 'Hilfe',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Angaben zur installierten Version und zum System — hilfreich, wenn du ein Problem meldest.',
+            style: TextStyle(color: kMuted),
+          ),
+          const SizedBox(height: 14),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final info = snapshot.data;
+              return _SecurityMetaRow(
+                label: 'Version',
+                value: info == null ? '…' : '${info.version} (Build ${info.buildNumber})',
+              );
+            },
+          ),
+          _SecurityMetaRow(
+            label: 'Betriebssystem',
+            value: '${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+          ),
+          _SecurityMetaRow(label: 'Prozessorkerne', value: '${Platform.numberOfProcessors}'),
+          _SecurityMetaRow(label: 'Systemsprache', value: Platform.localeName),
+          _SecurityMetaRow(label: 'Dart-Laufzeit', value: Platform.version.split(' ').first),
+          _SecurityMetaRow(
+            label: displays.length > 1 ? 'Bildschirme (${displays.length})' : 'Bildschirm',
+            value: displayLabel,
+          ),
+          _SecurityMetaRow(
+            label: 'Fenstergröße',
+            value: '${windowSize.width.round()}×${windowSize.height.round()}',
+          ),
+          FutureBuilder<bool>(
+            future: context.read<AppState>().currencyService.isApiReachable(),
+            builder: (context, snapshot) {
+              final label = switch (snapshot.connectionState) {
+                ConnectionState.done => (snapshot.data ?? false) ? 'Erreichbar' : 'Nicht erreichbar',
+                _ => 'Prüfe…',
+              };
+              return _SecurityMetaRow(label: 'Wechselkurs-API', value: label);
+            },
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Der Abruf der EZB-Wechselkurse (api.frankfurter.dev) ist die einzige externe '
+            'Netzwerkverbindung der App — sonst findet keine Kommunikation statt, kein Tracking, '
+            'keine Analyse-Dienste.',
+            style: TextStyle(color: kMuted, fontSize: 12),
+          ),
+          const Divider(height: 28, color: kBorder),
+          Wrap(
+            spacing: 20,
+            runSpacing: 8,
+            children: [
+              InkWell(
+                onTap: _openSupportMail,
+                child: noSelect(const Text('E-Mail-Support', style: TextStyle(color: kPrimary, fontSize: 13))),
+              ),
+              InkWell(
+                onTap: _openIssueTracker,
+                child: noSelect(
+                  const Text('Fehler melden (GitHub)', style: TextStyle(color: kPrimary, fontSize: 13)),
+                ),
+              ),
+              InkWell(
+                onTap: () => _copyDebugInfo(context, displayLabel, windowSize),
+                child: noSelect(
+                  const Text('Debug-Informationen kopieren', style: TextStyle(color: kPrimary, fontSize: 13)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _openSupportMail() async {
+  final uri = Uri.parse('mailto:finanzgecko@kreativ-anders.de?subject=Support-Anfrage');
+  await launchUrl(uri);
+}
+
+Future<void> _openIssueTracker() async {
+  final uri = Uri.parse('https://github.com/kreativanders/finanzgecko/issues/new');
+  await launchUrl(uri);
+}
+
+Future<void> _copyDebugInfo(BuildContext context, String displayLabel, Size windowSize) async {
+  final currencyService = context.read<AppState>().currencyService;
+  final info = await PackageInfo.fromPlatform();
+  final apiReachable = await currencyService.isApiReachable();
+  final text = [
+    'FinanzGecko ${info.version} (Build ${info.buildNumber})',
+    'Betriebssystem: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+    'Prozessorkerne: ${Platform.numberOfProcessors}',
+    'Systemsprache: ${Platform.localeName}',
+    'Dart-Laufzeit: ${Platform.version.split(' ').first}',
+    'Bildschirm(e): $displayLabel',
+    'Fenstergröße: ${windowSize.width.round()}×${windowSize.height.round()}',
+    'Wechselkurs-API erreichbar: ${apiReachable ? 'ja' : 'nein'}',
+  ].join('\n');
+  await Clipboard.setData(ClipboardData(text: text));
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Debug-Informationen kopiert.')));
 }
 
 /// Read-only "label: value" line used for non-sensitive encryption meta

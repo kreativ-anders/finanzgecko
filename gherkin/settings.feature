@@ -1,4 +1,4 @@
-# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/ui/widgets/reset_confirm_dialog.dart
+# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart
 # Implementierung: lib/ui/views/settings_view.dart
 @settings
 Feature: Einstellungen
@@ -51,6 +51,22 @@ Feature: Einstellungen
     And es wird eine UTF-8-CSV (mit BOM) geschrieben: eine Zeile je Konto und Monat, mit ";" getrennt und Dezimalkomma
     And dieser Export zählt NICHT als Backup — der Backup-Reminder und "zuletzt exportiert" bleiben unberührt
     And die CSV ist bewusst nicht wieder importierbar (nur der JSON-Export ist ein verlustfreier Round-Trip)
+
+  Scenario: Hilfe-Bereich zeigt App- und Systeminformationen
+    Then zeigt der Abschnitt "Hilfe" die installierte Version samt Build-Nummer, direkt aus der
+      laufenden Installation ausgelesen (stimmt dadurch immer mit dem tatsächlich installierten Release
+      überein, auch nach einem über den Release-Workflow automatisch hochgezählten Tag)
+    And dynamisch ermittelte Systeminformationen: Betriebssystem samt Version, Anzahl Prozessorkerne,
+      Systemsprache, Dart-Laufzeitversion
+    And die Auflösung(en) aller angeschlossenen Bildschirme (macht einen Mehrschirm-/externen-Monitor-Aufbau
+      auf einen Blick erkennbar) sowie die aktuelle Fenstergröße der App
+    And einen Live-Erreichbarkeits-Check der Wechselkurs-API ("Erreichbar" / "Nicht erreichbar" / "Prüfe…"),
+      begleitet vom Hinweis, dass dies die einzige externe Netzwerkverbindung der App ist (kein Tracking,
+      keine Analyse-Dienste) — macht diese Zeile zugleich zur Antwort auf "welche Berechtigungen nutzt die App"
+    And einen Link "E-Mail-Support" (mailto an die Support-Adresse) sowie "Fehler melden (GitHub)"
+      zum Issue-Tracker des Projekts
+    And einen Button "Debug-Informationen kopieren", der Version-, System- und Verbindungsinfos als Text in
+      die Zwischenablage kopiert, bestätigt per Snackbar "Debug-Informationen kopiert."
 
   Scenario: App zurücksetzen erfordert eine getippte Bestätigungsphrase
     When ich im rot umrandeten Bereich "Zurücksetzen" auf "App zurücksetzen…" klicke
