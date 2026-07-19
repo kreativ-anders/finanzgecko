@@ -71,7 +71,7 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -100,7 +100,7 @@ jobs:
     outputs:
       new_tag: ${{ steps.bump.outputs.new_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Neue Version berechnen
         id: bump
@@ -157,7 +157,7 @@ jobs:
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.bump-version.outputs.new_tag || github.ref }}
 
@@ -168,7 +168,7 @@ jobs:
       - name: Linux-Toolchain installieren
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev libnotify-dev
 
       - run: flutter config --enable-linux-desktop
       - run: flutter pub get
@@ -178,13 +178,13 @@ jobs:
         working-directory: build/linux/x64/release/bundle
         run: zip -r ../../../../../finanzgecko-linux-x64.zip .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: finanzgecko-linux-x64
           path: finanzgecko-linux-x64.zip
 
       - if: needs.bump-version.result == 'success' || startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
           files: finanzgecko-linux-x64.zip
@@ -196,7 +196,7 @@ jobs:
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.bump-version.outputs.new_tag || github.ref }}
 
@@ -214,13 +214,13 @@ jobs:
         working-directory: build/macos/Build/Products/Release
         run: ditto -c -k --sequesterRsrc --keepParent FinanzGecko.app ../../../../../FinanzGecko-mac.app.zip
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: FinanzGecko-mac
           path: FinanzGecko-mac.app.zip
 
       - if: needs.bump-version.result == 'success' || startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
           files: FinanzGecko-mac.app.zip
@@ -232,7 +232,7 @@ jobs:
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.bump-version.outputs.new_tag || github.ref }}
 
@@ -247,13 +247,13 @@ jobs:
       - name: Bundle zippen
         run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath finanzgecko-windows-x64.zip
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: finanzgecko-windows-x64
           path: finanzgecko-windows-x64.zip
 
       - if: needs.bump-version.result == 'success' || startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
           files: finanzgecko-windows-x64.zip
