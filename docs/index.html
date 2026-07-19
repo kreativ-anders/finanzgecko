@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FinanzGecko — Lokaler Vermögenstracker für Linux, macOS &amp; Windows</title>
-  <meta name="description" content="FinanzGecko ist ein kostenloser, nativer Desktop-Vermögenstracker für Linux, macOS und Windows. Kein Server, keine Cloud, kein Account — alle Daten bleiben AES-256-verschlüsselt lokal auf deinem Rechner." />
+  <meta name="description" content="FinanzGecko ist ein kostenloser, nativer Desktop-Vermögenstracker für Linux, macOS und Windows. Kein Server, keine Cloud, kein Account." />
   <link rel="canonical" href="https://kreativ-anders.github.io/finanzgecko/" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
@@ -18,15 +18,16 @@
   <meta property="og:url" content="https://kreativ-anders.github.io/finanzgecko/" />
   <meta property="og:title" content="FinanzGecko — Lokaler Vermögenstracker für Linux, macOS & Windows" />
   <meta property="og:description" content="Kostenloser, nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account — alle Daten bleiben AES-256-verschlüsselt lokal auf deinem Rechner." />
-  <meta property="og:image" content="https://kreativ-anders.github.io/finanzgecko/assets/icon.png" />
-  <meta property="og:image:width" content="1024" />
-  <meta property="og:image:height" content="1024" />
+  <meta property="og:image" content="https://kreativ-anders.github.io/finanzgecko/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="FinanzGecko Dashboard mit Gesamtvermögen und Vermögensverlauf inklusive Prognose" />
 
   <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="FinanzGecko — Lokaler Vermögenstracker für Linux, macOS & Windows" />
   <meta name="twitter:description" content="Kostenloser, nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account — alle Daten bleiben AES-256-verschlüsselt lokal auf deinem Rechner." />
-  <meta name="twitter:image" content="https://kreativ-anders.github.io/finanzgecko/assets/icon.png" />
+  <meta name="twitter:image" content="https://kreativ-anders.github.io/finanzgecko/assets/og-image.png" />
 
   <!-- Structured data -->
   <script type="application/ld+json">
@@ -140,32 +141,116 @@
           <span class="tag">AES-256-GCM</span>
           <span class="tag">Open Source</span>
         </div>
+
+        <figure class="hero-shot">
+          <picture>
+            <source type="image/webp" srcset="assets/screenshots/finanzgecko-gesamtvermoegen-verlauf-prognose.webp" />
+            <img src="assets/screenshots/finanzgecko-gesamtvermoegen-verlauf-prognose.png"
+                 width="2000" height="972" loading="eager" decoding="async"
+                 alt="FinanzGecko Dashboard mit Gesamtvermögen von 74.191,40 €, monatlichem Vermögensverlauf und Trend-Prognose bis Dezember 2026" />
+          </picture>
+          <figcaption>Das Dashboard: dein Gesamtvermögen, der Verlauf und die Prognose auf einen Blick.</figcaption>
+        </figure>
       </div>
     </section>
 
     <section id="screenshots" class="screenshots">
       <div class="wrap">
         <h2>Ein Blick in die App</h2>
-        <p class="section-lead">Übersicht, Erfassung und Auswertung — alles in einer Ansicht.</p>
-        <div class="shot-grid">
-          <figure class="shot-placeholder">
-            <div class="shot-box" aria-hidden="true">
-              <span>Screenshot folgt</span>
-            </div>
-            <figcaption>Dashboard — Gesamtvermögen, Verlauf &amp; Prognose</figcaption>
-          </figure>
-          <figure class="shot-placeholder">
-            <div class="shot-box" aria-hidden="true">
-              <span>Screenshot folgt</span>
-            </div>
-            <figcaption>Einträge — Kontostände monatlich erfassen</figcaption>
-          </figure>
-          <figure class="shot-placeholder">
-            <div class="shot-box" aria-hidden="true">
-              <span>Screenshot folgt</span>
-            </div>
-            <figcaption>Fixposten — wiederkehrende Ein- &amp; Ausgaben im Blick</figcaption>
-          </figure>
+        <p class="section-lead">Von der ersten Zahl bis zur Prognose — so fühlt sich Überblick an.</p>
+
+        <div class="story">
+
+          <article class="shot-story">
+            <span class="shot-eyebrow">Einmal im Monat</span>
+            <h3>In ein, zwei Minuten sind alle Konten erfasst</h3>
+            <p class="shot-lead">Einmal im Monat trägst du deine Kontostände ein — alle auf einer Seite, jeweils mit dem letzten Wert als Gedächtnisstütze. In zwei Minuten bist du fertig, den Rest erledigt FinanzGecko. Kein Tabellen-Wirrwarr, keine zwanzig offenen Tabs, kein Copy-and-Paste.</p>
+            <figure class="shot">
+              <picture>
+                <source type="image/webp" srcset="assets/screenshots/finanzgecko-kontostaende-monatlich-erfassen.webp" />
+                <img src="assets/screenshots/finanzgecko-kontostaende-monatlich-erfassen.png"
+                     width="2000" height="821" loading="lazy" decoding="async"
+                     alt="FinanzGecko Einträge-Ansicht: monatliche Kontostände für Girokonto, Tagesgeld, ETF-Depot, US-Aktien, Krypto und Bargeld erfassen" />
+              </picture>
+              <figcaption>Einträge — alle Kontostände eines Monats in einem Rutsch, jederzeit rückwirkend korrigierbar.</figcaption>
+            </figure>
+          </article>
+
+          <article class="shot-story">
+            <span class="shot-eyebrow">Mehr als bloße Summen</span>
+            <h3>Sehen, worauf dein Vermögen ruht</h3>
+            <p class="shot-lead">Wie viel steckt im Depot, wie viel liegt einfach bar herum? Die Verteilung nach Kontotyp zeigt es in Sekunden. Direkt daneben laufen deine Fixposten zusammen: Einnahmen, Ausgaben und der monatliche Überschuss, der deinen ganzen Verlauf antreibt.</p>
+            <figure class="shot">
+              <picture>
+                <source type="image/webp" srcset="assets/screenshots/finanzgecko-verteilung-nach-kontotyp-kennzahlen.webp" />
+                <img src="assets/screenshots/finanzgecko-verteilung-nach-kontotyp-kennzahlen.png"
+                     width="2000" height="462" loading="lazy" decoding="async"
+                     alt="FinanzGecko Kennzahlen: Verteilung des Vermögens nach Kontotyp als Ringdiagramm sowie monatlicher Überschuss aus Fixposten" />
+              </picture>
+              <figcaption>Kennzahlen — Verteilung nach Kontotyp, monatlicher Überschuss und Sachwerte nebeneinander.</figcaption>
+            </figure>
+          </article>
+
+          <article class="shot-story">
+            <span class="shot-eyebrow">Wachstum sichtbar gemacht</span>
+            <h3>Zuschauen, wie sich Schicht um Schicht aufbaut</h3>
+            <p class="shot-lead">Jede Farbe ein Kontotyp, jeder Monat eine Schicht mehr: Die Zusammensetzung über Zeit zeigt dir, ob dein Depot oder dein Sparkonto den Ausschlag gibt — und wie sich das über die Monate verschiebt.</p>
+            <figure class="shot">
+              <picture>
+                <source type="image/webp" srcset="assets/screenshots/finanzgecko-vermoegen-zusammensetzung-ueber-zeit.webp" />
+                <img src="assets/screenshots/finanzgecko-vermoegen-zusammensetzung-ueber-zeit.png"
+                     width="2060" height="491" loading="lazy" decoding="async"
+                     alt="FinanzGecko Diagramm der Vermögens-Zusammensetzung über Zeit, gestapelt nach Kontotyp von Januar bis Juli 2026" />
+              </picture>
+              <figcaption>Zusammensetzung über Zeit — wie sich dein Vermögen Monat für Monat aufbaut.</figcaption>
+            </figure>
+          </article>
+
+          <article class="shot-story">
+            <span class="shot-eyebrow">Nicht nur Kontostände</span>
+            <h3>Auch was in der Garage steht, zählt</h3>
+            <p class="shot-lead">E-Bike, MacBook, das Auto — Sachwerte gehören zu deinem Vermögen, tauchen auf keinem Kontoauszug auf. Erfasse sie mit ihrem aktuellen Wert, und FinanzGecko erinnert dich, sie hin und wieder neu zu bewerten. Per Schalter nimmst du sie ins Gesamtvermögen auf oder lässt sie bewusst außen vor.</p>
+            <figure class="shot">
+              <picture>
+                <source type="image/webp" srcset="assets/screenshots/finanzgecko-vermoegenswerte-sachwerte.webp" />
+                <img src="assets/screenshots/finanzgecko-vermoegenswerte-sachwerte.png"
+                     width="2000" height="1028" loading="lazy" decoding="async"
+                     alt="FinanzGecko Vermögenswerte: Sachwerte wie E-Bike, MacBook Pro und VW Golf mit aktuellem Wert und Datum der letzten Bewertung" />
+              </picture>
+              <figcaption>Vermögenswerte — Sachwerte wie Elektronik, Möbel oder Fahrzeuge, inklusive Erinnerung zur Neubewertung.</figcaption>
+            </figure>
+          </article>
+
+          <article class="shot-story">
+            <span class="shot-eyebrow">Was jeden Monat kommt und geht</span>
+            <h3>Gehalt, Miete, Abos — automatisch auf den Monat gerechnet</h3>
+            <p class="shot-lead">Wiederkehrende Ein- und Ausgaben pflegst du ein einziges Mal, ob monatlich, vierteljährlich oder jährlich. FinanzGecko normiert alles auf ein Monatsäquivalent, damit dein Überschuss stimmt und die Prognose weiß, womit sie rechnet.</p>
+            <figure class="shot">
+              <picture>
+                <source type="image/webp" srcset="assets/screenshots/finanzgecko-fixposten-einnahmen-ausgaben.webp" />
+                <img src="assets/screenshots/finanzgecko-fixposten-einnahmen-ausgaben.png"
+                     width="2000" height="1042" loading="lazy" decoding="async"
+                     alt="FinanzGecko Fixposten: wiederkehrende Einnahmen und Ausgaben wie Gehalt, Miete und Abos mit Intervall und Monatsäquivalent" />
+              </picture>
+              <figcaption>Fixposten — wiederkehrende Ein- und Ausgaben, sauber auf ein Monatsäquivalent normiert.</figcaption>
+            </figure>
+          </article>
+
+          <article class="shot-story">
+            <span class="shot-eyebrow">Dein Fundament</span>
+            <h3>Deine Bank, deine Farbe</h3>
+            <p class="shot-lead">Girokonto, Tagesgeld, Depot, Krypto, Bargeld: Lege so viele Konten an, wie du brauchst, in Euro oder Fremdwährung. Über ein Dutzend gängige Banken und Neobanken bekommen automatisch ihre echte Markenfarbe<span class="hint" title="Fehlt deine Bank in der Liste? Du kannst sie direkt im Konto-Formular vorschlagen.">ⓘ</span> — alles bleibt dabei auf deinem Rechner, AES-256-verschlüsselt. Kein Bank-Login, keine Cloud, kein Konto bei uns.</p>
+            <figure class="shot">
+              <picture>
+                <source type="image/webp" srcset="assets/screenshots/finanzgecko-konten-uebersicht.webp" />
+                <img src="assets/screenshots/finanzgecko-konten-uebersicht.png"
+                     width="2000" height="972" loading="lazy" decoding="async"
+                     alt="FinanzGecko Konten-Übersicht: Girokonto, Tagesgeld, Depots, Krypto und Bargeld verschiedener Banken in Euro und US-Dollar" />
+              </picture>
+              <figcaption>Konten — alle Geldtöpfe an einem Ort, mehrwährungsfähig und vollständig lokal.</figcaption>
+            </figure>
+          </article>
+
         </div>
       </div>
     </section>
@@ -177,7 +262,7 @@
         <div class="feature-grid">
           <div class="feature-card">
             <h3>Verlauf &amp; Prognose</h3>
-            <p>Zeitreihen-Chart deines Gesamtvermögens inklusive Trend-basierter Prognose, damit du siehst, wohin die Reise geht.</p>
+            <p>Zeitreihen-Chart deines Gesamtvermögens inklusive Trend-basierter Prognose, damit du siehst, ob du im Plan liegst.</p>
           </div>
           <div class="feature-card">
             <h3>Alle Konten an einem Ort</h3>
@@ -214,7 +299,7 @@
             <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">Kostenlos herunterladen →</a>
           </div>
           <div class="get-card">
-            <h3>Praktisch kaufen</h3>
+            <h3>Lieber kaufen</h3>
             <p>Für alle, die lieber über einen Store-Checkout gehen oder die Entwicklung direkt unterstützen möchten.</p>
             <!-- Platzhalter: echte Gumroad-/Lemon-Squeezy-Produktlinks eintragen, sobald verfügbar. -->
             <div class="store-buttons">

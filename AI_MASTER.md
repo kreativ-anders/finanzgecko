@@ -32,6 +32,7 @@ Erweiterung erhalten bleiben (siehe [Glossar](#7-domänen-glossar-verbindlich)).
 | Charts | `fl_chart` (Linie, Donut, gestapelte Fläche — eigene Wrapper in `lib/ui/widgets/`) | ^1.2.0 |
 | Wechselkurse | `http` gegen die freie Frankfurter.app-API (EZB-Referenzkurse) | ^1.6.0 |
 | OS-Benachrichtigungen | `local_notifier` (native Desktop-Notifications Linux/macOS/Windows) | ^0.1.6 |
+| App-Metadaten | `package_info_plus` (liest Version/Build-Nummer zur Laufzeit aus der Installation, für Einstellungen → "Hilfe") | ^10.2.1 |
 | Fenster | `window_manager` (Größe/Maximiert-Status merken) | ^0.5.2 |
 | Dateidialoge | `file_selector` (native Save/Open, kein Browser-Download) | ^1.1.0 |
 | Links | `url_launcher` (externe URLs, mailto:, Datei-Explorer öffnen) | ^6.3.2 |
@@ -107,7 +108,7 @@ finanzgecko/
 | `accounts_view.dart` | `accounts` | Konten | Konten anlegen/bearbeiten/archivieren/wiederherstellen |
 | `subscriptions_view.dart` | `subscriptions` | Fixposten | Wiederkehrende Ein-/Ausgaben anlegen/bearbeiten/löschen |
 | `assets_view.dart` | `assets` | Vermögenswerte | Sachwerte (kein Zeitverlauf) anlegen/inline bearbeiten/löschen |
-| `settings_view.dart` | `settings` | Einstellungen | Basiswährung, Sicherheits-Info, Backup-Export/Import, CSV-Export, Reset |
+| `settings_view.dart` | `settings` | Einstellungen | Basiswährung, Sicherheits-Info, Backup-Export/Import, CSV-Export, Hilfe (Version/System-Info/Support), Reset |
 
 Navigation ist **kein Router**, sondern ein einfacher `enum`-Switch in `navigation_shell.dart` (`_content()`), gesteuert über
 `ValueChanged<AppView> onNavigate`, das jede View nach oben durchreicht (z. B. für "Jetzt erfassen"-Buttons in
@@ -375,7 +376,7 @@ Alle Verhaltensspezifikationen auf einen Blick — Einstieg für eine KI, um vom
 | `gherkin/accounts.feature` | Konten anlegen/bearbeiten/archivieren; Bank→Farbe | Unit (`account_color_test`, `app_store_ops_test`) |
 | `gherkin/subscriptions.feature` | Fixposten CRUD, Monatsäquivalent | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/assets.feature` | Vermögenswerte CRUD, 6-Monats-Reminder | Unit (`app_store_ops_test`) |
-| `gherkin/settings.feature` | Basiswährung, Sicherheit, Backup-Export/Import, CSV-Export, Reset | Unit (`csv_export_test`) |
+| `gherkin/settings.feature` | Basiswährung, Sicherheit, Backup-Export/Import, CSV-Export, Hilfe (Version/System-Info/Support), Reset | Unit (`csv_export_test`) |
 | `gherkin/notifications.feature` | OS-Benachrichtigungen für Backup-/Asset-Reminder, episodenbasiert, Ein-/Ausschalten | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/backup_restore.feature` | Export/Import (JSON), Schemaprüfung, Bank→Farbe-Import, Fehlertoleranz | Unit (`app_store_ops_test`, `backup_hardening_test`) |
 | `gherkin/data_security.feature` | AES-256-GCM, OS-Keychain, Quarantäne, Schema-Parsing | Unit (`app_schema_test`, `app_store_encryption_test`) |
