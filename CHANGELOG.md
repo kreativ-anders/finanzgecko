@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.3.1 - 2026-07-19
+
+- 🔖 Version 1.3.1+7 (250c22b)
+- 🐛 Build Windows ICO in custom icon pipeline (1c758f4)
+- 📝 Changelog für v1.3.0 (296dc44)
+
+
 ## v1.3.0 - 2026-07-19
 
 - 🔖 Version 1.3.0+6 (fea3328)
