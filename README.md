@@ -390,10 +390,11 @@ Backup-Restore bringt wirklich *alle* exportierten Daten zurück.
 
 ## Bekannte Einschränkungen
 
-- **Kein In-App-Auto-Updater.** Ein Update bedeutet: neues Release-Zip aus
-  GitHub Releases laden, altes Bundle ersetzen (bzw. `install.sh` erneut
-  laufen lassen). Das Datenverzeichnis hängt nur vom Datenpfad ab, nicht vom
-  Bundle-Speicherort — bestehende Nutzerdaten bleiben unberührt.
+- **Kein In-App-Auto-Updater.** Ein Update bedeutet: neues Release-Artefakt aus
+  GitHub Releases laden — Windows-Installer erneut ausführen, Linux-AppImage
+  ersetzen (bzw. `install.sh` erneut laufen lassen), macOS-`.app` ersetzen. Das
+  Datenverzeichnis hängt nur vom Datenpfad ab, nicht vom Installationsort —
+  bestehende Nutzerdaten bleiben unberührt.
 - **Erster Start auf einem "fremden" Mac/Windows-Rechner:** Ohne
   Code-Signierung zeigen macOS Gatekeeper ("nicht verifizierter
   Entwickler") und Windows SmartScreen ("unbekannter Herausgeber") eine
