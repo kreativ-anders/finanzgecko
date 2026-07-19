@@ -74,7 +74,7 @@ jobs:
       - name: Linux-Toolchain installieren
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev
 
       - run: flutter config --enable-linux-desktop
       - run: flutter pub get
