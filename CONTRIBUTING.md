@@ -46,7 +46,8 @@ Doku und Code auseinanderlaufen.
 
 - Kleine, fokussierte Änderungen.
 - Beschreibe das *Warum*, nicht nur das *Was* — Commit-Messages landen automatisch im `CHANGELOG.md`.
-- Wenn ein Gherkin-Feature betroffen ist, das im PR erwähnen.
+- Ändert der PR Verhalten, gehören das aktualisierte `gherkin/*.feature` und ggf. AI_MASTER.md zum Diff, nicht zu
+  einem Follow-up.
 
 ## Lizenz
 

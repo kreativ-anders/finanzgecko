@@ -63,14 +63,10 @@ zusätzliches Packaging-Skript nötig. `flutter build windows` erzeugt einen Ord
 
 ### Alle drei Plattformen (CI)
 
-Läuft ausschließlich über `.github/workflows/release.yml` — ein nativer Runner pro OS (ubuntu/macos/windows-latest).
-
-- **Release:** `git tag v1.1.0 && git push origin v1.1.0` — baut alle drei Pakete und hängt sie ans GitHub-Release.
-- **Ad-hoc-Testbuild ohne Tag:** *Actions → Release → Run workflow* (jeder Branch) — Pakete landen als
-  Workflow-Artifacts, kein Release wird erzeugt.
-
-Vor den Build-Jobs läuft ein `gate`-Job (`flutter analyze` + `flutter test` + Icon-Pipeline); schlägt er fehl, wird
-nichts gebaut.
+Lokal baut immer nur die eigene Plattform. Alle drei zusammen laufen ausschließlich über
+`.github/workflows/release.yml` — ein nativer Runner pro OS (ubuntu/macos/windows-latest). Vor den Build-Jobs läuft
+ein `gate`-Job (`flutter analyze` + `flutter test` + Icon-Pipeline); schlägt er fehl, wird nichts gebaut. Details
+zum Anstoßen (Tag-Release vs. Ad-hoc-Testbuild): "Release-Prozess" unten.
 
 ## Icon-Pipeline
 
@@ -91,7 +87,7 @@ Ein Master speist alle Plattform-Icon-Formate:
 Nach jedem Austausch von `icon.png` einmal ausführen und die generierten Dateien mitcommitten (kein Build-Schritt
 erzeugt sie automatisch).
 
-## Updates veröffentlichen
+## Release-Prozess
 
 1. Version in `pubspec.yaml` hochzählen, committen.
 2. Tag pushen: `git tag v1.1.0 && git push origin v1.1.0`.
@@ -101,3 +97,6 @@ erzeugt sie automatisch).
    API-Aufruf immer auf die neueste Version zeigt.
 4. `CHANGELOG.md` wird vom `release`-Job automatisch aus den Commit-Messages seit dem letzten Tag gepflegt — nicht
    von Hand editieren.
+
+**Ad-hoc-Testbuild ohne Release:** *Actions → Release → Run workflow* (jeder Branch, kein Tag nötig) — baut
+dieselben drei Pakete als Workflow-Artifacts, ohne GitHub-Release oder CHANGELOG-Update.

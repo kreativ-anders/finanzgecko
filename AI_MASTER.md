@@ -26,10 +26,10 @@ Erweiterung erhalten bleiben (siehe [Glossar](#7-domänen-glossar-verbindlich)).
 und weitergebbar, Ableitungen müssen unter denselben Bedingungen bleiben — aber die Commons Clause untersagt
 zusätzlich jede **kommerzielle** Nutzung (Verkauf der Software oder eines Produkts/Service, dessen Wert überwiegend
 aus ihrer Funktionalität stammt). Das ist bewusst **kein** OSI-approved "Open Source" im engeren Sinn (die Open
-Source Definition verbietet Einschränkungen nach Verwendungszweck) — auf der Landingpage (`docs/index.html`) daher
+Source Definition verbietet Einschränkungen nach Verwendungszweck) — auf der Website (`docs/index.html`) daher
 als "quelloffen" plus einer eigenen FAQ-Antwort mit Lizenzdetails kommuniziert, nicht unkommentiert als "Open
 Source" behauptet. Die App selbst bleibt für Endnutzer:innen kostenlos (GitHub Releases); finanziert wird die
-Weiterentwicklung stattdessen über eine freiwillige "Pay what you want"-Unterstützung via Stripe auf der Landingpage
+Weiterentwicklung stattdessen über eine freiwillige "Pay what you want"-Unterstützung via Stripe auf der Website
 (Abschnitt "Entwicklung unterstützen").
 
 ## 2. Tech-Stack
@@ -108,7 +108,7 @@ finanzgecko/
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü, build_appimage.sh → FinanzGecko-<Version>-x86_64.AppImage
 ├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
-├── docs/                          # Statische Landingpage (GitHub Pages, kein Build-Schritt, reines HTML/CSS)
+├── docs/                          # Statische Website (GitHub Pages, kein Build-Schritt, reines HTML/CSS)
 │   ├── index.html                 # Startseite: Hero, Screenshots, Features, Download/Unterstützen, Trust-Strip, FAQ
 │   ├── download.html              # Download-Seite: ein Direktlink pro OS (Windows/macOS/Linux), s. u.
 │   ├── documentation.html         # Kurzanleitung für Endnutzer (kein Bezug zu AI_MASTER/gherkin)
@@ -368,7 +368,7 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   `upload-artifact`-Schritt in `linux`/`macos`/`windows`) landen als zusätzliche Release-Assets neben den
   versionierten Dateien. Grund: `docs/download.html` verlinkt pro Betriebssystem fest auf
   `.../releases/latest/download/<Alias-Dateiname>` — ein von GitHub garantiert stabiler Pfad, der immer auf das
-  neueste Release zeigt, ohne dass die Landingpage die aktuelle Versionsnummer kennen oder per API nachschlagen
+  neueste Release zeigt, ohne dass die Website die aktuelle Versionsnummer kennen oder per API nachschlagen
   muss (bewusst kein clientseitiger JS-/GitHub-API-Aufruf auf einer sonst komplett statischen Seite).
 - Kein In-App-Auto-Updater — Update = neues Release-Artefakt laden (Installer erneut ausführen bzw. AppImage/.app ersetzen).
 - **`CHANGELOG.md`** wird ausschließlich vom `release`-Job in `release.yml` gepflegt: bei jedem tatsächlichen Release

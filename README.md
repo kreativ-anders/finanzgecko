@@ -4,7 +4,7 @@ Nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account — al
 JSON-Datei im eigenen Datenverzeichnis der App. Gebaut mit [Flutter](https://flutter.dev), lokal lauffähig auf
 Linux, macOS und Windows.
 
-Download für Endnutzer:innen: [Landingpage](https://kreativ-anders.github.io/finanzgecko/) ·
+Download für Endnutzer:innen: [Website](https://kreativ-anders.github.io/finanzgecko/) ·
 [Download-Seite](https://kreativ-anders.github.io/finanzgecko/download.html)
 
 ## Lizenz
@@ -12,7 +12,7 @@ Download für Endnutzer:innen: [Landingpage](https://kreativ-anders.github.io/fi
 [GPL-3.0](LICENSE) mit ["Commons Clause"](https://commonsclause.com/)-Zusatz: Quellcode frei einsehbar, veränderbar
 und weitergebbar (Copyleft — Ableitungen bleiben unter denselben Bedingungen), aber **keine kommerzielle Nutzung**.
 Die App bleibt über [GitHub Releases](https://github.com/kreativ-anders/finanzgecko/releases) kostenlos; die
-Weiterentwicklung finanziert sich freiwillig über "Pay what you want" (Stripe) auf der Landingpage.
+Weiterentwicklung finanziert sich freiwillig über "Pay what you want" (Stripe) auf der Website.
 
 ## Quick Start
 
@@ -22,7 +22,7 @@ flutter run -d linux   # oder -d macos / -d windows
 ```
 
 Voraussetzung ist die Flutter-Desktop-Toolchain für deine Plattform — Einrichtung:
-[dev/setup.md](dev/setup.md). Release-Builds, Packaging und der Icon-Pipeline: [dev/building.md](dev/building.md).
+[dev/setup.md](dev/setup.md). Release-Builds, Packaging und Icon-Pipeline: [dev/building.md](dev/building.md).
 
 ## Architektur
 
