@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.5.0 - 2026-07-20
+
+- 🔖 Version 1.5.0+11 (570f98c)
+- ♿️ Improve WCAG contrast for UI text colors (9353190)
+- 📝 Add FAQ: no automatic bank import (2b4ad3e)
+- 💄 Show AlertDialog for available updates (691d47f)
+- 📦️ Add manual GitHub update check in settings (471b49f)
+- 📝 Changelog für v1.4.0 (89121a9)
+
+
 ## v1.4.0 - 2026-07-20
 
 - 🔖 Version 1.4.0+10 (53ad083)
