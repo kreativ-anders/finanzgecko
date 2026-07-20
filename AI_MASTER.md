@@ -398,11 +398,14 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   Check**: Einstellungen → Hilfe → "Nach Updates suchen" fragt nur bei diesem Klick (kein Hintergrund-/Start-Check)
   über `UpdateService` (`lib/services/update_service.dart`) den neuesten Release-Tag der öffentlichen
   GitHub-Releases-API (`api.github.com/repos/kreativ-anders/finanzgecko/releases/latest`) ab und vergleicht ihn
-  gegen die laufende Version (`PackageInfo`). Ergebnis nur als Snackbar: neue Version verfügbar (mit
-  "Herunterladen"-Aktion → öffnet die Release-Seite im Browser), bereits aktuell, oder — bei jedem Fehler
-  (offline, Repo (noch) privat, GitHub down, Rate-Limit) — ein generischer "bitte später erneut versuchen"-Hinweis
-  statt eines Fehlerdialogs; die App lädt/installiert dabei nie selbst etwas. Update selbst bleibt weiterhin: neues
-  Release-Artefakt laden (Installer erneut ausführen bzw. AppImage/.app ersetzen).
+  gegen die laufende Version (`PackageInfo`). Drei Ergebnisse: **neue Version verfügbar** — bewusst ein `AlertDialog`
+  statt einer Snackbar (handlungsrelevant, soll nicht von selbst wieder verschwinden), mit Buttons "Später" und
+  "Herunterladen" → öffnet `docs/download.html` (die Website-Downloadseite mit einem Button je Betriebssystem,
+  **nicht** die rohe GitHub-Release-Seite, die die Plattform-Dateiwahl dem Menschen überließe); **bereits aktuell**
+  und **fehlgeschlagen** (offline, Repo (noch) privat, GitHub down, Rate-Limit) bleiben einfache Snackbars, Letztere
+  mit generischem "bitte später erneut versuchen"-Hinweis statt eines Fehlerdialogs. Die App lädt/installiert dabei
+  nie selbst etwas. Update selbst bleibt weiterhin: neues Release-Artefakt laden (Installer erneut ausführen bzw.
+  AppImage/.app ersetzen).
 - **`CHANGELOG.md`** wird ausschließlich vom `release`-Job in `release.yml` gepflegt: bei jedem tatsächlichen Release
   (Tag-Push oder Version-Bump-Dispatch, nicht bei einem reinen Testbuild mit `bump: none`) wird ein Abschnitt mit den
   Commit-Messages seit dem vorherigen Tag oben angehängt und direkt nach `main` gepusht. Bewusst **kein** eigener

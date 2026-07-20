@@ -443,9 +443,15 @@ Future<void> _openIssueTracker() async {
   await launchUrl(uri);
 }
 
+/// The site's existing per-OS download page (docs/download.html) — one big
+/// button per platform, the same link end users already get via the website.
+/// Deliberately not GitHub's release page: that would leave picking the right
+/// asset (Setup.exe / .app.zip / .AppImage) to the user.
+const _downloadPageUrl = 'https://kreativ-anders.github.io/finanzgecko/download.html';
+
 /// Manual, user-triggered update check against the GitHub Releases API (see
 /// [UpdateService]) — never automatic, never downloads/executes anything
-/// itself, just compares version numbers and links to the release page.
+/// itself, just compares version numbers and points at the download page.
 Future<void> _checkForUpdates(BuildContext context) async {
   final appState = context.read<AppState>();
   final info = await PackageInfo.fromPlatform();
@@ -458,17 +464,37 @@ Future<void> _checkForUpdates(BuildContext context) async {
         context,
       ).showSnackBar(SnackBar(content: Text('Du verwendest bereits die neueste Version (${info.version}).')));
     case UpdateCheckStatus.updateAvailable:
-      final releaseUrl = result.releaseUrl!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Neue Version ${result.latestVersion} verfügbar.'),
-          duration: const Duration(seconds: 8),
-          action: SnackBarAction(label: 'Herunterladen', onPressed: () => launchUrl(Uri.parse(releaseUrl))),
-        ),
-      );
+      await _showUpdateAvailableDialog(context, currentVersion: info.version, latestVersion: result.latestVersion!);
     case UpdateCheckStatus.failed:
       showErrorSnackBar(context, 'Update-Prüfung fehlgeschlagen — bitte später erneut versuchen.');
   }
+}
+
+/// Shown instead of a snackbar for the "update available" result — unlike
+/// up-to-date/failed, this one is actionable and shouldn't be easy to miss
+/// or dismiss by accident via a passing snackbar.
+Future<void> _showUpdateAvailableDialog(
+  BuildContext context, {
+  required String currentVersion,
+  required String latestVersion,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Update verfügbar'),
+      content: Text('Eine neue Version ($latestVersion) ist verfügbar. Du verwendest aktuell $currentVersion.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: noSelect(const Text('Später'))),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(dialogContext).pop();
+            launchUrl(Uri.parse(_downloadPageUrl));
+          },
+          child: noSelect(const Text('Herunterladen')),
+        ),
+      ],
+    ),
+  );
 }
 
 Future<void> _copyDebugInfo(BuildContext context, String displayLabel, Size windowSize) async {

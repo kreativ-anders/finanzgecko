@@ -89,8 +89,12 @@ Feature: Einstellungen
       es gibt kein Code-Signing-Zertifikat, das einen vertrauenswürdigen automatischen Binary-Austausch
       erlauben würde)
     Given eine neuere Version ist verfügbar
-    Then zeigt eine Snackbar "Neue Version <Tag> verfügbar." mit einer Aktion "Herunterladen", die die
-      GitHub-Release-Seite im Standardbrowser öffnet
+    Then öffnet sich ein Dialog "Update verfügbar" mit der neuen Versionsnummer und der aktuell installierten
+      Version, sowie den Buttons "Später" (schließt den Dialog ohne Aktion) und "Herunterladen" (öffnet die
+      Download-Seite der Website, docs/download.html, im Standardbrowser — bewusst nicht die rohe
+      GitHub-Release-Seite, die die Wahl der richtigen Plattform-Datei dem Menschen überließe)
+    And dieser Fall nutzt bewusst einen Dialog statt einer Snackbar (wie bei den beiden Fällen unten): eine
+      tatsächlich handlungsrelevante Meldung soll nicht wie eine bloße Bestätigung von selbst wieder verschwinden
     Given die installierte Version ist bereits die neueste
     Then zeigt eine Snackbar "Du verwendest bereits die neueste Version (<Version>)."
     Given die Abfrage schlägt fehl (keine Internetverbindung, Repository noch nicht öffentlich, GitHub

@@ -7,20 +7,21 @@ enum UpdateCheckStatus { upToDate, updateAvailable, failed }
 /// Result of a manual update check — see [UpdateService.checkForUpdate].
 /// [failed] deliberately carries no error detail: the UI only ever shows a
 /// generic "try again later" note (offline, rate-limited, GitHub down, repo
-/// not yet public — none of that is actionable for the user).
+/// not yet public — none of that is actionable for the user). Deliberately
+/// no release URL here: the UI links to the project's own download page
+/// (one-click per-OS buttons), not GitHub's raw release/asset listing.
 class UpdateCheckResult {
-  const UpdateCheckResult._(this.status, {this.latestVersion, this.releaseUrl});
+  const UpdateCheckResult._(this.status, {this.latestVersion});
 
   const UpdateCheckResult.upToDate() : this._(UpdateCheckStatus.upToDate);
 
-  const UpdateCheckResult.updateAvailable({required String latestVersion, required String releaseUrl})
-    : this._(UpdateCheckStatus.updateAvailable, latestVersion: latestVersion, releaseUrl: releaseUrl);
+  const UpdateCheckResult.updateAvailable({required String latestVersion})
+    : this._(UpdateCheckStatus.updateAvailable, latestVersion: latestVersion);
 
   const UpdateCheckResult.failed() : this._(UpdateCheckStatus.failed);
 
   final UpdateCheckStatus status;
   final String? latestVersion;
-  final String? releaseUrl;
 }
 
 /// Manual "check for updates" against the project's public GitHub Releases —
@@ -48,15 +49,14 @@ class UpdateService {
 
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       final tagName = data['tag_name'];
-      final releaseUrl = data['html_url'];
-      if (tagName is! String || releaseUrl is! String) return const UpdateCheckResult.failed();
+      if (tagName is! String) return const UpdateCheckResult.failed();
 
       final latest = _parseVersion(tagName);
       final current = _parseVersion(currentVersion);
       if (latest == null || current == null) return const UpdateCheckResult.failed();
 
       if (_compareVersions(latest, current) > 0) {
-        return UpdateCheckResult.updateAvailable(latestVersion: tagName, releaseUrl: releaseUrl);
+        return UpdateCheckResult.updateAvailable(latestVersion: tagName);
       }
       return const UpdateCheckResult.upToDate();
     } catch (_) {
