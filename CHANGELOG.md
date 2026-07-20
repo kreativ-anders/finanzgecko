@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.0 - 2026-07-20
+
+- 🔖 Version 1.4.0+10 (53ad083)
+- 💄 Add light/dark/system theme + smarter backup reminder (5aa7344)
+- 📝 Translate docs to English and clarify upgrades (d666803)
+- 📝 Clarify website naming and release docs (167855b)
+- 📝 Split developer docs out of README (0e758a4)
+- 📝 Changelog für v1.3.3 (7396c54)
+
+
 ## v1.3.3 - 2026-07-20
 
 - 🔖 Version 1.3.3+9 (4c336ce)
