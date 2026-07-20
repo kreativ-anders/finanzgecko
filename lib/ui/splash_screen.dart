@@ -47,10 +47,10 @@ class _SplashScreenState extends State<SplashScreen> {
         children: [
           Image.asset('assets/logo/kreativ-anders-light-512.png', width: 160, height: 160),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             '🦎 FinanzGecko',
             style: TextStyle(
-              color: Colors.white,
+              color: kTextPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5,

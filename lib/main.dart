@@ -116,7 +116,11 @@ class _StartupErrorApp extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                Text('$error', style: const TextStyle(color: kMuted), textAlign: TextAlign.center),
+                Text(
+                  '$error',
+                  style: TextStyle(color: kMuted),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           ),
@@ -135,11 +139,25 @@ class FinanzGeckoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: appState,
-      child: MaterialApp(
-        title: 'FinanzGecko',
-        debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(),
-        home: const SelectionArea(child: SplashScreen(child: NavigationShell())),
+      // Consumer rebuilds this subtree whenever AppState changes (including
+      // setThemeMode), and ThemeScope resolves the active brightness before
+      // its child is built. The inner Builder matters: buildAppTheme() must
+      // run *during* a build that's a descendant of ThemeScope, not while
+      // MaterialApp is merely being constructed as ThemeScope's child
+      // argument (which would happen too early, against the previous
+      // brightness).
+      child: Consumer<AppState>(
+        builder: (context, app, _) => ThemeScope(
+          mode: app.themeMode,
+          child: Builder(
+            builder: (context) => MaterialApp(
+              title: 'FinanzGecko',
+              debugShowCheckedModeBanner: false,
+              theme: buildAppTheme(),
+              home: const SelectionArea(child: SplashScreen(child: NavigationShell())),
+            ),
+          ),
+        ),
       ),
     );
   }

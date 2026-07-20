@@ -91,7 +91,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
             return OutlinedButton(
               style: OutlinedButton.styleFrom(
                 backgroundColor: active ? kPrimary : null,
-                foregroundColor: active ? const Color(0xFF04140D) : Colors.white,
+                foregroundColor: active ? const Color(0xFF04140D) : kTextPrimary,
                 side: BorderSide(color: active ? kPrimary : kBorder),
                 padding: EdgeInsets.zero,
               ),

@@ -55,7 +55,7 @@ class AppStackedAreaChart extends StatelessWidget {
     if (n < 2 || active.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text(
             'Noch keine Daten.',
             style: TextStyle(color: kMuted, fontStyle: FontStyle.italic),
@@ -145,8 +145,8 @@ class AppStackedAreaChart extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(periodLabels.first, style: const TextStyle(color: kMuted, fontSize: 11)),
-            Text(periodLabels.last, style: const TextStyle(color: kMuted, fontSize: 11)),
+            Text(periodLabels.first, style: TextStyle(color: kMuted, fontSize: 11)),
+            Text(periodLabels.last, style: TextStyle(color: kMuted, fontSize: 11)),
           ],
         ),
         const SizedBox(height: 12),
@@ -273,7 +273,7 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
                 children: [
                   Text(
                     widget.periodLabels[index],
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                    style: TextStyle(color: kTextPrimary, fontSize: 12, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
                   // Value and percent each get a fixed-width, right-aligned
@@ -296,7 +296,7 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
                               s.label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: kMuted, fontSize: 11),
+                              style: TextStyle(color: kMuted, fontSize: 11),
                             ),
                           ),
                           SizedBox(
@@ -318,7 +318,7 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
                               textAlign: TextAlign.right,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: kMuted, fontSize: 11),
+                              style: TextStyle(color: kMuted, fontSize: 11),
                             ),
                           ),
                         ],
@@ -349,11 +349,15 @@ class ChartLegendItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+        ),
         const SizedBox(width: 6),
         Text(label, style: const TextStyle(fontSize: 12)),
         const SizedBox(width: 6),
-        Text(trailing, style: const TextStyle(color: kMuted, fontSize: 12)),
+        Text(trailing, style: TextStyle(color: kMuted, fontSize: 12)),
       ],
     );
   }

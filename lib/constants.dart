@@ -140,7 +140,14 @@ String resolveAccountColor({required String bank, required String tag}) {
   return color;
 }
 
-const int kBackupReminderDays = 30;
+/// Erster Backup-Hinweis, gemessen ab der frühesten erfassten Aktivität
+/// (nicht ab App-Installation) — solange die App leer ist (keine Konten,
+/// Kontostände, Vermögenswerte, Fixposten), gibt es schlicht nichts zu
+/// sichern, siehe [AppState.getBackupReminder].
+const int kBackupReminderFirstDays = 182; // ~6 Monate
+/// Wiederholter Backup-Hinweis nach dem ersten Export, gemessen ab dem
+/// letzten Export.
+const int kBackupReminderRepeatDays = 90; // ~3 Monate
 const int kAssetReevaluationDays = 182; // ~6 Monate
 
 /// Debounce before an inline-edited field (Vermögenswerte, Fixposten) is
@@ -153,3 +160,15 @@ const double kConcentrationRiskThreshold = 0.65;
 
 const String kDangerHex = '#ff6b6b';
 const String kPrimaryHex = '#00c878';
+
+/// Erscheinungsbild-Einstellung (Einstellungen → Erscheinungsbild). `system`
+/// folgt der Betriebssystem-Einstellung und ist der Standard. Die eigentliche
+/// Farbauflösung (welche Palette für welchen Modus) lebt in `ui/theme.dart`;
+/// hier nur die Domänen-Repräsentation, damit `AppSchema`/`AppStore` sie ohne
+/// eine Abhängigkeit auf die UI-Schicht persistieren können.
+enum AppThemeMode { system, light, dark }
+
+String appThemeModeToJson(AppThemeMode mode) => mode.name;
+
+AppThemeMode appThemeModeFromJson(String? value) =>
+    AppThemeMode.values.firstWhere((m) => m.name == value, orElse: () => AppThemeMode.system);

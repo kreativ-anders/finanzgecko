@@ -236,11 +236,7 @@ void main() {
       expect(store.assetOverdueNotifiedIds, [asset.id], reason: 'no duplicate entries for the same id');
 
       await store.updateAsset(asset.id, value: 1200);
-      expect(
-        store.assetOverdueNotifiedIds,
-        isEmpty,
-        reason: 're-evaluating the asset resolves its notified episode',
-      );
+      expect(store.assetOverdueNotifiedIds, isEmpty, reason: 're-evaluating the asset resolves its notified episode');
     });
 
     test('deleteAsset removes any lingering notified-episode entry', () async {

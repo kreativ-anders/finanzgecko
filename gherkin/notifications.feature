@@ -21,8 +21,15 @@ Feature: OS-Benachrichtigungen für Backup- und Vermögenswerte-Reminder
 
   Rule: Backup-Reminder — einmal pro überfälliger Episode
 
+    Scenario: Keine Benachrichtigung, solange die App komplett leer ist
+      Given es existieren weder Konten noch Kontostände noch Vermögenswerte noch Fixposten
+      Then erscheint keine Backup-Benachrichtigung, unabhängig davon, ob je exportiert wurde
+
     Scenario: Benachrichtigung feuert, sobald der Backup-Reminder neu überfällig wird
-      Given der letzte Export liegt kBackupReminderDays (30) Tage oder länger zurück (oder es wurde nie exportiert)
+      Given es existiert mindestens ein Konto, Kontostand, Vermögenswert oder Fixposten
+      And entweder liegt der letzte Export kBackupReminderRepeatDays (90, ~3 Monate) oder länger zurück, oder es
+        wurde nie exportiert und die früheste erfasste Aktivität liegt kBackupReminderFirstDays (182, ~6 Monate)
+        oder länger zurück
       And für diese Überfälligkeit wurde noch nicht benachrichtigt
       When die App startet oder eine Aktion einen Reload auslöst
       Then erscheint eine OS-Benachrichtigung mit demselben Text wie das Dashboard-Banner
@@ -37,7 +44,7 @@ Feature: OS-Benachrichtigungen für Backup- und Vermögenswerte-Reminder
       Given für die aktuelle Backup-Überfälligkeit wurde bereits benachrichtigt
       When ich ein Backup exportiere
       Then wird die Episode zurückgesetzt
-      And sobald kBackupReminderDays erneut erreicht sind, erscheint wieder genau eine Benachrichtigung
+      And sobald kBackupReminderRepeatDays erneut erreicht sind, erscheint wieder genau eine Benachrichtigung
 
   Rule: Vermögenswerte-Reminder — einmal pro Vermögenswert und Episode
 

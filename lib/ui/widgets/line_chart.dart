@@ -89,7 +89,7 @@ class AppLineChart extends StatelessWidget {
     if (points.isEmpty || values.isEmpty) {
       return SizedBox(
         height: height,
-        child: const Center(
+        child: Center(
           child: Text(
             'Noch keine Daten.',
             style: TextStyle(color: kMuted, fontStyle: FontStyle.italic),
@@ -314,7 +314,7 @@ class AppLineChart extends StatelessWidget {
                           child: IgnorePointer(
                             child: Text(
                               text,
-                              style: const TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                              style: TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ),
                         );
@@ -376,22 +376,22 @@ class AppLineChart extends StatelessWidget {
           if (useForecast)
             Row(
               children: [
-                Text(points.first.label, style: const TextStyle(color: kMuted, fontSize: 11)),
+                Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
                 Expanded(flex: lastIndex > 0 ? lastIndex : 1, child: const SizedBox()),
                 Text(
                   fc.endLabel.isEmpty ? 'Prognose' : '${fc.endLabel} (Prognose)',
-                  style: const TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
+                  style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
                 ),
               ],
             )
           else if (hasTrend)
             Row(
               children: [
-                Text(points.first.label, style: const TextStyle(color: kMuted, fontSize: 11)),
+                Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
                 Expanded(flex: lastIndex, child: const SizedBox()),
-                Text(points.last.label, style: const TextStyle(color: kMuted, fontSize: 11)),
+                Text(points.last.label, style: TextStyle(color: kMuted, fontSize: 11)),
                 const Expanded(flex: 1, child: SizedBox()),
-                const Text(
+                Text(
                   'Prognose',
                   style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
                 ),
@@ -401,8 +401,8 @@ class AppLineChart extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(points.first.label, style: const TextStyle(color: kMuted, fontSize: 11)),
-                Text(points.last.label, style: const TextStyle(color: kMuted, fontSize: 11)),
+                Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
+                Text(points.last.label, style: TextStyle(color: kMuted, fontSize: 11)),
               ],
             ),
         ],
@@ -517,9 +517,9 @@ class _HoverLayerState extends State<_HoverLayer> {
                 children: [
                   Text(
                     widget.fmtValue(value),
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                    style: TextStyle(color: kTextPrimary, fontSize: 13, fontWeight: FontWeight.w700),
                   ),
-                  Text(widget.points[index].label, style: const TextStyle(color: kMuted, fontSize: 11)),
+                  Text(widget.points[index].label, style: TextStyle(color: kMuted, fontSize: 11)),
                 ],
               ),
             ),

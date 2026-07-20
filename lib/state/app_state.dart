@@ -218,8 +218,7 @@ class AppState extends ChangeNotifier {
 
   /// Sum of all account balances (in base currency) for [period] — the
   /// dashboard's net-worth figure for a single month.
-  double totalForPeriod(String period) =>
-      balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
+  double totalForPeriod(String period) => balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
 
   /// All accounts including archived ones — used only where archived
   /// accounts' historical balances still matter (e.g. the CSV export), not
@@ -343,6 +342,13 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
+  AppThemeMode get themeMode => store.themeMode;
+
+  Future<void> setThemeMode(AppThemeMode value) async {
+    await store.setThemeMode(value);
+    await _reloadAndNotify();
+  }
+
   DateTime? get lastExportAt => store.lastExportAt;
 
   /// Where the encrypted database lives on disk — surfaced read-only in
@@ -354,13 +360,50 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
+  /// Earliest recorded activity across all data — the anchor for the
+  /// "never exported" backup reminder (see [getBackupReminder]). Null while
+  /// the app is completely empty, in which case there's nothing to back up
+  /// yet and no reminder should fire at all.
+  DateTime? _firstActivityAt() {
+    DateTime? earliest;
+    void consider(DateTime candidate) {
+      if (earliest == null || candidate.isBefore(earliest!)) earliest = candidate;
+    }
+
+    for (final a in accounts) {
+      consider(a.createdAt);
+    }
+    for (final b in balances) {
+      consider(b.enteredAt);
+    }
+    for (final a in assets) {
+      consider(a.createdAt);
+    }
+    for (final s in subscriptions) {
+      consider(s.createdAt);
+    }
+    return earliest;
+  }
+
   BackupReminder getBackupReminder() {
     final lastExportAt = store.lastExportAt;
     if (lastExportAt == null) {
-      return const BackupReminder(overdue: true, message: 'Noch nie exportiert — leg jetzt ein erstes Backup an.');
+      // Nothing exported yet: only nag once there's actually something to
+      // lose, and only after it's had time to accumulate — an empty, freshly
+      // reset app has nothing to back up (see gherkin/dashboard.feature).
+      final firstActivityAt = _firstActivityAt();
+      if (firstActivityAt == null) {
+        return const BackupReminder(overdue: false, message: 'Noch keine Daten erfasst.');
+      }
+      final days = daysSince(firstActivityAt);
+      if (days >= kBackupReminderFirstDays) {
+        return const BackupReminder(overdue: true, message: 'Noch nie exportiert — leg jetzt ein erstes Backup an.');
+      }
+      return const BackupReminder(overdue: false, message: 'Noch nie exportiert.');
     }
+
     final days = daysSince(lastExportAt);
-    if (days >= kBackupReminderDays) {
+    if (days >= kBackupReminderRepeatDays) {
       return BackupReminder(overdue: true, message: 'Letztes Backup vor $days Tagen — Zeit für ein neues Backup.');
     }
     return BackupReminder(overdue: false, message: 'Letztes Backup vor $days Tag${days == 1 ? '' : 'en'}.');

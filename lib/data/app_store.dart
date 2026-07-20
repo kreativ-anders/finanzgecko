@@ -276,9 +276,7 @@ class AppStore {
         await _persist();
       } else {
         final parsed = jsonDecode(await _decryptEnvelope(decoded as Map));
-        final onDiskVersion = (parsed is Map && parsed['schemaVersion'] is num)
-            ? parsed['schemaVersion'] as num
-            : null;
+        final onDiskVersion = (parsed is Map && parsed['schemaVersion'] is num) ? parsed['schemaVersion'] as num : null;
         final validated = AppSchema.fromDynamic(parsed);
         if (validated == null) {
           await _quarantineFile(file, 'unreadable');
@@ -666,11 +664,7 @@ class AppStore {
     if (idx == -1) throw RecordNotFoundException('asset', id);
     final previous = data.assets[idx];
     final wasNotified = data.assetOverdueNotifiedIds.contains(id);
-    final updated = previous.copyWith(
-      name: name,
-      value: value,
-      lastEvaluatedAt: value != null ? DateTime.now() : null,
-    );
+    final updated = previous.copyWith(name: name, value: value, lastEvaluatedAt: value != null ? DateTime.now() : null);
     data.assets[idx] = updated;
     if (value != null) data.assetOverdueNotifiedIds.remove(id);
     try {
@@ -824,6 +818,22 @@ class AppStore {
       await _persist();
     } catch (_) {
       data.notificationsEnabled = previous;
+      rethrow;
+    }
+  }
+
+  // ---------- Erscheinungsbild ----------
+
+  AppThemeMode get themeMode => _requireData.themeMode;
+
+  Future<void> setThemeMode(AppThemeMode value) async {
+    final data = _requireData;
+    final previous = data.themeMode;
+    data.themeMode = value;
+    try {
+      await _persist();
+    } catch (_) {
+      data.themeMode = previous;
       rethrow;
     }
   }

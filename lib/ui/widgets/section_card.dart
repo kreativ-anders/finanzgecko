@@ -61,7 +61,7 @@ class EmptyHint extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(color: kMuted, fontStyle: FontStyle.italic),
+      style: TextStyle(color: kMuted, fontStyle: FontStyle.italic),
     );
   }
 }

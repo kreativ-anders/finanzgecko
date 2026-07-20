@@ -9,7 +9,13 @@ import '../theme.dart';
 enum BannerUrgency { nudge, urgent }
 
 class InfoBanner extends StatelessWidget {
-  const InfoBanner({super.key, required this.message, this.actionLabel, this.onAction, this.urgency = BannerUrgency.urgent});
+  const InfoBanner({
+    super.key,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+    this.urgency = BannerUrgency.urgent,
+  });
 
   final String message;
   final String? actionLabel;

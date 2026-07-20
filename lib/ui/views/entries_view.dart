@@ -184,7 +184,7 @@ class _EntriesViewState extends State<EntriesView> {
             children: [
               Text('Erst ein Konto anlegen', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Bevor du einen Kontostand erfassen kannst, brauchst du mindestens ein Konto.',
                 style: TextStyle(color: kMuted),
               ),
@@ -221,7 +221,7 @@ class _EntriesViewState extends State<EntriesView> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Zeitraum:', style: TextStyle(color: kMuted)),
+                  Text('Zeitraum:', style: TextStyle(color: kMuted)),
                   const SizedBox(width: 12),
                   MonthPickerField(value: _period, onChanged: (p) => _changePeriod(p, app)),
                 ],
@@ -230,7 +230,7 @@ class _EntriesViewState extends State<EntriesView> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Switch(value: _onlyMissing, onChanged: (v) => setState(() => _onlyMissing = v)),
-                  const Text('Nur fehlende anzeigen', style: TextStyle(color: kMuted)),
+                  Text('Nur fehlende anzeigen', style: TextStyle(color: kMuted)),
                 ],
               ),
             ],
@@ -250,7 +250,7 @@ class _EntriesViewState extends State<EntriesView> {
                       // Full detail lives in the tooltip so it's available on
                       // demand without permanently occupying three lines above
                       // the account rows on every single visit.
-                      const Row(
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Tooltip(
@@ -259,11 +259,11 @@ class _EntriesViewState extends State<EntriesView> {
                                 'Eintrag für Konto + Monat wird überschrieben. Leere Felder werden übersprungen. '
                                 'Enter springt zum nächsten Konto.',
                             child: Padding(
-                              padding: EdgeInsets.only(top: 2),
+                              padding: const EdgeInsets.only(top: 2),
                               child: Icon(Icons.info_outline, size: 14, color: kMuted),
                             ),
                           ),
-                          SizedBox(width: 6),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               'Auch rückwirkend erfassbar — bestehende Einträge werden überschrieben.',
@@ -276,7 +276,7 @@ class _EntriesViewState extends State<EntriesView> {
                       if (visibleAccounts.isEmpty)
                         Text(
                           'Für ${periodLabel(_period)} sind bereits alle Konten erfasst.',
-                          style: const TextStyle(color: kMuted),
+                          style: TextStyle(color: kMuted),
                         )
                       else
                         for (var i = 0; i < visibleAccounts.length; i++)
@@ -337,7 +337,7 @@ class _SaveFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: kBorder)),
       ),
       child: Row(
@@ -349,13 +349,13 @@ class _SaveFooter extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (totals.filled == 0)
-                  const Text('Noch nichts eingegeben', style: TextStyle(color: kMuted))
+                  Text('Noch nichts eingegeben', style: TextStyle(color: kMuted))
                 else
                   Wrap(
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 10,
                     children: [
-                      const Text('Zwischensumme', style: TextStyle(color: kMuted, fontSize: 13)),
+                      Text('Zwischensumme', style: TextStyle(color: kMuted, fontSize: 13)),
                       Text(
                         fmtMoney(totals.running, baseCurrency),
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -376,13 +376,13 @@ class _SaveFooter extends StatelessWidget {
                     child: Text(
                       '${totals.withoutRate} Konto${totals.withoutRate == 1 ? '' : 'en'} in Fremdwährung ohne Kursschätzung — '
                       'Kurs wird beim Speichern abgefragt.',
-                      style: const TextStyle(color: kMuted, fontSize: 12),
+                      style: TextStyle(color: kMuted, fontSize: 12),
                     ),
                   ),
                 if (notice.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(notice, style: const TextStyle(color: kMuted, fontSize: 12)),
+                    child: Text(notice, style: TextStyle(color: kMuted, fontSize: 12)),
                   ),
               ],
             ),
@@ -479,7 +479,7 @@ class _EntryRow extends StatelessWidget {
                         children: [
                           TextSpan(
                             text: '  (${account.currency})',
-                            style: const TextStyle(color: kMuted, fontWeight: FontWeight.normal),
+                            style: TextStyle(color: kMuted, fontWeight: FontWeight.normal),
                           ),
                         ],
                       ),
@@ -488,7 +488,7 @@ class _EntryRow extends StatelessWidget {
                       prev != null
                           ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})'
                           : '',
-                      style: const TextStyle(color: kMuted, fontSize: 12),
+                      style: TextStyle(color: kMuted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -573,8 +573,8 @@ class _OrphanEntriesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
             child: Text('Einträge von Konten, die inzwischen archiviert wurden.', style: TextStyle(color: kMuted)),
           ),
           for (final bal in balances)
@@ -637,7 +637,7 @@ class _OrphanRow extends StatelessWidget {
         Expanded(
           child: Text(
             acc?.name ?? 'Konto gelöscht',
-            style: acc == null ? const TextStyle(color: kMuted) : const TextStyle(fontWeight: FontWeight.w600),
+            style: acc == null ? TextStyle(color: kMuted) : const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
         SizedBox(

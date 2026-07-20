@@ -99,7 +99,7 @@ class _TopBar extends StatelessWidget {
     return SelectionContainer.disabled(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: kBorder)),
         ),
         child: Wrap(
@@ -136,7 +136,7 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: onTap,
-      style: TextButton.styleFrom(foregroundColor: active ? kPrimary : Colors.white70),
+      style: TextButton.styleFrom(foregroundColor: active ? kPrimary : kMuted),
       child: Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
     );
   }
@@ -151,7 +151,7 @@ class _Footer extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         alignment: Alignment.center,
-        child: const Text(
+        child: Text(
           'Alle Daten bleiben lokal auf diesem Rechner. Kein Server, keine Cloud.',
           style: TextStyle(color: kMuted, fontSize: 12),
         ),

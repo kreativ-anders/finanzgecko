@@ -46,7 +46,7 @@ class SettingsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Alle Beträge werden für Dashboard-Ansichten in diese Währung umgerechnet.',
                   style: TextStyle(color: kMuted),
                 ),
@@ -63,6 +63,45 @@ class SettingsView extends StatelessWidget {
                       showSavedSnackBar(context, onNavigate);
                     },
                   ),
+                ),
+              ],
+            ),
+          ),
+          cardGap,
+          SectionCard(
+            title: 'Erscheinungsbild',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Steuert die Hell-/Dunkel-Darstellung der App. "System" folgt der Einstellung deines '
+                  'Betriebssystems.',
+                  style: TextStyle(color: kMuted),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<AppThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: AppThemeMode.system,
+                      label: Text('System'),
+                      icon: Icon(Icons.brightness_auto_outlined),
+                    ),
+                    ButtonSegment(
+                      value: AppThemeMode.light,
+                      label: Text('Hell'),
+                      icon: Icon(Icons.light_mode_outlined),
+                    ),
+                    ButtonSegment(
+                      value: AppThemeMode.dark,
+                      label: Text('Dunkel'),
+                      icon: Icon(Icons.dark_mode_outlined),
+                    ),
+                  ],
+                  selected: {app.themeMode},
+                  onSelectionChanged: (selection) {
+                    context.read<AppState>().setThemeMode(selection.first);
+                    showSavedSnackBar(context, onNavigate);
+                  },
                 ),
               ],
             ),
@@ -97,7 +136,7 @@ class SettingsView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Deine Daten werden ausschließlich lokal auf diesem Gerät gespeichert und dort '
                   'verschlüsselt abgelegt. Der Schlüssel liegt im Anmeldeinformationsspeicher deines '
                   'Betriebssystems, nicht in der Datendatei selbst.',
@@ -120,7 +159,7 @@ class SettingsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Erinnert dich per nativer System-Benachrichtigung ans Backup-Exportieren und an fällige '
                   'Neubewertungen von Vermögenswerten — höchstens einmal je überfälligem Zustand, nicht bei jedem '
                   'App-Start erneut. Dafür muss die App laufen; es gibt keinen Hintergrunddienst, der '
@@ -143,14 +182,14 @@ class SettingsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Schreibt eine unverschlüsselte JSON-Datei mit allen Konten und Kontoständen an einen Ort deiner Wahl.',
                   style: TextStyle(color: kMuted),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   lastExport != null ? 'Letzter Export: ${_formatDateTime(lastExport)}' : 'Noch nie exportiert.',
-                  style: const TextStyle(color: kMuted, fontSize: 13),
+                  style: TextStyle(color: kMuted, fontSize: 13),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -158,14 +197,11 @@ class SettingsView extends StatelessWidget {
                   children: [
                     ElevatedButton(onPressed: onExport, child: noSelect(const Text('Backup exportieren…'))),
                     const SizedBox(width: 10),
-                    Text(
-                      '$modKeyLabel+${AppShortcuts.export.letter}',
-                      style: const TextStyle(color: kMuted, fontSize: 12),
-                    ),
+                    Text('$modKeyLabel+${AppShortcuts.export.letter}', style: TextStyle(color: kMuted, fontSize: 12)),
                   ],
                 ),
-                const Divider(height: 28, color: kBorder),
-                const Text(
+                Divider(height: 28, color: kBorder),
+                Text(
                   'Als Tabelle (CSV) für Excel/Numbers exportieren — alle Kontostände je Monat und Konto. '
                   'Kein Backup: die CSV kann nicht wieder importiert werden.',
                   style: TextStyle(color: kMuted),
@@ -181,7 +217,7 @@ class SettingsView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text.rich(
+                Text.rich(
                   TextSpan(
                     children: [
                       TextSpan(
@@ -199,10 +235,7 @@ class SettingsView extends StatelessWidget {
                   children: [
                     OutlinedButton(onPressed: onImport, child: noSelect(const Text('Backup importieren…'))),
                     const SizedBox(width: 10),
-                    Text(
-                      '$modKeyLabel+${AppShortcuts.import_.letter}',
-                      style: const TextStyle(color: kMuted, fontSize: 12),
-                    ),
+                    Text('$modKeyLabel+${AppShortcuts.import_.letter}', style: TextStyle(color: kMuted, fontSize: 12)),
                   ],
                 ),
               ],
@@ -229,13 +262,13 @@ class SettingsView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Setzt die Basiswährung auf ihren Standardwert zurück und löscht ALLE Konten, '
                   'Kontostände, Vermögenswerte und Fixposten unwiderruflich.',
                   style: TextStyle(color: kMuted),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   'Erstelle vorher ggf. ein Backup über den Export oben — diese Aktion kann nicht rückgängig gemacht werden.',
                   style: TextStyle(color: kMuted),
                 ),
@@ -320,7 +353,7 @@ class _HelpSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Angaben zur installierten Version und zum System — hilfreich, wenn du ein Problem meldest.',
             style: TextStyle(color: kMuted),
           ),
@@ -346,10 +379,7 @@ class _HelpSection extends StatelessWidget {
             label: displays.length > 1 ? 'Bildschirme (${displays.length})' : 'Bildschirm',
             value: displayLabel,
           ),
-          _SecurityMetaRow(
-            label: 'Fenstergröße',
-            value: '${windowSize.width.round()}×${windowSize.height.round()}',
-          ),
+          _SecurityMetaRow(label: 'Fenstergröße', value: '${windowSize.width.round()}×${windowSize.height.round()}'),
           FutureBuilder<bool>(
             future: context.read<AppState>().currencyService.isApiReachable(),
             builder: (context, snapshot) {
@@ -361,13 +391,13 @@ class _HelpSection extends StatelessWidget {
             },
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Der Abruf der EZB-Wechselkurse (api.frankfurter.dev) ist die einzige externe '
             'Netzwerkverbindung der App — sonst findet keine Kommunikation statt, kein Tracking, '
             'keine Analyse-Dienste.',
             style: TextStyle(color: kMuted, fontSize: 12),
           ),
-          const Divider(height: 28, color: kBorder),
+          Divider(height: 28, color: kBorder),
           Wrap(
             spacing: 20,
             runSpacing: 8,
@@ -378,9 +408,7 @@ class _HelpSection extends StatelessWidget {
               ),
               InkWell(
                 onTap: _openIssueTracker,
-                child: noSelect(
-                  const Text('Fehler melden (GitHub)', style: TextStyle(color: kPrimary, fontSize: 13)),
-                ),
+                child: noSelect(const Text('Fehler melden (GitHub)', style: TextStyle(color: kPrimary, fontSize: 13))),
               ),
               InkWell(
                 onTap: () => _copyDebugInfo(context, displayLabel, windowSize),
@@ -446,7 +474,7 @@ class _SecurityMetaRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 140,
-            child: Text(label, style: const TextStyle(color: kMuted, fontSize: 13)),
+            child: Text(label, style: TextStyle(color: kMuted, fontSize: 13)),
           ),
           Expanded(child: SelectableText(value, style: const TextStyle(fontSize: 13))),
           if (onOpen != null)
@@ -459,7 +487,7 @@ class _SecurityMetaRow extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   iconSize: 16,
                   tooltip: 'Im Dateimanager öffnen',
-                  icon: const Icon(Icons.folder_open, color: kMuted),
+                  icon: Icon(Icons.folder_open, color: kMuted),
                   onPressed: onOpen,
                 ),
               ),

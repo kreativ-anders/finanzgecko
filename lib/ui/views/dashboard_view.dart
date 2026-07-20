@@ -56,9 +56,7 @@ class DashboardView extends StatelessWidget {
     // card below, so the filter genuinely drives the whole dashboard.
     final available = availableRanges(allPeriods);
     final storedPreset = app.dashboardRangePreset;
-    final preset = (storedPreset != null && available.contains(storedPreset))
-        ? storedPreset
-        : defaultRange(available);
+    final preset = (storedPreset != null && available.contains(storedPreset)) ? storedPreset : defaultRange(available);
     final filtered = allPeriods.isEmpty ? <String>[] : periodsForRange(allPeriods, preset);
     final includesLatest = filtered.isNotEmpty && filtered.last == allPeriods.last;
 
@@ -69,7 +67,7 @@ class DashboardView extends StatelessWidget {
         children: [
           ...banners,
           if (allPeriods.isEmpty) ...[
-            _EmptyDashboard(onNavigate: onNavigate),
+            _EmptyDashboard(onNavigate: onNavigate, hasAccounts: app.accounts.isNotEmpty),
             cardGap,
             _SummaryRow(
               children: [
@@ -122,23 +120,50 @@ class DashboardView extends StatelessWidget {
   }
 }
 
+/// Onboarding hero shown in place of the charts until there's at least one
+/// balance entry — staged in two steps so the call to action always matches
+/// what's actually missing (an account first, then a first Kontostand),
+/// instead of a single generic "nothing here yet" message. `Center` is
+/// required (not just Column's default center cross-axis-alignment) because
+/// this sits inside a Column with crossAxisAlignment.start: without it, the
+/// block would only shrink-wrap to its own content width and "center"
+/// relative to that — visually indistinguishable from left-aligned.
 class _EmptyDashboard extends StatelessWidget {
-  const _EmptyDashboard({required this.onNavigate});
+  const _EmptyDashboard({required this.onNavigate, required this.hasAccounts});
 
   final ValueChanged<AppView> onNavigate;
+  final bool hasAccounts;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        children: [
-          Text('Noch kein Vermögen erfasst', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          const Text('Leg zuerst ein Konto an und trag deinen ersten Kontostand ein.', style: TextStyle(color: kMuted)),
-          const SizedBox(height: 20),
-          ElevatedButton(onPressed: () => onNavigate(AppView.accounts), child: noSelect(const Text('Konto anlegen'))),
-        ],
+    final headline = hasAccounts ? 'Fast geschafft!' : 'Willkommen bei FinanzGecko! 👋';
+    final body = hasAccounts
+        ? 'Dein erstes Konto steht schon — trag jetzt deinen ersten Kontostand ein, dann füllt sich dein '
+              'Dashboard mit Verlauf, Verteilung und Kennzahlen.'
+        : 'Noch keine Daten vorhanden. Leg jetzt dein erstes Konto an, um dein Vermögen zu erfassen.';
+    final buttonLabel = hasAccounts ? 'Einträge erfassen' : 'Konto anlegen';
+    final target = hasAccounts ? AppView.entries : AppView.accounts;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 64),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(headline, style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              Text(
+                body,
+                style: TextStyle(color: kMuted),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(onPressed: () => onNavigate(target), child: noSelect(Text(buttonLabel))),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -214,7 +239,7 @@ class _TotalsOverview extends StatelessWidget {
                           : 'GESAMTVERMÖGEN · STAND ${periodLabel(latestPeriod).toUpperCase()}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
+                      style: TextStyle(color: kMuted, fontSize: 12, letterSpacing: 1),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -229,13 +254,10 @@ class _TotalsOverview extends StatelessWidget {
                         children: [
                           Transform.scale(
                             scale: 0.8,
-                            child: Switch(
-                              value: app.includeAssetsInTotal,
-                              onChanged: app.setIncludeAssetsInTotal,
-                            ),
+                            child: Switch(value: app.includeAssetsInTotal, onChanged: app.setIncludeAssetsInTotal),
                           ),
                           const SizedBox(width: 4),
-                          const Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 12)),
+                          Text('inkl. Sachwerte', style: TextStyle(color: kMuted, fontSize: 12)),
                         ],
                       ),
                     ],
@@ -248,7 +270,7 @@ class _TotalsOverview extends StatelessWidget {
                         style: TextStyle(color: delta >= 0 ? kPrimary : kDanger, fontWeight: FontWeight.w600),
                       )
                     else
-                      const Text('Noch kein Vergleichsmonat', style: TextStyle(color: kMuted)),
+                      Text('Noch kein Vergleichsmonat', style: TextStyle(color: kMuted)),
                     // Split the change into what you added vs. what the market
                     // did, as two compact chips right under the delta:
                     // contributions are estimated from the Fixposten net (scaled
@@ -315,9 +337,9 @@ class _TotalsOverview extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.info_outline, size: 13, color: kMuted),
+                            Icon(Icons.info_outline, size: 13, color: kMuted),
                             const SizedBox(width: 6),
-                            const Flexible(
+                            Flexible(
                               child: Text(
                                 'Fremdwährungskonten: Rundungsdifferenzen von wenigen Cent möglich.',
                                 style: TextStyle(color: kMuted, fontSize: 12),
@@ -429,11 +451,11 @@ class _HistoryCard extends StatelessWidget {
                   children: [
                     Text(
                       'Prognose: ${fmtSignedMoney(rate, cur)}/Monat',
-                      style: const TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: kMuted, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     Text(
                       '$basis → ${fmtMoney(total, cur)} bis ${forecast.endLabel} (${fmtSignedMoney(delta, cur)})',
-                      style: const TextStyle(color: kMuted, fontSize: 12),
+                      style: TextStyle(color: kMuted, fontSize: 12),
                     ),
                   ],
                 );
@@ -747,10 +769,10 @@ class _AccountSortSelector extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 selected.label,
-                style: const TextStyle(fontSize: 12, color: kMuted, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 12, color: kMuted, fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 2),
-              const Icon(Icons.expand_more, size: 16, color: kMuted),
+              Icon(Icons.expand_more, size: 16, color: kMuted),
             ],
           ),
         ),
@@ -994,7 +1016,7 @@ class _AccountCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               acc.bank,
-              style: const TextStyle(color: kMuted, fontSize: 12),
+              style: TextStyle(color: kMuted, fontSize: 12),
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
@@ -1074,9 +1096,9 @@ class _AssetsSection extends StatelessWidget {
             const EmptyHint('Noch keine Vermögenswerte erfasst.')
           else ...[
             Text(fmtMoney(total, app.baseCurrency), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            Text('${app.assets.length} Gegenstände erfasst', style: const TextStyle(color: kMuted, fontSize: 13)),
+            Text('${app.assets.length} Gegenstände erfasst', style: TextStyle(color: kMuted, fontSize: 13)),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Standardmäßig nicht im Gesamtvermögen — oben zuschaltbar.',
               style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
             ),
@@ -1153,9 +1175,12 @@ class _SubscriptionsSection extends StatelessWidget {
   }
 }
 
-const _metricLabelStyle = TextStyle(color: kMuted, fontSize: 13);
+// Getters, not `const`/`final` fields: kMuted resolves against the current
+// theme, so a cached value would freeze at whatever theme was active on
+// first use and never follow a later Hell/Dunkel switch.
+TextStyle get _metricLabelStyle => TextStyle(color: kMuted, fontSize: 13);
 const _metricValueStyle = TextStyle(fontSize: 20, fontWeight: FontWeight.bold);
-const _metricSubValueStyle = TextStyle(color: kMuted, fontSize: 12);
+TextStyle get _metricSubValueStyle => TextStyle(color: kMuted, fontSize: 12);
 
 class _SummaryItem extends StatelessWidget {
   const _SummaryItem({required this.label, required this.value, this.subValue, required this.color});

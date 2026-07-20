@@ -95,7 +95,7 @@ finanzgecko/
 │       ├── backup_actions.dart   # Backup-Fluss: Export-/Import-/CSV-Datei-Dialoge, Sicherheitsabfrage, Snackbars
 │       ├── app_view.dart         # enum AppView (die 6 Ansichten) + deutsche Labels
 │       ├── splash_screen.dart    # Splash beim Start
-│       ├── theme.dart            # Farb-Konstanten (dark theme), ThemeData, `noSelect()`-Helper
+│       ├── theme.dart            # Farb-Konstanten (Hell/Dunkel/System via `ThemeScope`), ThemeData, `noSelect()`-Helper
 │       ├── views/                # Eine Datei pro Hauptansicht (siehe Tabelle unten)
 │       └── widgets/               # Wiederverwendbare Bausteine (Charts, Dialoge, Banner, Formularelemente)
 ├── test/                         # Dart-Unit-/Widget-Tests, gespiegelt zu den Gherkin-Szenarien (siehe Abschnitt 8)
@@ -236,7 +236,8 @@ automatisch über `Provider`.
 `balances`, `assets`, `subscriptions`), `ratesCache` (Legacy-Migrationspfad, s.o.), Auto-Increment-IDs
 (`nextAccountId` etc.), `lastExportAt`, `window` (`WindowPrefs`), sowie das Reminder-Notification-Tracking
 `notificationsEnabled`, `backupOverdueNotified`, `assetOverdueNotifiedIds` (episodenbasiert, siehe §4.4 und
-`gherkin/notifications.feature`) — alles additive `meta`-Felder, kein `schemaVersion`-Bump nötig. `fromDynamic()` ist **fehlertolerant pro Eintrag**:
+`gherkin/notifications.feature`), sowie `themeMode` (`AppThemeMode`, Standard `system`, siehe §5
+"Erscheinungsbild") — alles additive `meta`-Felder, kein `schemaVersion`-Bump nötig. `fromDynamic()` ist **fehlertolerant pro Eintrag**:
 eine kaputte Zeile in einer Liste wird übersprungen statt die ganze Datei unlesbar zu machen. `toExportJson()` ist
 bewusst schlanker als `toJson()` (kein `ratesCache`/`meta`/`window` — internes Implementierungsdetail, nicht Teil
 eines Backups) **und ohne `account.color`** (`Account.toExportJson`): die Farbe ist aus der Bank ableitbar und wird
@@ -264,7 +265,10 @@ App kann alte Daten nicht mehr lesen" in der CI auffällt, bevor es ausgeliefert
 Zentrale Fassade für die UI. Zwei Kategorien von Methoden:
 1. **CRUD** (`addAccount`, `upsertBalance`, `addAsset`, `addSubscription`, …) — delegieren an `store`, reloaden, notifyen.
 2. **Berechnete Werte für die UI**, die aus Rohdaten abgeleitet werden (nicht persistiert):
-   - `getBackupReminder()` — überfällig nach `kBackupReminderDays` (30) seit `lastExportAt`, oder wenn nie exportiert
+   - `getBackupReminder()` — nie überfällig, solange die App komplett leer ist (keine Konten/Kontostände/
+     Vermögenswerte/Fixposten — nichts erfasst heißt nichts zu sichern). Danach: wenn nie exportiert, überfällig
+     `kBackupReminderFirstDays` (182, ~6 Monate) nach der frühesten erfassten Aktivität; nach dem ersten Export
+     überfällig `kBackupReminderRepeatDays` (90, ~3 Monate) seit `lastExportAt`
    - `getAssetReminder()` — Liste überfälliger Vermögenswerte (> `kAssetReevaluationDays` = 182 Tage seit `lastEvaluatedAt`)
    - `getUpdateReminder()` — Nudge, wenn der neueste erfasste Monat älter als der aktuelle ist
    - `computeSubscriptionTotals()` — Einnahmen/Ausgaben/Netto, alle Fixposten auf Monatsäquivalent normiert
@@ -306,12 +310,23 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 
 ## 5. UI-Konventionen
 
-- **Dark Theme only**, Konstanten in `lib/ui/theme.dart`: `kBackground`, `kSurface`, `kBorder`, `kMuted`, `kPrimary`
-  (`#00C878`, Markenfarbe), `kDanger` (`#FF6B6B`), `kWarning` (`#E0A030`, Amber für unkritische Warnungen wie den
-  Erfassungsstand-Hinweis — abgegrenzt von `kDanger`, das einen echten Fehler/Verlust signalisiert),
-  `kTrendUp/Down/Neutral` (Prognose-Linie, bewusst blasser als
-  Primary/Danger). Diese Hex-Werte sind mit `kPrimaryHex`/`kDangerHex` in `constants.dart` synchron zu halten
-  (String-Form fürs on-disk Kontofarben-Feld vs. `Color`-Form fürs Theme).
+- **Dark Theme als Standard, Hell/Dunkel/System wählbar** (Einstellungen → "Erscheinungsbild", `AppThemeMode` in
+  `constants.dart`, persistiert in `AppSchema.themeMode`/`AppStore.themeMode`, Standard: `system`). Nur vier Tokens
+  in `lib/ui/theme.dart` sind pro Theme unterschiedlich: `kBackground`, `kSurface`, `kBorder`, `kMuted` sowie
+  `kTextPrimary` (volltoniger Lesetext auf `kBackground`/`kSurface`, z. B. Splash-Screen, Chart-Tooltips,
+  Monatsauswahl — ersetzt die früheren fest verdrahteten `Colors.white`-Stellen). Alle anderen Farben —
+  `kPrimary` (`#00C878`, Markenfarbe), `kDanger` (`#FF6B6B`), `kWarning` (`#E0A030`, Amber für unkritische
+  Warnungen wie den Erfassungsstand-Hinweis — abgegrenzt von `kDanger`, das einen echten Fehler/Verlust
+  signalisiert), `kTrendUp/Down/Neutral` (Prognose-Linie, bewusst blasser als Primary/Danger) — sind **bewusst in
+  beiden Themes identisch** (Markenfarben, keine Neuinterpretation). Diese vier dynamischen Tokens sind
+  top-level **Getter** (kein `const` mehr), die den zuletzt von `ThemeScope` aufgelösten `Brightness`-Wert lesen —
+  `ThemeScope` sitzt in `main.dart` oberhalb von `MaterialApp` (innerhalb eines `Consumer<AppState>`, das bei jedem
+  `setThemeMode()` neu baut) und löst `AppThemeMode.system` gegen `MediaQuery.platformBrightnessOf(context)` auf.
+  Jede Stelle, die einen dieser vier Tokens (oder `kTextPrimary`) referenziert, darf deshalb **nicht** `const` sein
+  (der Dart-Compiler bricht mit "Invalid constant value" ab, falls doch — verlässlicher Marker beim Reviewen).
+  Diese Hex-Werte sind mit `kPrimaryHex`/`kDangerHex` in `constants.dart` synchron zu halten (String-Form fürs
+  on-disk Kontofarben-Feld vs. `Color`-Form fürs Theme). **Noch offen:** eigene Hell/Dunkel-Varianten fürs
+  Taskleisten-/Dock-Icon (aktuell ein einziges Icon für beide Themes, siehe Icon-Pipeline in Abschnitt 6).
 - **Kein natives Menü** unter Linux/Windows (Flutters `PlatformMenuBar` nur macOS) → In-App-"Datei"-Bereich im
   Fensterkopf, plattformübergreifend identisch, plus globale Tastenkürzel (`Strg`/`⌘`+E/I/Q) via `CallbackShortcuts`.
 - **Geld-/Zahlenformat:** immer über `fmtMoney`/`fmtPercent`/`fmtInputNumber`/`parseInputNumber` aus `formatting.dart`
@@ -524,7 +539,7 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
 
 1. **Dieses Dokument und `gherkin/` sind Pflichtteil jeder Änderung, nicht optional.**
    Ändert sich durch einen Task die Ordnerstruktur, die Architektur, ein Datenmodell, eine Konstante mit fachlicher
-   Bedeutung (z. B. `kBackupReminderDays`) oder das Verhalten einer View → **im selben Arbeitsschritt**:
+   Bedeutung (z. B. `kBackupReminderFirstDays`) oder das Verhalten einer View → **im selben Arbeitsschritt**:
    - Abschnitt 3 (Ordnerstruktur) aktualisieren, falls Dateien/Ordner hinzukamen/wegfielen.
    - Abschnitt 4/5 (Architektur/UI-Konventionen) aktualisieren, falls sich Datenfluss, Schema oder Konventionen ändern.
    - Das passende `.feature`-File in `gherkin/` um das neue/geänderte Szenario ergänzen oder korrigieren.
@@ -542,8 +557,8 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
 
 4. **Designtokens (Farben, Abstände, Schwellwerte) exakt übernehmen**, nicht neu interpretieren — sie stehen in
    `constants.dart`/`theme.dart` und sind hier in Abschnitt 5/7 dokumentiert. Beispiel: `kConcentrationRiskThreshold
-   = 0.65`, `kAssetReevaluationDays = 182`, `kBackupReminderDays = 30` sind fachliche Entscheidungen, keine
-   beliebigen Defaults.
+   = 0.65`, `kAssetReevaluationDays = 182`, `kBackupReminderFirstDays = 182`, `kBackupReminderRepeatDays = 90` sind
+   fachliche Entscheidungen, keine beliebigen Defaults.
 
 5. **Architekturentscheidungen mit dokumentierter Begründung nicht ohne Rücksprache rückgängig machen**, u. a.:
    - Wechselkurs-Cache in eigener unverschlüsselter Datei (nicht in der DB) — Abschnitt 4.1.

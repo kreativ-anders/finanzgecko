@@ -113,7 +113,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Wiederkehrende Ein- und Ausgaben wie Gehalt, Dividenden oder Abos. Über das Vorzeichen-Symbol '
                   'zwischen Einnahme (+) und Ausgabe (−) umschalten. Alle Felder sind direkt bearbeitbar.',
                   style: TextStyle(color: kMuted),
@@ -122,7 +122,8 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                 if (entries.isEmpty)
                   const EmptyHint('Noch keine Fixposten erfasst.')
                 else
-                  for (final s in entries) _SubscriptionRow(key: ValueKey(s.id), sub: s, app: app, onNavigate: widget.onNavigate),
+                  for (final s in entries)
+                    _SubscriptionRow(key: ValueKey(s.id), sub: s, app: app, onNavigate: widget.onNavigate),
               ],
             ),
           ),
@@ -181,7 +182,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'Standard ist Ausgabe (−). Für eine Einnahme wie Gehalt auf + umschalten.',
                     style: TextStyle(color: kMuted, fontSize: 12),
                   ),
@@ -374,7 +375,7 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
                   textAlign: TextAlign.right,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: kMuted, fontSize: 12),
+                  style: TextStyle(color: kMuted, fontSize: 12),
                 ),
               ),
             ),

@@ -1,4 +1,4 @@
-# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart
+# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart
 # Implementierung: lib/ui/views/settings_view.dart
 @settings
 Feature: Einstellungen
@@ -14,6 +14,16 @@ Feature: Einstellungen
     Then wird sie sofort übernommen (keine separate Speichern-Aktion nötig)
     And ich sehe eine Speicher-Bestätigung
     And alle Dashboard-Summen werden ab sofort in dieser Währung berechnet
+
+  Scenario: Erscheinungsbild wählen
+    Then zeigt der Abschnitt "Erscheinungsbild" eine Auswahl mit "System", "Hell" und "Dunkel", standardmäßig "System"
+    When ich "Hell" bzw. "Dunkel" wähle
+    Then wird die App sofort auf die entsprechende Farbpalette umgestellt (keine separate Speichern-Aktion nötig)
+    And ich sehe eine Speicher-Bestätigung
+    And die Wahl bleibt über einen Neustart der App hinweg erhalten
+    Given "System" ist gewählt
+    Then folgt die App der Hell-/Dunkel-Einstellung des Betriebssystems und wechselt automatisch mit, wenn das
+      Betriebssystem seine Einstellung ändert
 
   Scenario: Desktop-Benachrichtigungen ein-/ausschalten
     Then zeigt der Abschnitt "Benachrichtigungen" einen Schalter "Desktop-Benachrichtigungen", standardmäßig aktiv

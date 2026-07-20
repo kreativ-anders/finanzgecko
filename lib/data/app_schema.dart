@@ -1,3 +1,4 @@
+import '../constants.dart';
 import '../models/account.dart';
 import '../models/asset.dart';
 import '../models/balance.dart';
@@ -70,6 +71,9 @@ class AppSchema {
   bool backupOverdueNotified;
   List<int> assetOverdueNotifiedIds;
 
+  /// Einstellungen → Erscheinungsbild (System/Hell/Dunkel), Standard: System.
+  AppThemeMode themeMode;
+
   AppSchema({
     required this.schemaVersion,
     required this.baseCurrency,
@@ -87,6 +91,7 @@ class AppSchema {
     this.notificationsEnabled = true,
     this.backupOverdueNotified = false,
     List<int>? assetOverdueNotifiedIds,
+    this.themeMode = AppThemeMode.system,
   }) : assetOverdueNotifiedIds = assetOverdueNotifiedIds ?? [];
 
   factory AppSchema.defaults() => AppSchema(
@@ -153,6 +158,7 @@ class AppSchema {
                 if (v is num) v.toInt(),
             ]
           : <int>[],
+      themeMode: appThemeModeFromJson(meta['themeMode'] as String?),
     );
   }
 
@@ -172,6 +178,7 @@ class AppSchema {
       'notificationsEnabled': notificationsEnabled,
       'backupOverdueNotified': backupOverdueNotified,
       'assetOverdueNotifiedIds': assetOverdueNotifiedIds,
+      'themeMode': appThemeModeToJson(themeMode),
     },
     'window': window.toJson(),
   };

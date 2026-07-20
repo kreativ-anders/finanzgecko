@@ -34,7 +34,7 @@ class _AppDonutChartState extends State<AppDonutChart> {
     if (total <= 0) {
       return SizedBox(
         height: widget.height,
-        child: const Center(
+        child: Center(
           child: Text(
             'Noch keine Daten.',
             style: TextStyle(color: kMuted, fontStyle: FontStyle.italic),
@@ -97,7 +97,7 @@ class _AppDonutChartState extends State<AppDonutChart> {
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11, color: kMuted),
+                          style: TextStyle(fontSize: 11, color: kMuted),
                         ),
                         Text(
                           fmtPercent(hovered.value / total * 100),

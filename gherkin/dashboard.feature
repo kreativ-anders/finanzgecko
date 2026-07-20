@@ -8,11 +8,24 @@ Feature: Dashboard — Vermögensübersicht
   Background:
     Given die App ist gestartet und initialisiert
 
-  Scenario: Leerer Zustand ohne jegliche Kontostände
-    Given es existiert noch kein einziger erfasster Kontostand
-    When ich das Dashboard öffne
-    Then sehe ich den Hinweis "Noch kein Vermögen erfasst" mit einem Button zum Anlegen eines Kontos
-    And trotzdem werden die Abschnitte "Fixposten" und "Vermögenswerte" mit ihrem jeweiligen Leer- oder Ist-Zustand angezeigt
+  Rule: Leerer Zustand — zweistufiges Onboarding
+
+    Scenario: Noch kein Konto angelegt
+      Given es existiert noch kein einziges Konto
+      When ich das Dashboard öffne
+      Then sehe ich eine zentrierte Willkommens-Karte mit einem Button "Konto anlegen", der zur Ansicht "Konten" führt
+      And trotzdem werden die Abschnitte "Fixposten" und "Vermögenswerte" mit ihrem jeweiligen Leer- oder Ist-Zustand angezeigt
+
+    Scenario: Konto vorhanden, aber noch kein einziger Kontostand
+      Given mindestens ein Konto existiert, aber es existiert noch kein einziger erfasster Kontostand
+      When ich das Dashboard öffne
+      Then sehe ich eine zentrierte Karte mit einem Button "Einträge erfassen", der zur Ansicht "Einträge" führt
+      And trotzdem werden die Abschnitte "Fixposten" und "Vermögenswerte" mit ihrem jeweiligen Leer- oder Ist-Zustand angezeigt
+
+    Scenario: Erster Kontostand vorhanden
+      Given mindestens ein Kontostand ist erfasst
+      When ich das Dashboard öffne
+      Then sehe ich die normale Dashboard-Ansicht mit Verlauf, Verteilung und Kennzahlen statt der Onboarding-Karte
 
   Rule: Zeitraum-Filter steuert das gesamte Dashboard
 
@@ -169,12 +182,24 @@ Feature: Dashboard — Vermögensübersicht
       Given das Netto ist ≥0 oder es gibt keine Fixposten
       Then erscheint dieses Banner nicht
 
-    Scenario: Backup-Reminder
-      Given noch nie ein Export durchgeführt wurde
+    Scenario: Kein Backup-Reminder, solange die App komplett leer ist
+      Given es existieren weder Konten noch Kontostände noch Vermögenswerte noch Fixposten
+      Then erscheint kein Backup-Reminder-Banner, unabhängig davon, ob je exportiert wurde
+        (nichts erfasst heißt nichts zu sichern)
+
+    Scenario: Backup-Reminder, wenn nie exportiert wurde
+      Given es existiert mindestens ein Konto, Kontostand, Vermögenswert oder Fixposten
+      And noch nie ein Export durchgeführt wurde
+      And die früheste erfasste Aktivität liegt mindestens kBackupReminderFirstDays (182, ~6 Monate) zurück
       Then erscheint ein Banner "Noch nie exportiert — leg jetzt ein erstes Backup an."
-      Given der letzte Export liegt mindestens 30 Tage zurück
+      Given die früheste erfasste Aktivität liegt weniger als kBackupReminderFirstDays zurück
+      Then erscheint noch kein Backup-Reminder-Banner (nur eine unauffällige Info in den Einstellungen)
+
+    Scenario: Backup-Reminder nach einem bereits erfolgten Export
+      Given mindestens einmal wurde bereits exportiert
+      And der letzte Export liegt mindestens kBackupReminderRepeatDays (90, ~3 Monate) zurück
       Then erscheint ein Banner mit der Anzahl Tage seit dem letzten Export
-      Given der letzte Export liegt weniger als 30 Tage zurück
+      Given der letzte Export liegt weniger als kBackupReminderRepeatDays zurück
       Then erscheint kein Backup-Reminder-Banner (nur eine unauffällige Info in den Einstellungen)
 
     Scenario: Asset-Reevaluation-Reminder

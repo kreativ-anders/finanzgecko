@@ -140,8 +140,8 @@ class _CurrencyHint extends StatelessWidget {
   Widget build(BuildContext context) {
     if (currency == baseCurrency) return const SizedBox.shrink();
 
-    return const Padding(
-      padding: EdgeInsets.only(top: 6),
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
       child: Text(
         'Wechselkurse werden automatisch über die frankfurter.dev API (EZB-Referenzkurse) abgerufen und für den Offline-Betrieb zwischengespeichert.',
         style: TextStyle(color: kMuted, fontSize: 12),
@@ -161,12 +161,12 @@ class _BankSuggestionHint extends StatelessWidget {
       padding: const EdgeInsets.only(top: 4),
       child: Wrap(
         children: [
-          const Text('Bank fehlt? ', style: TextStyle(color: kMuted, fontSize: 12)),
+          Text('Bank fehlt? ', style: TextStyle(color: kMuted, fontSize: 12)),
           InkWell(
             onTap: () => _openBankSuggestion(typedBank()),
             child: noSelect(const Text('Auf GitHub vorschlagen', style: TextStyle(color: kPrimary, fontSize: 12))),
           ),
-          const Text(' oder ', style: TextStyle(color: kMuted, fontSize: 12)),
+          Text(' oder ', style: TextStyle(color: kMuted, fontSize: 12)),
           InkWell(
             onTap: _openSuggestionMail,
             child: noSelect(const Text('E-Mail schreiben', style: TextStyle(color: kPrimary, fontSize: 12))),
@@ -409,7 +409,7 @@ class _AccountRow extends StatelessWidget {
                   Text(account.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                   Text(
                     '${account.bank.isNotEmpty ? '${account.bank} · ' : ''}${account.tag} · ${account.currency}',
-                    style: const TextStyle(color: kMuted, fontSize: 13),
+                    style: TextStyle(color: kMuted, fontSize: 13),
                   ),
                 ],
               ),

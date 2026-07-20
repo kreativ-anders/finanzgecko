@@ -67,7 +67,7 @@ class _AssetsViewState extends State<AssetsView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Anschaffungen wie Elektronik, Möbel oder Fahrzeuge mit ihrem aktuellen Wert. Werte direkt in der '
                   'Liste bearbeiten — beim Ändern gilt der Eintrag als heute neu bewertet.',
                   style: TextStyle(color: kMuted),
@@ -203,7 +203,7 @@ class _AssetRowState extends State<_AssetRow> {
                   asset.lastEvaluatedAt != null
                       ? 'zuletzt bewertet ${_formatDate(asset.lastEvaluatedAt!)}'
                       : 'noch nie bewertet',
-                  style: const TextStyle(color: kMuted, fontSize: 12),
+                  style: TextStyle(color: kMuted, fontSize: 12),
                 ),
               ],
             ),

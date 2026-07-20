@@ -155,8 +155,45 @@ void main() {
   });
 
   group('backup reminder', () {
-    test('flags "never exported" on a fresh store', () async {
+    test('no reminder while the app has no data at all', () async {
       final state = await newState();
+      final reminder = state.getBackupReminder();
+      expect(reminder.overdue, isFalse);
+      expect(reminder.message, contains('Noch keine Daten'));
+    });
+
+    test('never exported, but first activity under kBackupReminderFirstDays: not yet overdue', () async {
+      final state = await newState();
+      await state.addAccount(name: 'Girokonto', tag: 'Girokonto', currency: 'EUR', color: tagColorHex('Girokonto'));
+      final reminder = state.getBackupReminder();
+      expect(reminder.overdue, isFalse);
+      expect(reminder.message, contains('Noch nie exportiert'));
+    });
+
+    test('never exported and first activity at least kBackupReminderFirstDays ago: overdue', () async {
+      final store = AppStore(dataDirectory: tempDir);
+      await store.ensureInitialized();
+      final past = DateTime.now().subtract(const Duration(days: kBackupReminderFirstDays + 1)).toIso8601String();
+      await store.importAllData({
+        'schemaVersion': currentSchemaVersion,
+        'baseCurrency': 'EUR',
+        'accounts': [
+          {
+            'id': 1,
+            'name': 'Girokonto',
+            'bank': '',
+            'tag': 'Girokonto',
+            'currency': 'EUR',
+            'archived': false,
+            'createdAt': past,
+          },
+        ],
+        'balances': <Map<String, dynamic>>[],
+        'assets': <Map<String, dynamic>>[],
+        'subscriptions': <Map<String, dynamic>>[],
+      });
+      final state = AppState(store);
+      await state.init();
       final reminder = state.getBackupReminder();
       expect(reminder.overdue, isTrue);
       expect(reminder.message, contains('Noch nie'));
@@ -234,36 +271,41 @@ void main() {
   });
 
   group('reminder notifications', () {
-    test('backup: fires once when overdue, stays silent across a relaunch, fires again after export+new episode', () async {
-      final store1 = AppStore(dataDirectory: tempDir);
-      await store1.ensureInitialized();
-      await store1.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderDays + 1)));
+    test(
+      'backup: fires once when overdue, stays silent across a relaunch, fires again after export+new episode',
+      () async {
+        final store1 = AppStore(dataDirectory: tempDir);
+        await store1.ensureInitialized();
+        await store1.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderRepeatDays + 1)));
 
-      final fake1 = _FakeNotificationService();
-      await AppState(store1, notificationService: fake1).init();
-      expect(fake1.shown, hasLength(1));
-      expect(fake1.shown.single, contains('Zeit für ein neues Backup'));
+        final fake1 = _FakeNotificationService();
+        await AppState(store1, notificationService: fake1).init();
+        expect(fake1.shown, hasLength(1));
+        expect(fake1.shown.single, contains('Zeit für ein neues Backup'));
 
-      // Reopening the app (fresh AppState/AppStore over the same directory)
-      // must not refire while the episode is unresolved.
-      final fake2 = _FakeNotificationService();
-      final state2 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake2);
-      await state2.init();
-      expect(fake2.shown, isEmpty);
+        // Reopening the app (fresh AppState/AppStore over the same directory)
+        // must not refire while the episode is unresolved.
+        final fake2 = _FakeNotificationService();
+        final state2 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake2);
+        await state2.init();
+        expect(fake2.shown, isEmpty);
 
-      // Exporting resolves the episode; a fresh overdue period fires again.
-      await state2.markExported();
-      await state2.store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderDays + 1)));
-      final fake3 = _FakeNotificationService();
-      final state3 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake3);
-      await state3.init();
-      expect(fake3.shown, hasLength(1));
-    });
+        // Exporting resolves the episode; a fresh overdue period fires again.
+        await state2.markExported();
+        await state2.store.setLastExportAt(
+          DateTime.now().subtract(const Duration(days: kBackupReminderRepeatDays + 1)),
+        );
+        final fake3 = _FakeNotificationService();
+        final state3 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake3);
+        await state3.init();
+        expect(fake3.shown, hasLength(1));
+      },
+    );
 
     test('backup: disabled toggle suppresses the notification even while overdue', () async {
       final store = AppStore(dataDirectory: tempDir);
       await store.ensureInitialized();
-      await store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderDays + 1)));
+      await store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderRepeatDays + 1)));
       await store.setNotificationsEnabled(false);
 
       final fake = _FakeNotificationService();
