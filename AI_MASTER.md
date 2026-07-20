@@ -397,13 +397,14 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   Build-Job aus `pubspec.yaml` gelesen (nicht aus dem Git-Tag), damit auch ungetaggte Ad-hoc-Testbuilds
   (`workflow_dispatch`, `bump: none`) einen versionierten Dateinamen bekommen. `packaging/linux/install.sh` bleibt als
   Alternative fürs Linux-Startmenü aus einem entpackten Bundle bestehen.
-- **Zusätzliche unversionierte Alias-Assets** (`FinanzGecko-Setup.exe`, `FinanzGecko-mac.app.zip`,
-  `FinanzGecko-x86_64.AppImage`, je eine `cp`/`Copy-Item`-Kopie des versionierten Pakets direkt vor dem jeweiligen
-  `upload-artifact`-Schritt in `linux`/`macos`/`windows`) landen als zusätzliche Release-Assets neben den
-  versionierten Dateien. Grund: `docs/download.html` verlinkt pro Betriebssystem fest auf
-  `.../releases/latest/download/<Alias-Dateiname>` — ein von GitHub garantiert stabiler Pfad, der immer auf das
-  neueste Release zeigt, ohne dass die Website die aktuelle Versionsnummer kennen oder per API nachschlagen
-  muss (bewusst kein clientseitiger JS-/GitHub-API-Aufruf auf einer sonst komplett statischen Seite).
+- **Keine unversionierten Alias-Assets mehr:** jedes Release trägt pro Plattform genau **eine** Binärdatei (den
+  versionierten Namen). Ein früherer Ansatz lud zusätzlich eine byte-identische unversionierte Kopie hoch
+  (`cp`/`Copy-Item` vor dem jeweiligen `upload-artifact`-Schritt), damit `docs/download.html` fest auf
+  `.../releases/latest/download/<fester Name>` verlinken konnte — das verdoppelte aber Upload/Storage pro Release
+  für reine Duplikate. `docs/download.html` verlinkt die drei OS-Buttons deshalb stattdessen auf
+  `.../releases/latest` (GitHubs stabiler Redirect auf die neueste Release-Seite); Nutzer:innen wählen dort die
+  passende Datei. Bewusst weiterhin kein clientseitiger JS-/GitHub-API-Aufruf auf der sonst komplett statischen
+  Seite, um die exakte Asset-URL clientseitig zusammenzubauen.
 - **Kein automatischer/silenter In-App-Auto-Updater** — mangels Apple-Developer- bzw. Microsoft-Signaturzertifikat
   gäbe es keine vertrauenswürdige Grundlage, um ein heruntergeladenes Binary ohne Rückfrage zu installieren; ein
   In-Place-Austausch würde Gatekeeper/SmartScreen-Warnungen ohnehin nicht vermeiden. Stattdessen ein **manueller

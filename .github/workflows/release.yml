@@ -199,19 +199,10 @@ jobs:
           chmod +x packaging/linux/build_appimage.sh
           ./packaging/linux/build_appimage.sh
 
-      # Zusätzliche unversionierte Kopie, damit docs/download.html einen
-      # stabilen Link (.../releases/latest/download/FinanzGecko-x86_64.AppImage)
-      # verwenden kann, der über GitHub immer auf das neueste Release zeigt,
-      # statt die Version im Dateinamen erraten zu müssen.
-      - name: Unversionierte Alias-Kopie für den Download-Link erzeugen
-        run: cp "FinanzGecko-${{ steps.version.outputs.version }}-x86_64.AppImage" "FinanzGecko-x86_64.AppImage"
-
       - uses: actions/upload-artifact@v7
         with:
           name: FinanzGecko-linux-x86_64
-          path: |
-            FinanzGecko-${{ steps.version.outputs.version }}-x86_64.AppImage
-            FinanzGecko-x86_64.AppImage
+          path: FinanzGecko-${{ steps.version.outputs.version }}-x86_64.AppImage
 
   macos:
     needs: [gate, bump-version]
@@ -245,19 +236,10 @@ jobs:
         working-directory: build/macos/Build/Products/Release
         run: ditto -c -k --sequesterRsrc --keepParent FinanzGecko.app ../../../../../FinanzGecko-${{ steps.version.outputs.version }}-mac.app.zip
 
-      # Zusätzliche unversionierte Kopie, damit docs/download.html einen
-      # stabilen Link (.../releases/latest/download/FinanzGecko-mac.app.zip)
-      # verwenden kann, der über GitHub immer auf das neueste Release zeigt,
-      # statt die Version im Dateinamen erraten zu müssen.
-      - name: Unversionierte Alias-Kopie für den Download-Link erzeugen
-        run: cp "FinanzGecko-${{ steps.version.outputs.version }}-mac.app.zip" "FinanzGecko-mac.app.zip"
-
       - uses: actions/upload-artifact@v7
         with:
           name: FinanzGecko-mac
-          path: |
-            FinanzGecko-${{ steps.version.outputs.version }}-mac.app.zip
-            FinanzGecko-mac.app.zip
+          path: FinanzGecko-${{ steps.version.outputs.version }}-mac.app.zip
 
   windows:
     needs: [gate, bump-version]
@@ -301,20 +283,10 @@ jobs:
           $buildDir = "$PWD\build\windows\x64\runner\Release"
           & "iscc" "/DMyAppVersion=${{ steps.version.outputs.version }}" "/DBuildDir=$buildDir" packaging\windows\finanzgecko.iss
 
-      # Zusätzliche unversionierte Kopie, damit docs/download.html einen
-      # stabilen Link (.../releases/latest/download/FinanzGecko-Setup.exe)
-      # verwenden kann, der über GitHub immer auf das neueste Release zeigt,
-      # statt die Version im Dateinamen erraten zu müssen.
-      - name: Unversionierte Alias-Kopie für den Download-Link erzeugen
-        shell: pwsh
-        run: Copy-Item "packaging\windows\FinanzGecko-${{ steps.version.outputs.version }}-Setup.exe" "packaging\windows\FinanzGecko-Setup.exe"
-
       - uses: actions/upload-artifact@v7
         with:
           name: FinanzGecko-windows-x64
-          path: |
-            packaging/windows/FinanzGecko-${{ steps.version.outputs.version }}-Setup.exe
-            packaging/windows/FinanzGecko-Setup.exe
+          path: packaging/windows/FinanzGecko-${{ steps.version.outputs.version }}-Setup.exe
 
   # Veröffentlicht das GitHub-Release erst, wenn ALLE drei Plattform-Builds
   # erfolgreich waren — bewusst ein einziger, atomarer Schritt statt dass
