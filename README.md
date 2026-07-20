@@ -184,10 +184,11 @@ flutter build linux --release   # falls noch nicht geschehen
 ./packaging/linux/build_appimage.sh
 ```
 
-Erzeugt `FinanzGecko-x86_64.AppImage` (dasselbe Skript nutzt auch die CI);
-Empfänger machen sie ggf. mit `chmod +x` ausführbar und starten sie per
-Doppelklick — nichts zu entpacken, nichts, das beim Löschen einzelner Dateien
-kaputtgeht.
+Erzeugt standardmäßig `FinanzGecko-x86_64.AppImage` (dasselbe Skript nutzt
+auch die CI, dort mit `OUT_FILE=FinanzGecko-<Version>-x86_64.AppImage`, damit
+der Dateiname die Version trägt); Empfänger machen sie ggf. mit `chmod +x`
+ausführbar und starten sie per Doppelklick — nichts zu entpacken, nichts, das
+beim Löschen einzelner Dateien kaputtgeht.
 
 ### macOS / Windows
 
@@ -209,8 +210,8 @@ unter `build/windows/x64/runner/Release/` (Executable + `data/` + DLLs), der
 komplett verteilt werden muss — auch hier keine Einzeldatei mehr. Für die
 Weitergabe an Nutzer verpackt die CI dieses Bundle deshalb mit Inno Setup
 (`packaging/windows/finanzgecko.iss`) in einen einzigen Installer
-`FinanzGecko-Setup.exe` (Doppelklick → Next/Finish → Start-Menü-Eintrag +
-Uninstaller), analog zum Linux-AppImage. Zum
+`FinanzGecko-<Version>-Setup.exe` (Doppelklick → Next/Finish → Start-Menü-
+Eintrag + Uninstaller), analog zum Linux-AppImage. Zum
 Ausprobieren direkt aus dem Bundle heraus:
 
 ```powershell
@@ -235,9 +236,10 @@ landen gezippt am selben Lauf. Zwei Wege, den Workflow anzustoßen:
 - **Ad-hoc-Test ohne Tag/Release:** im GitHub-Repo unter *Actions →
   Release → Run workflow* manuell starten (funktioniert auf jedem Branch).
   Die drei Pakete (`FinanzGecko-linux-x86_64` → AppImage,
-  `FinanzGecko-windows-x64` → `FinanzGecko-Setup.exe`, `FinanzGecko-mac` →
-  gezipptes `.app`) stehen danach als Workflow-Artifacts auf der
-  Summary-Seite des Laufs zum Download bereit — es wird dabei kein
+  `FinanzGecko-windows-x64` → `FinanzGecko-<Version>-Setup.exe`,
+  `FinanzGecko-mac` → gezipptes `.app`, Dateinamen jeweils mit der aus
+  `pubspec.yaml` gelesenen Version) stehen danach als Workflow-Artifacts auf
+  der Summary-Seite des Laufs zum Download bereit — es wird dabei kein
   GitHub-Release erzeugt.
 
 Ohne eigenen Mac/Windows-Rechner oder GitHub-Zugriff auf diesen Workflow
@@ -259,8 +261,8 @@ bauen.
 | `lib/ui/backup_actions.dart` | Backup-Fluss: Export-/Import-/CSV-Datei-Dialoge, Sicherheitsabfrage, Snackbars |
 | `lib/ui/views/` | Die sieben Ansichten: Dashboard, Erfassen, Einträge, Konten, Vermögenswerte, Fixposten, Einstellungen |
 | `lib/ui/widgets/` | Wiederverwendbare Bausteine: Linienchart/Donut (`fl_chart`), Monatsauswahl, Vorzeichen-Umschalter, Banner |
-| `packaging/linux/` | `.desktop`-Datei + `install.sh` (Startmenü-/Taskleisten-Icon unter Wayland/X11) + `build_appimage.sh` (packt das Bundle in ein einzelnes `FinanzGecko-x86_64.AppImage`) |
-| `packaging/windows/` | `finanzgecko.iss` — Inno-Setup-Skript, das aus dem Windows-Bundle einen einzigen Installer `FinanzGecko-Setup.exe` erzeugt |
+| `packaging/linux/` | `.desktop`-Datei + `install.sh` (Startmenü-/Taskleisten-Icon unter Wayland/X11) + `build_appimage.sh` (packt das Bundle in ein einzelnes `FinanzGecko-x86_64.AppImage`, in der CI versioniert als `FinanzGecko-<Version>-x86_64.AppImage`) |
+| `packaging/windows/` | `finanzgecko.iss` — Inno-Setup-Skript, das aus dem Windows-Bundle einen einzigen Installer `FinanzGecko-<Version>-Setup.exe` erzeugt |
 | `.github/workflows/release.yml` | CI: baut bei jedem Tag-Push je Plattform ein fertiges Paket (Windows-Installer, Linux-AppImage, macOS-.app-Zip; je ein nativer Runner pro OS) und hängt sie ans GitHub-Release |
 | `assets/icon/icon.png` | App-Icon-Master (1024×1024), Quelle für alle Plattform-Icons (siehe "App-Icon aktualisieren") |
 | `tool/generate_icons.dart` | Einziger Befehl für die komplette Icon-Pipeline: macOS via `flutter_launcher_icons`, Windows-`.ico` (Multi-Size) und Linux-Hicolor-Icons per eigener Skalierung aus dem Master |

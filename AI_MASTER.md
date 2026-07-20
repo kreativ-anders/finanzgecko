@@ -87,8 +87,8 @@ finanzgecko/
 ├── tool/generate_icons.dart       # Icon-Pipeline (ein Master-PNG → alle Plattform-Icon-Formate)
 ├── tool/generate_demo_data.dart   # buildDemoBackup() → demo/finanzgecko-demo.json (an "heute" verankert); auch von flutter test aufgerufen
 ├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots (generiert, .gitignore) — via "Backup importieren…"
-├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü, build_appimage.sh → FinanzGecko-x86_64.AppImage
-├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-Setup.exe
+├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü, build_appimage.sh → FinanzGecko-<Version>-x86_64.AppImage
+├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
 └── .github/workflows/
     └── release.yml                # einziger Workflow. Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst
@@ -333,10 +333,12 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   (`icon_size`-Konfig), was Explorer/Taskleiste/Startmenü nach der Installation ohne Icon lässt statt
   herunterzuskalieren — `generateWindowsIcon` erzeugt stattdessen ein echtes Multi-Size-`.ico` (16–256px).
 - Release-Artefakte sind **fertige Pakete statt roher Bundle-Ordner** (die Testnutzer verwirrten und beim Löschen
-  einzelner Dateien den Start brachen): Windows → Inno-Setup-Installer `FinanzGecko-Setup.exe`
+  einzelner Dateien den Start brachen): Windows → Inno-Setup-Installer `FinanzGecko-<Version>-Setup.exe`
   (`packaging/windows/finanzgecko.iss`, gebaut mit `iscc` im `windows`-Job), Linux → einzelnes ausführbares AppImage
-  `FinanzGecko-x86_64.AppImage` (`packaging/linux/build_appimage.sh` via `appimagetool`), macOS → gezipptes
-  `FinanzGecko.app` (behandelt der Finder ohnehin als eine Einheit). `packaging/linux/install.sh` bleibt als
+  `FinanzGecko-<Version>-x86_64.AppImage` (`packaging/linux/build_appimage.sh` via `appimagetool`), macOS → gezipptes
+  `FinanzGecko-<Version>-mac.app.zip` (behandelt der Finder ohnehin als eine Einheit). Die Version wird in jedem
+  Build-Job aus `pubspec.yaml` gelesen (nicht aus dem Git-Tag), damit auch ungetaggte Ad-hoc-Testbuilds
+  (`workflow_dispatch`, `bump: none`) einen versionierten Dateinamen bekommen. `packaging/linux/install.sh` bleibt als
   Alternative fürs Linux-Startmenü aus einem entpackten Bundle bestehen.
 - Kein In-App-Auto-Updater — Update = neues Release-Artefakt laden (Installer erneut ausführen bzw. AppImage/.app ersetzen).
 - **`CHANGELOG.md`** wird ausschließlich vom `release`-Job in `release.yml` gepflegt: bei jedem tatsächlichen Release
