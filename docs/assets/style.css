@@ -490,6 +490,76 @@ footer.site .wrap {
   color: var(--text);
 }
 
+/* Download page */
+
+.download-hero {
+  padding: 72px 0 16px;
+  text-align: center;
+}
+
+.download-hero h1 {
+  font-size: 30px;
+  margin: 0 0 12px;
+  letter-spacing: -0.01em;
+}
+
+.download-hero p {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.download-grid {
+  padding: 40px 0 64px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.download-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.download-card h2 {
+  font-size: 18px;
+  margin: 0 0 6px;
+}
+
+.download-card .download-req {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+
+.download-card .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.download-card .install-hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 14px 0 0;
+}
+
+.download-all {
+  text-align: center;
+  padding-bottom: 64px;
+}
+
+.download-all p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
 /* Documentation page */
 
 .doc-layout {

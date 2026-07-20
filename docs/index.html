@@ -44,7 +44,8 @@
       "priceCurrency": "EUR"
     },
     "url": "https://kreativ-anders.github.io/finanzgecko/",
-    "downloadUrl": "https://github.com/kreativ-anders/finanzgecko/releases/latest",
+    "downloadUrl": "https://kreativ-anders.github.io/finanzgecko/download.html",
+    "license": "https://github.com/kreativ-anders/finanzgecko/blob/main/LICENSE",
     "author": {
       "@type": "Organization",
       "name": "kreativ-anders",
@@ -91,10 +92,26 @@
       },
       {
         "@type": "Question",
+        "name": "Wie installiere ich FinanzGecko für mein Betriebssystem?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Windows: Installer starten und den Anweisungen folgen. macOS: FinanzGecko.app öffnen oder in den Programme-Ordner ziehen. Linux: AppImage ausführbar machen und z. B. in einen Anwendungsordner legen."
+        }
+      },
+      {
+        "@type": "Question",
         "name": "Wie bekomme ich Updates?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Es gibt keinen Auto-Updater: Update bedeutet, das neue Release-Artefakt von GitHub zu laden — Windows-Installer erneut ausführen, Linux-AppImage bzw. macOS-App ersetzen."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Unter welcher Lizenz steht FinanzGecko?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "GPL-3.0 mit Commons-Clause-Zusatz: Quellcode frei einsehbar, veränderbar und weitergebbar (Copyleft), aber nicht für kommerzielle Zwecke nutzbar. Details in der LICENSE-Datei im Repository."
         }
       }
     ]
@@ -109,7 +126,7 @@
       <nav>
         <a href="#features">Funktionen</a>
         <a href="#screenshots">Einblicke</a>
-        <a href="#bekommen">Bekommen</a>
+        <a href="#download">Download</a>
         <a href="#faq">FAQ</a>
         <a href="documentation.html">Dokumentation</a>
         <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">GitHub</a>
@@ -128,7 +145,7 @@
         </p>
 
         <div class="cta-group">
-          <a class="btn" href="#bekommen">Kostenlos herunterladen →</a>
+          <a class="btn" href="#download">Kostenlos herunterladen →</a>
           <a class="btn btn-secondary" href="documentation.html">Zur Dokumentation</a>
         </div>
         <p class="micro-trust">Für Linux, macOS &amp; Windows · kein Account nötig · Daten bleiben auf deinem Gerät</p>
@@ -288,30 +305,25 @@
       </div>
     </section>
 
-    <section id="bekommen" class="get">
+    <section id="download" class="get">
       <div class="wrap">
-        <h2>FinanzGecko bekommen</h2>
+        <h2>Download</h2>
         <p class="section-lead">Immer derselbe quelloffene Vermögenstracker — wähle den Weg, der dir am liebsten ist.</p>
         <div class="get-grid">
           <div class="get-card get-card-primary">
-            <h3>Kostenlos &amp; Open Source</h3>
-            <p>Direkt von GitHub Releases laden — für Linux, macOS und Windows. Quellcode frei einsehbar.</p>
-            <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">Kostenlos herunterladen →</a>
+            <h3>Kostenlos &amp; quelloffen</h3>
+            <p>Installer für Linux, macOS und Windows — immer die neueste Version. Quellcode frei einsehbar (<a href="https://github.com/kreativ-anders/finanzgecko/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0, nicht-kommerziell</a>).</p>
+            <a class="btn" href="download.html">Kostenlos herunterladen →</a>
+            <p class="micro-trust"><a href="#faq-install">Wie installiere ich es für Windows, macOS oder Linux? →</a></p>
           </div>
           <div class="get-card">
-            <h3>Lieber kaufen</h3>
-            <p>Für alle, die lieber über einen Store-Checkout gehen oder die Entwicklung direkt unterstützen möchten.</p>
-            <!-- Platzhalter: echte Gumroad-/Lemon-Squeezy-Produktlinks eintragen, sobald verfügbar. -->
-            <div class="store-buttons">
-              <span class="btn btn-store" aria-disabled="true" title="Bald verfügbar">
-                Bei Gumroad kaufen
-                <span class="store-badge">bald verfügbar</span>
-              </span>
-              <span class="btn btn-store" aria-disabled="true" title="Bald verfügbar">
-                Bei Lemon&nbsp;Squeezy kaufen
-                <span class="store-badge">bald verfügbar</span>
-              </span>
-            </div>
+            <h3>Entwicklung unterstützen</h3>
+            <p>FinanzGecko bleibt kostenlos und quelloffen. Wer möchte, kann die Weiterentwicklung freiwillig unterstützen — zahl, was es dir wert ist.</p>
+            <!-- Platzhalter: echten Stripe Payment Link (Checkout mit frei wählbarem Betrag, "customer chooses price") eintragen, sobald eingerichtet. -->
+            <span class="btn btn-store" aria-disabled="true" title="Bald verfügbar">
+              Freiwillig unterstützen (Stripe)
+              <span class="store-badge">bald verfügbar</span>
+            </span>
           </div>
         </div>
       </div>
@@ -356,9 +368,17 @@
             <summary>Welche Plattformen werden unterstützt?</summary>
             <p>Linux, macOS und Windows als native Desktop-Anwendung. Es gibt keine mobile App und keine Web-Version.</p>
           </details>
+          <details id="faq-install">
+            <summary>Wie installiere ich FinanzGecko für mein Betriebssystem?</summary>
+            <p>Windows: Installer starten und den Anweisungen folgen. macOS: FinanzGecko.app öffnen oder in den Programme-Ordner ziehen. Linux: AppImage ausführbar machen und z. B. in einen Anwendungsordner legen.</p>
+          </details>
           <details>
             <summary>Wie bekomme ich Updates?</summary>
             <p>Es gibt keinen Auto-Updater: Update bedeutet, das neue Release-Artefakt von GitHub zu laden — Windows-Installer erneut ausführen, Linux-AppImage bzw. macOS-App ersetzen.</p>
+          </details>
+          <details>
+            <summary>Unter welcher Lizenz steht FinanzGecko?</summary>
+            <p>GPL-3.0 mit Commons-Clause-Zusatz: Quellcode frei einsehbar, veränderbar und weitergebbar (Copyleft) — aber nicht für kommerzielle Zwecke nutzbar. Details in der <a href="https://github.com/kreativ-anders/finanzgecko/blob/main/LICENSE" target="_blank" rel="noopener">LICENSE-Datei</a> im Repository.</p>
           </details>
         </div>
       </div>

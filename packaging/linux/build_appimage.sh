@@ -8,6 +8,9 @@
 # Aufruf (siehe .github/workflows/release.yml, Job "linux"):
 #   ./packaging/linux/build_appimage.sh
 # Optional: Pfad zu einem entpackten Bundle als $1 (Default: der build/-Pfad).
+# Optional: Ausgabedateiname als $OUT_FILE (Default: FinanzGecko-x86_64.AppImage
+# im Repo-Root) — die CI setzt hier FinanzGecko-<Version>-x86_64.AppImage,
+# damit der Dateiname die aus pubspec.yaml gelesene Version trägt.
 #
 # Benötigt appimagetool im PATH oder lädt es bei Bedarf nach $TMPDIR.
 set -euo pipefail

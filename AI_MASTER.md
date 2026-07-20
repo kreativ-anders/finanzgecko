@@ -21,6 +21,17 @@ einer einzigen JSON-Datei im OS-Datenverzeichnis; der Schlüssel liegt im OS-Cre
 Die komplette UI ist **auf Deutsch** — das ist ein Kernmerkmal, kein Zufall, und muss bei jeder Regenerierung/
 Erweiterung erhalten bleiben (siehe [Glossar](#7-domänen-glossar-verbindlich)).
 
+**Lizenz:** Quellcode öffentlich auf GitHub (`kreativ-anders/finanzgecko`), lizenziert unter **GPL-3.0 mit
+"Commons Clause"-Zusatz** (siehe [`LICENSE`](LICENSE)): Copyleft wie bei GPL — Quellcode frei einsehbar, veränderbar
+und weitergebbar, Ableitungen müssen unter denselben Bedingungen bleiben — aber die Commons Clause untersagt
+zusätzlich jede **kommerzielle** Nutzung (Verkauf der Software oder eines Produkts/Service, dessen Wert überwiegend
+aus ihrer Funktionalität stammt). Das ist bewusst **kein** OSI-approved "Open Source" im engeren Sinn (die Open
+Source Definition verbietet Einschränkungen nach Verwendungszweck) — auf der Landingpage (`docs/index.html`) daher
+als "quelloffen" plus einer eigenen FAQ-Antwort mit Lizenzdetails kommuniziert, nicht unkommentiert als "Open
+Source" behauptet. Die App selbst bleibt für Endnutzer:innen kostenlos (GitHub Releases); finanziert wird die
+Weiterentwicklung stattdessen über eine freiwillige "Pay what you want"-Unterstützung via Stripe auf der Landingpage
+(Abschnitt "Entwicklung unterstützen").
+
 ## 2. Tech-Stack
 
 | Bereich | Wahl | Version (siehe `pubspec.yaml`) |
@@ -49,6 +60,7 @@ nutzbar).
 finanzgecko/
 ├── AI_MASTER.md                  # ← dieses Dokument
 ├── CHANGELOG.md                  # generiert vom release-Job in release.yml (Commits seit letztem Tag, oben angehängt) — nicht von Hand pflegen
+├── LICENSE                       # GPL-3.0 + "Commons Clause"-Zusatz (Copyleft, aber keine kommerzielle Nutzung) — siehe "Lizenz" unten
 ├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (deklarativ)
 │   └── executable/               # ← ausführbare Features (@executable), laufen via test/support/gherkin_runner.dart
 ├── templates/                    # ← Import-Vorlage (import-template.json) + Feld-Doku für die Datenmigration aus Fremdtools
@@ -90,6 +102,11 @@ finanzgecko/
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü, build_appimage.sh → FinanzGecko-<Version>-x86_64.AppImage
 ├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
+├── docs/                          # Statische Landingpage (GitHub Pages, kein Build-Schritt, reines HTML/CSS)
+│   ├── index.html                 # Startseite: Hero, Screenshots, Features, Download/Unterstützen, Trust-Strip, FAQ
+│   ├── download.html              # Download-Seite: ein Direktlink pro OS (Windows/macOS/Linux), s. u.
+│   ├── documentation.html         # Kurzanleitung für Endnutzer (kein Bezug zu AI_MASTER/gherkin)
+│   └── assets/                    # style.css (teilt Farbtokens mit lib/ui/theme.dart), Icons, Screenshots
 └── .github/workflows/
     └── release.yml                # einziger Workflow. Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst
                                    #   `gate`-Job (analyze + test + Icon-Pipeline), dann 3 native Build-Jobs
@@ -340,6 +357,13 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   Build-Job aus `pubspec.yaml` gelesen (nicht aus dem Git-Tag), damit auch ungetaggte Ad-hoc-Testbuilds
   (`workflow_dispatch`, `bump: none`) einen versionierten Dateinamen bekommen. `packaging/linux/install.sh` bleibt als
   Alternative fürs Linux-Startmenü aus einem entpackten Bundle bestehen.
+- **Zusätzliche unversionierte Alias-Assets** (`FinanzGecko-Setup.exe`, `FinanzGecko-mac.app.zip`,
+  `FinanzGecko-x86_64.AppImage`, je eine `cp`/`Copy-Item`-Kopie des versionierten Pakets direkt vor dem jeweiligen
+  `upload-artifact`-Schritt in `linux`/`macos`/`windows`) landen als zusätzliche Release-Assets neben den
+  versionierten Dateien. Grund: `docs/download.html` verlinkt pro Betriebssystem fest auf
+  `.../releases/latest/download/<Alias-Dateiname>` — ein von GitHub garantiert stabiler Pfad, der immer auf das
+  neueste Release zeigt, ohne dass die Landingpage die aktuelle Versionsnummer kennen oder per API nachschlagen
+  muss (bewusst kein clientseitiger JS-/GitHub-API-Aufruf auf einer sonst komplett statischen Seite).
 - Kein In-App-Auto-Updater — Update = neues Release-Artefakt laden (Installer erneut ausführen bzw. AppImage/.app ersetzen).
 - **`CHANGELOG.md`** wird ausschließlich vom `release`-Job in `release.yml` gepflegt: bei jedem tatsächlichen Release
   (Tag-Push oder Version-Bump-Dispatch, nicht bei einem reinen Testbuild mit `bump: none`) wird ein Abschnitt mit den

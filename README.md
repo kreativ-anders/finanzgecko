@@ -5,6 +5,15 @@ alle Daten liegen in einer einzigen JSON-Datei im eigenen Datenverzeichnis
 der App. Gebaut mit [Flutter](https://flutter.dev) (Desktop-Target), lokal
 lauffähig auf Linux, macOS und Windows.
 
+## Lizenz
+
+[GPL-3.0](LICENSE) mit ["Commons Clause"](https://commonsclause.com/)-Zusatz: Quellcode frei einsehbar, veränderbar
+und weitergebbar (Copyleft — Ableitungen bleiben unter denselben Bedingungen), aber **keine kommerzielle Nutzung**
+(kein Verkauf der Software oder eines Produkts/Service, dessen Wert überwiegend aus ihrer Funktionalität stammt).
+Für Endnutzer:innen bleibt die App über [GitHub Releases](https://github.com/kreativ-anders/finanzgecko/releases)
+kostenlos; wer die Weiterentwicklung freiwillig unterstützen möchte, kann das über den "Pay what you want"-Link
+(Stripe) auf der [Landingpage](https://kreativ-anders.github.io/finanzgecko/) tun.
+
 ## Einmalig einrichten
 
 ### Linux (z. B. TUXEDO OS)
@@ -419,10 +428,16 @@ Backup-Restore bringt wirklich *alle* exportierten Daten zurück.
    - Tag pushen, z. B.: `git tag v1.1.0 && git push origin v1.1.0`
 2. `.github/workflows/release.yml` baut auf drei nativen Runnern
    (ubuntu/macos/windows-latest) je ein Plattform-Bundle und hängt es als
-   Zip ans GitHub-Release.
+   Zip ans GitHub-Release. Zusätzlich zum versionierten Dateinamen
+   (`FinanzGecko-<Version>-…`) lädt jeder Build-Job eine unversionierte
+   Alias-Kopie (`FinanzGecko-Setup.exe`, `FinanzGecko-mac.app.zip`,
+   `FinanzGecko-x86_64.AppImage`) mit hoch — darauf verlinkt
+   `docs/download.html` fest über `.../releases/latest/download/<Alias>`,
+   damit die Download-Seite ohne API-Aufruf immer auf die neueste Version zeigt.
 3. Nutzer laden das passende Zip herunter, entpacken es und ersetzen die
    alte Ordnerkopie (Linux: `./packaging/linux/install.sh <entpackter-Ordner>`
-   erledigt das inkl. Startmenü-Eintrag).
+   erledigt das inkl. Startmenü-Eintrag) — oder gehen direkt über die
+   [Download-Seite](https://kreativ-anders.github.io/finanzgecko/download.html).
 
 ## Troubleshooting
 

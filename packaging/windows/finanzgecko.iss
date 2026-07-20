@@ -1,12 +1,14 @@
 ; Inno-Setup-Skript für FinanzGecko (Windows).
 ;
 ; Erzeugt aus dem Flutter-Windows-Bundle (Executable + data/ + DLLs) einen
-; einzigen Installer `FinanzGecko-Setup.exe`, statt Testnutzern den rohen
-; Bundle-Ordner zuzumuten: der Installer legt alles nach Program Files, setzt
-; Start-Menü- (und optional Desktop-)Verknüpfungen und einen sauberen
+; einzigen Installer `FinanzGecko-<Version>-Setup.exe`, statt Testnutzern den
+; rohen Bundle-Ordner zuzumuten: der Installer legt alles nach Program Files,
+; setzt Start-Menü- (und optional Desktop-)Verknüpfungen und einen sauberen
 ; Uninstaller an. Das löst die Verwirrung, dass ein lose entpacktes Bundle wie
 ; ein Haufen loser Dateien aussieht und beim Löschen einzelner Dateien
-; (DLLs / data/) nicht mehr startet.
+; (DLLs / data/) nicht mehr startet. Der Dateiname trägt MyAppVersion (aus
+; pubspec.yaml, via /DMyAppVersion), damit mehrere heruntergeladene Releases
+; nebeneinander unterscheidbar bleiben.
 ;
 ; Aufruf (siehe .github/workflows/release.yml, Job "windows"):
 ;   iscc /DMyAppVersion=<X.Y.Z> /DBuildDir=<Pfad zu ...\Release> finanzgecko.iss
@@ -33,7 +35,7 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\FinanzGecko
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
-OutputBaseFilename=FinanzGecko-Setup
+OutputBaseFilename=FinanzGecko-{#MyAppVersion}-Setup
 OutputDir=.
 Compression=lzma2
 SolidCompression=yes
