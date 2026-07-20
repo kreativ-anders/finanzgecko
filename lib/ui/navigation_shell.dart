@@ -136,7 +136,7 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: onTap,
-      style: TextButton.styleFrom(foregroundColor: active ? kPrimary : kMuted),
+      style: TextButton.styleFrom(foregroundColor: active ? kPrimaryText : kMuted),
       child: Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
     );
   }

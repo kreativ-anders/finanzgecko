@@ -329,6 +329,18 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   Diese Hex-Werte sind mit `kPrimaryHex`/`kDangerHex` in `constants.dart` synchron zu halten (String-Form fürs
   on-disk Kontofarben-Feld vs. `Color`-Form fürs Theme). **Noch offen:** eigene Hell/Dunkel-Varianten fürs
   Taskleisten-/Dock-Icon (aktuell ein einziges Icon für beide Themes, siehe Icon-Pipeline in Abschnitt 6).
+- **`kPrimaryText`/`kDangerText`/`kWarningText`** (`lib/ui/theme.dart`, gleiches Getter-Muster wie oben): WCAG-2.1-AA-
+  sichere Varianten von `kPrimary`/`kDanger`/`kWarning` für den Einsatz als **Text-/Icon-Farbe** (statt als Fläche/
+  Chart-Linie/Button-Hintergrund). `kPrimary` & Co. bleiben als Marken-/Füllfarbe bewusst themenidentisch (s. o.) —
+  als Textfarbe auf dem hellen Theme unterschreiten sie aber alle drei die 4,5:1-Mindestkontrastvorgabe (~2,0–2,8:1
+  gegen `kBackground`/`kSurface` hell). Die `*Text`-Getter geben im Dark Theme exakt die Original-Konstante zurück
+  (dort bereits ≥6,9:1) und nur im Light Theme eine dunklere, farbtongleiche Variante (`#00814D`/`#BA4E4E`/`#936920`,
+  alle ≥4,5:1 gegen `#F4F7F5`/`#FFFFFF`). Regel: **jede Stelle, an der eine der drei Markenfarben eine Textzeile,
+  ein alleinstehendes Icon-Glyph oder einen Fokus-/Rahmenindikator (`InputDecorationTheme.focusedBorder`) färbt,
+  nutzt die `*Text`-Variante** — Flächen/Fills (Button-/Chip-Hintergrund, `AppLineChart`-Linienfarbe, farbige
+  Badges mit dunklem Text obendrauf) bleiben bei der Original-Konstante. Ausnahme: der Marken-Schriftzug
+  "🦎 FinanzGecko" im Kopfbereich (`navigation_shell.dart`) bleibt `kPrimary`, da Logos/Markennamen laut WCAG 1.4.3
+  von der Kontrastvorgabe ausgenommen sind.
 - **Kein natives Menü** unter Linux/Windows (Flutters `PlatformMenuBar` nur macOS) → In-App-"Datei"-Bereich im
   Fensterkopf, plattformübergreifend identisch, plus globale Tastenkürzel (`Strg`/`⌘`+E/I/Q) via `CallbackShortcuts`.
 - **Geld-/Zahlenformat:** immer über `fmtMoney`/`fmtPercent`/`fmtInputNumber`/`parseInputNumber` aus `formatting.dart`

@@ -164,12 +164,12 @@ class _BankSuggestionHint extends StatelessWidget {
           Text('Bank fehlt? ', style: TextStyle(color: kMuted, fontSize: 12)),
           InkWell(
             onTap: () => _openBankSuggestion(typedBank()),
-            child: noSelect(const Text('Auf GitHub vorschlagen', style: TextStyle(color: kPrimary, fontSize: 12))),
+            child: noSelect(Text('Auf GitHub vorschlagen', style: TextStyle(color: kPrimaryText, fontSize: 12))),
           ),
           Text(' oder ', style: TextStyle(color: kMuted, fontSize: 12)),
           InkWell(
             onTap: _openSuggestionMail,
-            child: noSelect(const Text('E-Mail schreiben', style: TextStyle(color: kPrimary, fontSize: 12))),
+            child: noSelect(Text('E-Mail schreiben', style: TextStyle(color: kPrimaryText, fontSize: 12))),
           ),
         ],
       ),

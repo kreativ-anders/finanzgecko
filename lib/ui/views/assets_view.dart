@@ -213,10 +213,10 @@ class _AssetRowState extends State<_AssetRow> {
               margin: const EdgeInsets.only(right: 10),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                border: Border.all(color: kDanger),
+                border: Border.all(color: kDangerText),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Text('Neu bewerten', style: TextStyle(color: kDanger, fontSize: 11)),
+              child: Text('Neu bewerten', style: TextStyle(color: kDangerText, fontSize: 11)),
             ),
           SizedBox(
             width: 130,

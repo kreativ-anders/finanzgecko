@@ -72,9 +72,17 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => setState(() => viewYear -= 1)),
+          IconButton(
+            tooltip: 'Vorheriges Jahr',
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () => setState(() => viewYear -= 1),
+          ),
           Text('$viewYear', style: const TextStyle(fontWeight: FontWeight.w600)),
-          IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => setState(() => viewYear += 1)),
+          IconButton(
+            tooltip: 'Nächstes Jahr',
+            icon: const Icon(Icons.chevron_right),
+            onPressed: () => setState(() => viewYear += 1),
+          ),
         ],
       ),
       content: SizedBox(
@@ -88,18 +96,21 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
           children: List.generate(12, (i) {
             final month = i + 1;
             final active = viewYear == selectedYear && month == selectedMonth;
-            return OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                backgroundColor: active ? kPrimary : null,
-                foregroundColor: active ? const Color(0xFF04140D) : kTextPrimary,
-                side: BorderSide(color: active ? kPrimary : kBorder),
-                padding: EdgeInsets.zero,
+            return Semantics(
+              selected: active,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: active ? kPrimary : null,
+                  foregroundColor: active ? const Color(0xFF04140D) : kTextPrimary,
+                  side: BorderSide(color: active ? kPrimary : kBorder),
+                  padding: EdgeInsets.zero,
+                ),
+                onPressed: () {
+                  final period = '$viewYear-${month.toString().padLeft(2, '0')}';
+                  Navigator.of(context).pop(period);
+                },
+                child: noSelect(Text(kMonthLabels[i])),
               ),
-              onPressed: () {
-                final period = '$viewYear-${month.toString().padLeft(2, '0')}';
-                Navigator.of(context).pop(period);
-              },
-              child: noSelect(Text(kMonthLabels[i])),
             );
           }),
         ),

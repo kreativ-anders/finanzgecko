@@ -48,6 +48,22 @@ const Color kDanger = Color(0xFFFF6B6B);
 // header) — distinct from kDanger, which signals an actual error/loss.
 const Color kWarning = Color(0xFFE0A030);
 
+// ---------- WCAG-AA-safe text/icon variants of the brand colors ----------
+// kPrimary/kDanger/kWarning themselves stay pixel-identical between themes
+// (see AI_MASTER.md §5) — they're correct as-is for fills (button/chip
+// backgrounds, chart lines) where a dark or light glyph sits on top. But used
+// directly *as* text/icon color on the light theme's near-white background,
+// all three fall short of WCAG 2.1 AA's 4.5:1 minimum (kPrimary ~2.0:1,
+// kDanger ~2.6:1, kWarning ~2.1:1) — verified against both kBackground and
+// kSurface. These three getters are darkened, same-hue variants used
+// wherever the brand color is the color of a glyph rather than a fill; they
+// equal the original constant in dark mode (already ≥6.9:1) and only diverge
+// in light mode (recomputed against #F4F7F5/#FFFFFF to clear 4.5:1 with
+// margin, see the derivation this was checked against).
+Color get kPrimaryText => _activeBrightness == Brightness.dark ? kPrimary : const Color(0xFF00814D);
+Color get kDangerText => _activeBrightness == Brightness.dark ? kDanger : const Color(0xFFBA4E4E);
+Color get kWarningText => _activeBrightness == Brightness.dark ? kWarning : const Color(0xFF936920);
+
 // Trend-line direction colors (see AppLineChart) — deliberately lighter/more
 // muted than kPrimary/kDanger so the dashed projection stays visually
 // secondary to the actual data line.
@@ -121,7 +137,7 @@ ThemeData buildAppTheme() {
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: border,
       enabledBorder: border,
-      focusedBorder: border.copyWith(borderSide: BorderSide(color: kPrimary, width: 1.5)),
+      focusedBorder: border.copyWith(borderSide: BorderSide(color: kPrimaryText, width: 1.5)),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -139,7 +155,7 @@ ThemeData buildAppTheme() {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     ),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: kPrimary)),
+    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: kPrimaryText)),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
         return states.contains(WidgetState.selected) ? const Color(0xFF04140D) : kMuted;

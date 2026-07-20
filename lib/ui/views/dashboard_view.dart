@@ -245,7 +245,7 @@ class _TotalsOverview extends StatelessWidget {
                     Text(
                       fmtMoney(displayTotal, app.baseCurrency),
                       maxLines: 1,
-                      style: const TextStyle(color: kPrimary, fontSize: 44, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: kPrimaryText, fontSize: 44, fontWeight: FontWeight.bold),
                     ),
                     if (hasAssets) ...[
                       const SizedBox(height: 2),
@@ -267,7 +267,7 @@ class _TotalsOverview extends StatelessWidget {
                         '${fmtSignedMoney(delta, app.baseCurrency)}'
                         '${pct != null ? ' (${delta >= 0 ? '+' : ''}${fmtPercent(pct)})' : ''}'
                         ' ggü. ${periodLabel(prevPeriod!)}',
-                        style: TextStyle(color: delta >= 0 ? kPrimary : kDanger, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: delta >= 0 ? kPrimaryText : kDangerText, fontWeight: FontWeight.w600),
                       )
                     else
                       Text('Noch kein Vergleichsmonat', style: TextStyle(color: kMuted)),
@@ -294,7 +294,7 @@ class _TotalsOverview extends StatelessWidget {
                               _SplitChip(
                                 icon: Icons.savings_outlined,
                                 label: '${fmtSignedMoneyRounded(split.contributions, cur)} eingezahlt',
-                                tint: kPrimary,
+                                tint: kPrimaryText,
                               ),
                               _SplitChip(
                                 icon: Icons.show_chart,
@@ -316,12 +316,12 @@ class _TotalsOverview extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.warning_amber_rounded, size: 14, color: kWarning),
+                          Icon(Icons.warning_amber_rounded, size: 14, color: kWarningText),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
                               'Nur $entriesInLatest von ${app.accounts.length} Konten für diesen Monat erfasst — Summe evtl. unvollständig.',
-                              style: const TextStyle(color: kWarning, fontSize: 12),
+                              style: TextStyle(color: kWarningText, fontSize: 12),
                             ),
                           ),
                         ],
@@ -544,37 +544,37 @@ class _StatsCard extends StatelessWidget {
         label: 'Gesamtveränderung',
         value: fmtSignedMoney(stats.totalGrowth, cur),
         subValue: 'seit ${periodLabel(stats.startPeriod)}',
-        color: stats.totalGrowth >= 0 ? kPrimary : kDanger,
+        color: stats.totalGrowth >= 0 ? kPrimaryText : kDangerText,
       ),
       (
         label: 'Bester Monat',
         value: fmtSignedMoney(stats.best.delta, cur),
         subValue: periodLabel(stats.best.period),
-        color: stats.best.delta >= 0 ? kPrimary : kDanger,
+        color: stats.best.delta >= 0 ? kPrimaryText : kDangerText,
       ),
       (
         label: 'Schwächster Monat',
         value: fmtSignedMoney(stats.worst.delta, cur),
         subValue: periodLabel(stats.worst.period),
-        color: stats.worst.delta >= 0 ? kPrimary : kDanger,
+        color: stats.worst.delta >= 0 ? kPrimaryText : kDangerText,
       ),
       (
         label: 'Ø Veränderung/Monat',
         value: fmtSignedMoney(stats.averageChange, cur),
         subValue: '${stats.changeCount} Monate',
-        color: stats.averageChange >= 0 ? kPrimary : kDanger,
+        color: stats.averageChange >= 0 ? kPrimaryText : kDangerText,
       ),
       (
         label: 'Monate im Plus',
         value: '${stats.monthsUp}/${stats.changeCount}',
         subValue: fmtPercent(stats.upShare * 100),
-        color: kPrimary,
+        color: kPrimaryText,
       ),
       (
         label: 'Höchststand',
         value: fmtMoney(stats.peak, cur),
         subValue: periodLabel(stats.peakPeriod),
-        color: kPrimary,
+        color: kPrimaryText,
       ),
     ];
     return SectionCard(
@@ -742,12 +742,12 @@ class _AccountSortSelector extends StatelessWidget {
             value: order,
             child: Row(
               children: [
-                Icon(order.icon, size: 18, color: order == selected ? kPrimary : kMuted),
+                Icon(order.icon, size: 18, color: order == selected ? kPrimaryText : kMuted),
                 const SizedBox(width: 10),
                 Text(
                   order.label,
                   style: TextStyle(
-                    color: order == selected ? kPrimary : null,
+                    color: order == selected ? kPrimaryText : null,
                     fontWeight: order == selected ? FontWeight.w600 : null,
                   ),
                 ),
@@ -867,12 +867,12 @@ class _DistributionSection extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline, size: 14, color: kDanger),
+                Icon(Icons.info_outline, size: 14, color: kDangerText),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Hoher Anteil in einer Kategorie: ${topEntry!.key} macht ${fmtPercent(topShare * 100)} deines Vermögens aus.',
-                    style: const TextStyle(color: kDanger, fontSize: 12),
+                    style: TextStyle(color: kDangerText, fontSize: 12),
                   ),
                 ),
               ],
@@ -1037,7 +1037,7 @@ class _AccountCard extends StatelessWidget {
                     child: Text(
                       '${fmtSignedMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
                       style: TextStyle(
-                        color: delta >= 0 ? kPrimary : kDanger,
+                        color: delta >= 0 ? kPrimaryText : kDangerText,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -1144,19 +1144,19 @@ class _SubscriptionsSection extends StatelessWidget {
                   label: 'Einnahmen/Monat',
                   value: fmtMoney(totals.totalIncome, app.baseCurrency),
                   subValue: '${fmtMoney(totals.totalIncome * 12, app.baseCurrency)}/Jahr',
-                  color: kPrimary,
+                  color: kPrimaryText,
                 ),
                 _SummaryItem(
                   label: 'Ausgaben/Monat',
                   value: fmtMoney(totals.totalExpense, app.baseCurrency),
                   subValue: '${fmtMoney(totals.totalExpense * 12, app.baseCurrency)}/Jahr',
-                  color: kDanger,
+                  color: kDangerText,
                 ),
                 _SummaryItem(
                   label: 'Differenz',
                   value: fmtSignedMoney(totals.net, app.baseCurrency),
                   subValue: '${fmtSignedMoney(totals.net * 12, app.baseCurrency)}/Jahr',
-                  color: totals.net >= 0 ? kPrimary : kDanger,
+                  color: totals.net >= 0 ? kPrimaryText : kDangerText,
                 ),
               ],
             ),

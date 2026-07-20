@@ -24,11 +24,11 @@ Future<bool?> _showConfirmResetDialog(BuildContext context, TextEditingControlle
       builder: (ctx, setState) {
         final matches = ctrl.text.trim() == _confirmPhrase;
         return AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: kDanger),
-              SizedBox(width: 10),
-              Text('App wirklich zurücksetzen?'),
+              Icon(Icons.warning_amber_rounded, color: kDangerText),
+              const SizedBox(width: 10),
+              const Text('App wirklich zurücksetzen?'),
             ],
           ),
           content: Column(
@@ -46,7 +46,7 @@ Future<bool?> _showConfirmResetDialog(BuildContext context, TextEditingControlle
                     const TextSpan(text: 'Gib zum Bestätigen '),
                     TextSpan(
                       text: _confirmPhrase,
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: kDanger),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: kDangerText),
                     ),
                     const TextSpan(text: ' ein:'),
                   ],
@@ -65,7 +65,11 @@ Future<bool?> _showConfirmResetDialog(BuildContext context, TextEditingControlle
             TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
             ElevatedButton(
               onPressed: matches ? () => Navigator.of(ctx).pop(true) : null,
-              style: ElevatedButton.styleFrom(backgroundColor: kDanger, foregroundColor: Colors.white),
+              // Same near-black-on-danger pairing as OverspendBanner's button
+              // (banners.dart) — white-on-kDanger measures ~2.8:1, short of
+              // WCAG AA's 4.5:1 text-contrast minimum in either theme, since
+              // kDanger is deliberately identical light/dark (see theme.dart).
+              style: ElevatedButton.styleFrom(backgroundColor: kDanger, foregroundColor: const Color(0xFF2B0000)),
               child: noSelect(const Text('Endgültig zurücksetzen')),
             ),
           ],

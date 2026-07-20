@@ -125,11 +125,11 @@ class SettingsView extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.lock_outline, color: kPrimary, size: 14),
+                          Icon(Icons.lock_outline, color: kPrimaryText, size: 14),
                           const SizedBox(width: 6),
                           Text(
                             'Verschlüsselung aktiv',
-                            style: TextStyle(color: kPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                            style: TextStyle(color: kPrimaryText, fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -257,9 +257,9 @@ class SettingsView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded, color: kDanger, size: 20),
+                    Icon(Icons.warning_amber_rounded, color: kDangerText, size: 20),
                     const SizedBox(width: 8),
-                    Text('Zurücksetzen', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: kDanger)),
+                    Text('Zurücksetzen', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: kDangerText)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -277,8 +277,8 @@ class SettingsView extends StatelessWidget {
                 OutlinedButton(
                   onPressed: () => _handleReset(context),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: kDanger,
-                    side: const BorderSide(color: kDanger),
+                    foregroundColor: kDangerText,
+                    side: BorderSide(color: kDangerText),
                   ),
                   child: noSelect(const Text('App zurücksetzen…')),
                 ),
@@ -409,20 +409,20 @@ class _HelpSection extends StatelessWidget {
             children: [
               InkWell(
                 onTap: () => _checkForUpdates(context),
-                child: noSelect(const Text('Nach Updates suchen', style: TextStyle(color: kPrimary, fontSize: 13))),
+                child: noSelect(Text('Nach Updates suchen', style: TextStyle(color: kPrimaryText, fontSize: 13))),
               ),
               InkWell(
                 onTap: _openSupportMail,
-                child: noSelect(const Text('E-Mail-Support', style: TextStyle(color: kPrimary, fontSize: 13))),
+                child: noSelect(Text('E-Mail-Support', style: TextStyle(color: kPrimaryText, fontSize: 13))),
               ),
               InkWell(
                 onTap: _openIssueTracker,
-                child: noSelect(const Text('Fehler melden (GitHub)', style: TextStyle(color: kPrimary, fontSize: 13))),
+                child: noSelect(Text('Fehler melden (GitHub)', style: TextStyle(color: kPrimaryText, fontSize: 13))),
               ),
               InkWell(
                 onTap: () => _copyDebugInfo(context, displayLabel, windowSize),
                 child: noSelect(
-                  const Text('Debug-Informationen kopieren', style: TextStyle(color: kPrimary, fontSize: 13)),
+                  Text('Debug-Informationen kopieren', style: TextStyle(color: kPrimaryText, fontSize: 13)),
                 ),
               ),
             ],
