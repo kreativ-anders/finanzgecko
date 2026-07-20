@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.3.3 - 2026-07-20
+
+- 🔖 Version 1.3.3+9 (4c336ce)
+- 📝 Add LICENSE, download page, alias release assets (0f2e441)
+- 🐛 Version release artifact names in CI (5d9feb5)
+- 📝 Changelog für v1.3.2 (a167893)
+
+
 ## v1.3.2 - 2026-07-19
 
 - 🔖 Version 1.3.2+8 (70be6e0)
