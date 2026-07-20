@@ -38,7 +38,7 @@ Weiterentwicklung stattdessen über eine freiwillige "Pay what you want"-Unterst
 |---|---|---|
 | Framework | Flutter (Desktop-Targets only: Linux/macOS/Windows, kein Mobile/Web) | SDK ^3.12.2 |
 | State Management | `provider` (`ChangeNotifier` + `ChangeNotifierProvider`) | ^6.1.5 |
-| Persistenz | eigene JSON-Datei, kein SQLite/Hive/Isar (bewusste Entscheidung, siehe README "Warum weiterhin keine Datenbank-Engine") | — |
+| Persistenz | eigene JSON-Datei, kein SQLite/Hive/Isar (bewusste Entscheidung, siehe [dev/architecture.md](dev/architecture.md)) | — |
 | Verschlüsselung | `cryptography` (AES-256-GCM) + `flutter_secure_storage` (Schlüssel im OS-Keychain) | ^2.7.0 / ^10.3.1 |
 | Charts | `fl_chart` (Linie, Donut, gestapelte Fläche — eigene Wrapper in `lib/ui/widgets/`) | ^1.2.0 |
 | Wechselkurse | `http` gegen die freie Frankfurter.app-API (EZB-Referenzkurse) | ^1.6.0 |
@@ -64,7 +64,13 @@ finanzgecko/
 ├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (deklarativ)
 │   └── executable/               # ← ausführbare Features (@executable), laufen via test/support/gherkin_runner.dart
 ├── templates/                    # ← Import-Vorlage (import-template.json) + Feld-Doku für die Datenmigration aus Fremdtools
-├── README.md                     # Entwickler-Doku: Setup, Build, Release, Architektur-Tabelle, Troubleshooting
+├── README.md                     # Schlanker Einstieg: Pitch, Lizenz, Quick Start, Architektur-Tabelle, Links weiter
+├── CONTRIBUTING.md               # Workflow für Beiträge (Spec-first, Checks, PRs), verlinkt dev/
+├── dev/                          # Entwickler-Referenz, ausgelagert aus README (Details statt Prosa in der Kurzdoku)
+│   ├── setup.md                  #   Plattform-Toolchain-Setup (Linux/macOS/Windows)
+│   ├── building.md               #   Dev-Run, Release-Builds, Packaging, CI/Release-Prozess, Icon-Pipeline
+│   ├── architecture.md           #   Architektur-Entscheidungen: keine DB-Engine, Verschlüsselung, Fenster/Menü
+│   └── troubleshooting.md        #   Troubleshooting, bekannte Einschränkungen, Migration von Altversionen
 ├── pubspec.yaml                  # Package-Name, Version, Dependencies, flutter_launcher_icons-Konfig
 ├── analysis_options.yaml         # Lint-Regeln (flutter_lints)
 ├── lib/
@@ -334,7 +340,7 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   eine feste `maxWidth` begrenzt (`ConstrainedBox`), statt über die volle, auf breiten Fenstern sehr lange
   Karten-/Dashboard-Breite (bis zu 1100px, siehe `navigation_shell.dart`) zu laufen.
 
-## 6. Plattform-Besonderheiten (siehe auch README für Setup-Details)
+## 6. Plattform-Besonderheiten (siehe auch [dev/setup.md](dev/setup.md) und [dev/building.md](dev/building.md) für Details)
 
 - Cross-Platform-Builds sind **nicht möglich** — jede Plattform muss auf ihrem eigenen OS gebaut werden; alle drei
   gleichzeitig nur über GitHub Actions (`.github/workflows/release.yml`, per Tag-Push `v*.*.*` oder manuell über
