@@ -1,54 +1,53 @@
 # Contributing
 
-## Bevor du anfängst
+## Before you start
 
-[AI_MASTER.md](AI_MASTER.md) ist die Source of Truth für Architektur, Datenmodelle, Konventionen und
-Domänensprache; [gherkin/](gherkin/) die fachliche Spezifikation. Lies beides, bevor du eine nicht-triviale Änderung
-machst — insbesondere den Abschnitt "Regeln für KI-Agenten" am Ende von AI_MASTER.md, der auch für menschliche
-Beiträge gilt:
+[AI_MASTER.md](AI_MASTER.md) is the source of truth for architecture, data models, conventions, and domain
+language; [gherkin/](gherkin/) is the behavioral spec. Both are in German (see AI_MASTER §3 "Sprache der Doku") —
+read both before making any non-trivial change, especially the "Regeln für KI-Agenten" section at the end of
+AI_MASTER.md, which applies to human contributions too:
 
-- Deutsche Domänenbegriffe (Konto, Fixposten, Vermögenswerte, …) sind verbindlich, nicht kosmetisch.
-- Dokumentierte Architekturentscheidungen (z. B. macOS-Keychain-/Sandbox-Settings, unverschlüsselter
-  Wechselkurs-Cache) nicht ohne Rücksprache rückgängig machen — siehe [dev/architecture.md](dev/architecture.md).
-- Jede Änderung an Ordnerstruktur, Architektur, Datenmodellen oder View-Verhalten aktualisiert **im selben Schritt**
-  AI_MASTER.md und das betroffene `gherkin/*.feature`.
+- German domain terms (Konto, Fixposten, Vermögenswerte, …) are mandatory, not cosmetic — never translate them,
+  including in English prose.
+- Documented architecture decisions (e.g. macOS keychain/sandbox settings, unencrypted rates cache) don't get
+  reverted without discussion first — see [dev/architecture.md](dev/architecture.md).
+- Any change to folder structure, architecture, data models, or view behavior updates AI_MASTER.md and the
+  relevant `gherkin/*.feature` **in the same step**.
 
-## Dev-Umgebung einrichten
+## Set up a dev environment
 
-Plattform-Setup (Toolchain, Flutter SDK): [dev/setup.md](dev/setup.md).
+Platform setup (toolchain, Flutter SDK): [dev/setup.md](dev/setup.md).
 
 ```bash
 flutter pub get
-flutter run -d linux   # oder -d macos / -d windows
+flutter run -d linux   # or -d macos / -d windows
 ```
 
 ## Workflow
 
-1. **Spec-first:** Neues fachliches Verhalten zuerst als Gherkin-Szenario formulieren (spätestens im selben Schritt
-   wie die Implementierung). Navigation: AI_MASTER §8 Feature-Übersicht → Feature-Datei → deren
-   `# Implementierung:`-Datei.
-2. Ändern, dabei nur die durch das Feature betroffenen Dateien anfassen (siehe AI_MASTER "Regenerierung eines
-   Features").
-3. Für neue reine Logik: `Scenario` in `gherkin/executable/*.feature` + `s.step(...)` in `test/bdd/`.
+1. **Spec-first:** write a Gherkin scenario for new behavior before or alongside the implementation. Navigate:
+   AI_MASTER §8 Feature-Übersicht → feature file → its `# Implementierung:` file.
+2. Implement, touching only the files that feature actually owns (see AI_MASTER "Regenerierung eines Features").
+3. For new pure logic: add a `Scenario` in `gherkin/executable/*.feature` + an `s.step(...)` in `test/bdd/`.
 
-## Checks vor jedem Commit
+## Checks before every commit
 
 ```bash
 flutter analyze
 flutter test
 ```
 
-Beides muss grün sein — das ist exakt das, was der `gate`-Job in `.github/workflows/release.yml` vor jedem Release
-prüft. `test/gherkin_sync_test.dart` schlägt fehl und zeigt genau, welcher Spec/Code/Test-Link gebrochen ist, falls
-Doku und Code auseinanderlaufen.
+Both must pass — that's exactly what the `gate` job in `.github/workflows/release.yml` checks before every release.
+`test/gherkin_sync_test.dart` fails fast and points at exactly which spec/code/test link broke, if docs and code
+drift apart.
 
-## Pull Requests
+## Pull requests
 
-- Kleine, fokussierte Änderungen.
-- Beschreibe das *Warum*, nicht nur das *Was* — Commit-Messages landen automatisch im `CHANGELOG.md`.
-- Ändert der PR Verhalten, gehören das aktualisierte `gherkin/*.feature` und ggf. AI_MASTER.md zum Diff, nicht zu
-  einem Follow-up.
+- Small, focused changes.
+- Explain the *why*, not just the *what* — commit messages get folded into `CHANGELOG.md` automatically.
+- If the PR changes behavior, the updated `gherkin/*.feature` (and `AI_MASTER.md` where relevant) is part of the
+  diff, not a follow-up.
 
-## Lizenz
+## License
 
-Beiträge fallen unter dieselbe Lizenz wie das Projekt: [GPL-3.0 mit Commons-Clause-Zusatz](LICENSE).
+Contributions fall under the same license as the project: [GPL-3.0 with the Commons Clause addition](LICENSE).

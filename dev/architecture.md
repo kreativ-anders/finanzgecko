@@ -1,46 +1,61 @@
-# Architektur-Entscheidungen
+# Architecture decisions
 
-Für die vollständige Architektur/Datenfluss/Domänen-Referenz siehe [AI_MASTER.md](../AI_MASTER.md). Hier nur die
-Entscheidungen, die typische Rückfragen beantworten.
+For the full architecture/data-flow/domain reference see [AI_MASTER.md](../AI_MASTER.md) (German). This file only
+covers the decisions that tend to raise questions.
 
-## Warum keine Datenbank-Engine
+## Why no database engine
 
-Eine einzige JSON-Datei im OS-Datenverzeichnis, keine SQLite/Hive/Isar-Abhängigkeit. Für die Datenmenge eines
-persönlichen Vermögenstrackers (ein paar hundert Kontostände) reicht "ganze Datei lesen/schreiben" und hält den Code
-einfach.
+A single JSON file in the OS data directory, no SQLite/Hive/Isar dependency. For the data volume of a personal
+net-worth tracker (a few hundred balance entries) "read/write the whole file" is entirely sufficient and keeps the
+code simple.
 
-**Dateipfad:** `<Datenverzeichnis>/finanzgecko-data.json` (Verzeichnis je OS: [setup.md](setup.md)).
+**File path:** `<data directory>/finanzgecko-data.json` (per-OS directory: [setup.md](setup.md)).
 
-- **Verschlüsselung:** AES-256-GCM (`lib/data/app_store.dart`, `lib/data/secure_key_store.dart`). Schlüssel liegt im
-  OS-Credential-Speicher (Windows Credential Locker, macOS Keychain, Linux libsecret/kwallet), pro Installation
-  einmalig erzeugt.
-- Nur eine echte Envelope-Datei wird als Datenquelle akzeptiert; alles andere wird vor dem Überschreiben unter
-  `*.unreadable-<Zeitstempel>` gesichert, die App startet dann mit Standardwerten.
-- Dateirechte als zusätzliche Ebene: `chmod 0700`/`0600` (Linux/macOS), ACL via `icacls` (Windows).
-- Wechselkurse (öffentliche EZB-Referenzkurse) liegen bewusst **nicht** in der verschlüsselten Datei, sondern
-  klartext in `finanzgecko-rates.json` daneben — ein neu gecachter Kurs löst so kein Neu-Verschlüsseln der ganzen
-  Datenbank aus. Alle Schreibvorgänge laufen über eine gemeinsame Warteschlange.
+- **Encryption:** AES-256-GCM (`lib/data/app_store.dart`, `lib/data/secure_key_store.dart`). The key lives in the
+  OS credential store (Windows Credential Locker, macOS Keychain, Linux libsecret/kwallet), generated once per
+  installation.
+- Only a genuine envelope file is accepted as a data source; anything else is quarantined under
+  `*.unreadable-<timestamp>` before being overwritten, and the app starts with defaults.
+- File permissions as an extra layer: `chmod 0700`/`0600` (Linux/macOS), ACL via `icacls` (Windows).
+- Exchange rates (public ECB reference rates) live deliberately **outside** the encrypted file, in plaintext
+  `finanzgecko-rates.json` next to it — caching a freshly fetched rate doesn't trigger a full re-encrypt of the
+  database. All writes go through a shared queue.
 
-**macOS — zwei bewusste, nicht offensichtliche Einstellungen:**
+**macOS — two deliberate, non-obvious settings:**
 
-- `SecureKeyStore` nutzt `MacOsOptions(usesDataProtectionKeychain: false)`. Der Plugin-Default (`true`) bindet den
-  Schlüssel an die Team-ID der Code-Signatur — bei einem unsigniert/ad-hoc-signierten Build (kein Apple-Developer-
-  Team) bricht der erste Schlüsselzugriff mit `PlatformException(..., -34018, "A required entitlement isn't
-  present.")` ab. Ohne Team-ID-Bindung funktioniert es auch ohne Zertifikat.
-- App-Sandbox ist deaktiviert (`com.apple.security.app-sandbox = false`, beide `.entitlements`) — mit aktiver
-  Sandbox virtualisiert macOS `$HOME` auf einen Container-Pfad, wodurch `resolveDataDirectory()` am dokumentierten
-  Pfad vorbeischreiben würde und dort abgelegte Bestandsdaten unauffindbar wären.
+- `SecureKeyStore` uses `MacOsOptions(usesDataProtectionKeychain: false)`. The plugin default (`true`) binds the
+  key entry to the code signature's team ID — on an unsigned/ad-hoc-signed build (no Apple Developer team), the
+  first key access fails with `PlatformException(..., -34018, "A required entitlement isn't present.")`. Without
+  the team-ID binding it also works without a certificate.
+- App Sandbox is disabled (`com.apple.security.app-sandbox = false`, both `.entitlements` files) — with sandbox
+  active, macOS virtualizes `$HOME` for the process to a container path, so `resolveDataDirectory()` would miss the
+  documented path and any data already stored there would become unreachable.
 
-Beide Einstellungen **nicht ohne Rücksprache rückgängig machen** (siehe AI_MASTER "Regeln für KI-Agenten").
+Neither setting should be reverted without discussion first (see AI_MASTER "Regeln für KI-Agenten").
 
-## Fensterverhalten
+## Schema migration on startup
 
-Startet mit zuletzt verwendeter Größe (Standard 1280×860, Mindestgröße 960×640, `window_manager`) plus
-Maximiert-Status. Bewusst **keine** gespeicherte Bildschirmposition — sonst landet das Fenster nach einem
-Monitor-/Auflösungswechsel außerhalb des sichtbaren Bereichs.
+`ensureInitialized()` compares the decrypted data file's `schemaVersion` against `currentSchemaVersion` on every
+launch:
 
-## In-App-Menü statt nativer Menüleiste
+- **Newer than this build (downgrade):** the file is quarantined untouched as `*.newer-version-<timestamp>`, the
+  app starts with defaults. A matching app update makes the data readable again.
+- **Older than this build (forward migration):** a byte-exact copy of the still-encrypted file is saved first as
+  `pre-migrate-backup-<timestamp>.json`, then the in-memory schema is stamped to `currentSchemaVersion` and
+  rewritten immediately.
 
-Flutters `PlatformMenuBar` unterstützt nur macOS. Linux/Windows bekommen stattdessen einen "Datei"-Menüpunkt im
-eigenen Fensterkopf (plattformübergreifend identisch) plus globale Tastenkürzel (<kbd>Strg</kbd>/<kbd>Cmd</kbd>+
+This runs automatically on first launch after an update — **a normal upgrade needs no manual export/import**, just
+install the new release and start it. Export/Import (see [troubleshooting.md](troubleshooting.md)) is for moving to
+a new device or making a manual backup, not for upgrading in place.
+
+## Window behavior
+
+Starts at the last-used size (default 1280×860, minimum 960×640, `window_manager`) plus maximized state. Screen
+position is deliberately **not** saved — otherwise the window could land outside the visible area after a
+monitor/resolution change.
+
+## In-app menu instead of a native menu bar
+
+Flutter's `PlatformMenuBar` only supports macOS. Linux/Windows get a "Datei" menu entry in the app's own window
+header instead (identical across platforms), plus global keyboard shortcuts (<kbd>Strg</kbd>/<kbd>Cmd</kbd>+
 <kbd>E</kbd>/<kbd>I</kbd>/<kbd>Q</kbd>).

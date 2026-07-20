@@ -1,15 +1,15 @@
-# Bauen & Release
+# Building & releasing
 
-## Entwickeln
+## Develop
 
 ```bash
 flutter pub get
-flutter run -d windows   # oder: -d linux / -d macos
+flutter run -d windows   # or: -d linux / -d macos
 ```
 
-`-d` wählt explizit das Desktop-Target — nötig, sobald mehr als ein Gerät verfügbar ist.
+`-d` explicitly picks the desktop target — needed once more than one device is available.
 
-## Release-Build
+## Release build
 
 ### Linux
 
@@ -17,86 +17,87 @@ flutter run -d windows   # oder: -d linux / -d macos
 flutter build linux --release
 ```
 
-Ergebnis: `build/linux/x64/release/bundle/` — ein Ordner, kein Single-File-Binary (Executable braucht `data/` und
-`lib/*.so` daneben). Direkt ausprobieren:
+Result: `build/linux/x64/release/bundle/` — a folder, not a single-file binary (the executable needs `data/` and
+`lib/*.so` next to it). Try it directly:
 
 ```bash
 ./build/linux/x64/release/bundle/finanzgecko
 ```
 
-**Startmenü-/Taskleisten-Icon lokal registrieren:**
+**Register the start-menu/taskbar icon locally:**
 
 ```bash
 flutter build linux --release
 ./packaging/linux/install.sh
 ```
 
-Kopiert das Bundle nach `~/.local/share/finanzgecko/`, legt Symlink, `.desktop`-Eintrag und Hicolor-Icons an. Danach
-über das Startmenü starten, nicht mehr direkt aus `build/` (sonst fehlt WM_CLASS/`app_id` für die Icon-Zuordnung).
+Copies the bundle to `~/.local/share/finanzgecko/`, sets up a symlink, a `.desktop` entry, and Hicolor icons.
+Launch from the start menu afterward, not directly from `build/` (otherwise WM_CLASS/`app_id` is missing for icon
+resolution).
 
-**Für die Weitergabe an Nutzer:** AppImage statt Bundle-Ordner.
+**For distributing to users:** an AppImage instead of the bundle folder.
 
 ```bash
 flutter build linux --release
 ./packaging/linux/build_appimage.sh
 ```
 
-Erzeugt `FinanzGecko-x86_64.AppImage` (CI setzt `OUT_FILE=FinanzGecko-<Version>-x86_64.AppImage`).
+Produces `FinanzGecko-x86_64.AppImage` (CI sets `OUT_FILE=FinanzGecko-<version>-x86_64.AppImage`).
 
 ### macOS / Windows
 
-Nicht cross-kompilierbar — jede Plattform baut nur auf ihrem eigenen OS.
+Not cross-compilable — each platform only builds on its own OS.
 
 ```bash
-flutter build macos --release     # auf einem Mac
-flutter build windows --release   # unter Windows
+flutter build macos --release     # on a Mac
+flutter build windows --release   # on Windows
 ```
 
-`flutter build macos` erzeugt bereits ein fertiges `FinanzGecko.app` (Info.plist, Icon, Ad-hoc-Signatur) — kein
-zusätzliches Packaging-Skript nötig. `flutter build windows` erzeugt einen Ordner
-(`build/windows/x64/runner/Release/`), der komplett verteilt werden muss; die CI verpackt ihn mit Inno Setup
-(`packaging/windows/finanzgecko.iss`) zu `FinanzGecko-<Version>-Setup.exe`.
+`flutter build macos` already produces a complete `FinanzGecko.app` (Info.plist, icon, ad-hoc signature) — no extra
+packaging script needed. `flutter build windows` produces a folder (`build/windows/x64/runner/Release/`) that must
+be distributed as a whole; CI packages it with Inno Setup (`packaging/windows/finanzgecko.iss`) into
+`FinanzGecko-<version>-Setup.exe`.
 
 ```powershell
 .\build\windows\x64\runner\Release\finanzgecko.exe
 ```
 
-### Alle drei Plattformen (CI)
+### All three platforms (CI)
 
-Lokal baut immer nur die eigene Plattform. Alle drei zusammen laufen ausschließlich über
-`.github/workflows/release.yml` — ein nativer Runner pro OS (ubuntu/macos/windows-latest). Vor den Build-Jobs läuft
-ein `gate`-Job (`flutter analyze` + `flutter test` + Icon-Pipeline); schlägt er fehl, wird nichts gebaut. Details
-zum Anstoßen (Tag-Release vs. Ad-hoc-Testbuild): "Release-Prozess" unten.
+Locally, only your own platform builds. All three together run exclusively via
+`.github/workflows/release.yml` — one native runner per OS (ubuntu/macos/windows-latest). A `gate` job
+(`flutter analyze` + `flutter test` + icon pipeline) runs before the build jobs; if it fails, nothing gets built.
+Details on triggering it (tagged release vs. ad-hoc test build): "Release process" below.
 
-## Icon-Pipeline
+## Icon pipeline
 
-Ein Master speist alle Plattform-Icon-Formate:
+One master feeds every platform icon format:
 
-- **Master:** `assets/icon/icon.png`, 1024×1024 PNG, quadratisch (kleiner = unscharfe macOS-Variante).
-- **Generieren:**
+- **Master:** `assets/icon/icon.png`, 1024×1024 PNG, square (smaller source = blurry macOS variant).
+- **Generate:**
 
   ```bash
   dart run tool/generate_icons.dart
   ```
 
-  macOS läuft über `flutter_launcher_icons` (Config in `pubspec.yaml`). Windows-`.ico` (Multi-Size 16–256px) und
-  Linux-Hicolor-PNGs generiert das Skript selbst (`generateWindowsIcon`/`generateLinuxIcons`) — bewusst nicht über
-  `flutter_launcher_icons` für Windows, dessen Generator nur eine 256px-Größe schreibt und nach der Installation in
-  Explorer/Taskleiste/Startmenü als fehlendes Icon endet.
+  macOS goes through `flutter_launcher_icons` (config in `pubspec.yaml`). Windows `.ico` (multi-size 16–256px) and
+  Linux Hicolor PNGs are generated by the script itself (`generateWindowsIcon`/`generateLinuxIcons`) — deliberately
+  not via `flutter_launcher_icons` for Windows, whose generator writes only a single 256px size and ends up with a
+  missing icon in Explorer/taskbar/start menu after installation.
 
-Nach jedem Austausch von `icon.png` einmal ausführen und die generierten Dateien mitcommitten (kein Build-Schritt
-erzeugt sie automatisch).
+Run it once after replacing `icon.png` and commit the generated files (no build step generates them
+automatically).
 
-## Release-Prozess
+## Release process
 
-1. Version in `pubspec.yaml` hochzählen, committen.
-2. Tag pushen: `git tag v1.1.0 && git push origin v1.1.0`.
-3. CI baut alle drei Pakete und lädt sie sowohl versioniert (`FinanzGecko-<Version>-…`) als auch als unversionierte
-   Alias-Kopie (`FinanzGecko-Setup.exe`, `FinanzGecko-mac.app.zip`, `FinanzGecko-x86_64.AppImage`) hoch — darauf
-   verlinkt `docs/download.html` fest über `.../releases/latest/download/<Alias>`, damit die Download-Seite ohne
-   API-Aufruf immer auf die neueste Version zeigt.
-4. `CHANGELOG.md` wird vom `release`-Job automatisch aus den Commit-Messages seit dem letzten Tag gepflegt — nicht
-   von Hand editieren.
+1. Bump the version in `pubspec.yaml`, commit.
+2. Push a tag: `git tag v1.1.0 && git push origin v1.1.0`.
+3. CI builds all three packages and uploads them both versioned (`FinanzGecko-<version>-…`) and as an unversioned
+   alias copy (`FinanzGecko-Setup.exe`, `FinanzGecko-mac.app.zip`, `FinanzGecko-x86_64.AppImage`) — `docs/download.html`
+   links directly to `.../releases/latest/download/<alias>`, so the download page always points at the latest
+   version without an API call.
+4. `CHANGELOG.md` is maintained automatically by the `release` job from commit messages since the last tag — don't
+   edit it by hand.
 
-**Ad-hoc-Testbuild ohne Release:** *Actions → Release → Run workflow* (jeder Branch, kein Tag nötig) — baut
-dieselben drei Pakete als Workflow-Artifacts, ohne GitHub-Release oder CHANGELOG-Update.
+**Ad-hoc test build without a release:** *Actions → Release → Run workflow* (any branch, no tag needed) — builds
+the same three packages as workflow artifacts, without a GitHub release or CHANGELOG update.

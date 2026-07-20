@@ -1,52 +1,51 @@
 # FinanzGecko 🦎
 
-Nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account — alle Daten liegen in einer einzigen
-JSON-Datei im eigenen Datenverzeichnis der App. Gebaut mit [Flutter](https://flutter.dev), lokal lauffähig auf
-Linux, macOS und Windows.
+Native desktop net-worth tracker. No server, no cloud, no account — all data lives in a single JSON file in the
+app's own data directory. Built with [Flutter](https://flutter.dev), runs locally on Linux, macOS, and Windows.
 
-Download für Endnutzer:innen: [Website](https://kreativ-anders.github.io/finanzgecko/) ·
-[Download-Seite](https://kreativ-anders.github.io/finanzgecko/download.html)
+Download for end users: [Website](https://kreativ-anders.github.io/finanzgecko/) ·
+[Download page](https://kreativ-anders.github.io/finanzgecko/download.html)
 
-## Lizenz
+## License
 
-[GPL-3.0](LICENSE) mit ["Commons Clause"](https://commonsclause.com/)-Zusatz: Quellcode frei einsehbar, veränderbar
-und weitergebbar (Copyleft — Ableitungen bleiben unter denselben Bedingungen), aber **keine kommerzielle Nutzung**.
-Die App bleibt über [GitHub Releases](https://github.com/kreativ-anders/finanzgecko/releases) kostenlos; die
-Weiterentwicklung finanziert sich freiwillig über "Pay what you want" (Stripe) auf der Website.
+[GPL-3.0](LICENSE) with a ["Commons Clause"](https://commonsclause.com/) addition: source freely viewable,
+modifiable, and redistributable (copyleft — derivatives stay under the same terms), but **no commercial use**. The
+app itself stays free for end users via [GitHub Releases](https://github.com/kreativ-anders/finanzgecko/releases);
+further development is funded voluntarily through "Pay what you want" (Stripe) on the website.
 
-## Quick Start
+## Quick start
 
 ```bash
 flutter pub get
-flutter run -d linux   # oder -d macos / -d windows
+flutter run -d linux   # or -d macos / -d windows
 ```
 
-Voraussetzung ist die Flutter-Desktop-Toolchain für deine Plattform — Einrichtung:
-[dev/setup.md](dev/setup.md). Release-Builds, Packaging und Icon-Pipeline: [dev/building.md](dev/building.md).
+Requires the Flutter desktop toolchain for your platform — setup: [dev/setup.md](dev/setup.md). Release builds,
+packaging, and the icon pipeline: [dev/building.md](dev/building.md).
 
-## Architektur
+## Architecture
 
-| Datei/Ordner | Zweck |
+| File/Folder | Purpose |
 |---|---|
-| `lib/main.dart` | Einstiegspunkt: Fenster-Setup, Store-Initialisierung, `runApp()` |
-| `lib/data/app_store.dart` | Persistenz: verschlüsselte JSON-Datei, atomare Writes |
-| `lib/data/app_schema.dart` | In-Memory-Schema der Datendatei |
-| `lib/models/` | Datenklassen (`Account`, `Balance`, `Asset`, `Subscription`) |
-| `lib/services/currency_service.dart` | Wechselkurse (Frankfurter.app) mit Cache |
-| `lib/state/app_state.dart` | Zentraler `ChangeNotifier` — CRUD + berechnete Werte für die UI |
-| `lib/ui/views/` | Die sechs Ansichten: Dashboard, Einträge, Konten, Fixposten, Vermögenswerte, Einstellungen |
-| `lib/utils/analysis.dart` | Reine, testbare Berechnungslogik (Trend, Prognose, Kennzahlen) |
-| `gherkin/` | Fachliche Spezifikation (Gherkin) |
+| `lib/main.dart` | Entry point: window setup, store initialization, `runApp()` |
+| `lib/data/app_store.dart` | Persistence: encrypted JSON file, atomic writes |
+| `lib/data/app_schema.dart` | In-memory schema of the data file |
+| `lib/models/` | Data classes (`Account`, `Balance`, `Asset`, `Subscription`) |
+| `lib/services/currency_service.dart` | Exchange rates (Frankfurter.app) with cache |
+| `lib/state/app_state.dart` | Central `ChangeNotifier` — CRUD + derived values for the UI |
+| `lib/ui/views/` | The six views: Dashboard, Einträge, Konten, Fixposten, Vermögenswerte, Einstellungen |
+| `lib/utils/analysis.dart` | Pure, testable computation logic (trend, projection, KPIs) |
+| `gherkin/` | Behavioral specification (Gherkin) |
 
-Vollständige Referenz (Datenfluss, Domänen-Glossar, Feature↔Test-Zuordnung): [AI_MASTER.md](AI_MASTER.md).
-Architektur-Entscheidungen im Detail (Verschlüsselung, warum keine DB-Engine, Fensterverhalten):
-[dev/architecture.md](dev/architecture.md).
+Full reference (data flow, domain glossary, feature↔test mapping): [AI_MASTER.md](AI_MASTER.md) (German — see
+"Sprache der Doku" in §3 for why). Architecture decisions in detail (encryption, why no DB engine, window
+behavior): [dev/architecture.md](dev/architecture.md).
 
-## Mitentwickeln
+## Contributing
 
-Workflow, Spec-first-Vorgehen, Checks vor dem Commit: [CONTRIBUTING.md](CONTRIBUTING.md).
+Workflow, spec-first approach, checks before committing: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Bekannte Einschränkungen
+## Known limitations
 
-Kein In-App-Auto-Updater; ungesignte Builds lösen bei Erstnutzung Gatekeeper-/SmartScreen-Warnungen aus. Details
-und Workarounds: [dev/troubleshooting.md](dev/troubleshooting.md).
+No in-app auto-updater; unsigned builds trigger Gatekeeper/SmartScreen warnings on first launch. Details and
+workarounds: [dev/troubleshooting.md](dev/troubleshooting.md).

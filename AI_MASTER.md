@@ -64,9 +64,9 @@ finanzgecko/
 ├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (deklarativ)
 │   └── executable/               # ← ausführbare Features (@executable), laufen via test/support/gherkin_runner.dart
 ├── templates/                    # ← Import-Vorlage (import-template.json) + Feld-Doku für die Datenmigration aus Fremdtools
-├── README.md                     # Schlanker Einstieg: Pitch, Lizenz, Quick Start, Architektur-Tabelle, Links weiter
-├── CONTRIBUTING.md               # Workflow für Beiträge (Spec-first, Checks, PRs), verlinkt dev/
-├── dev/                          # Entwickler-Referenz, ausgelagert aus README (Details statt Prosa in der Kurzdoku)
+├── README.md                     # Schlanker Einstieg (Englisch, wie der Code — siehe Hinweis unten): Pitch, Lizenz, Quick Start, Architektur-Tabelle, Links weiter
+├── CONTRIBUTING.md               # Workflow für Beiträge (Englisch), verlinkt dev/
+├── dev/                          # Entwickler-Referenz (Englisch), ausgelagert aus README (Details statt Prosa in der Kurzdoku)
 │   ├── setup.md                  #   Plattform-Toolchain-Setup (Linux/macOS/Windows)
 │   ├── building.md               #   Dev-Run, Release-Builds, Packaging, CI/Release-Prozess, Icon-Pipeline
 │   ├── architecture.md           #   Architektur-Entscheidungen: keine DB-Engine, Verschlüsselung, Fenster/Menü
@@ -121,6 +121,11 @@ finanzgecko/
                                    #   Push/PR-CI-Workflow — `flutter analyze`/`flutter test`/`dart format` laufen
                                    #   lokal vor dem Commit, nicht automatisiert bei jedem Push.
 ```
+
+**Sprache der Doku:** Code, Kommentare, `README.md`, `CONTRIBUTING.md` und `dev/` sind auf Englisch.
+`AI_MASTER.md` und `gherkin/` bleiben bewusst Deutsch (sie beschreiben eine deutschsprachige UI und nutzen die
+verbindlichen Domänenbegriffe aus §7) — diese Begriffe (Konto, Fixposten, Vermögenswerte, …) werden **auch in
+englischem Fließtext nicht übersetzt**, siehe §7 und "Regeln für KI-Agenten" #3.
 
 ### Die sechs Ansichten (`lib/ui/views/`)
 

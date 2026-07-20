@@ -1,27 +1,26 @@
-# Dev-Setup
+# Dev Setup
 
-Flutter-Desktop-Builds sind **nicht cross-kompilierbar** — jede Plattform muss auf ihrem eigenen OS eingerichtet
-werden.
+Flutter desktop builds are **not cross-compilable** — each platform must be set up on its own OS.
 
-## Linux (z. B. Ubuntu/Debian, TUXEDO OS)
+## Linux (e.g. Ubuntu/Debian, TUXEDO OS)
 
 ```bash
 sudo apt-get update
 sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev
 ```
 
-Kompiliert/linkt den nativen GTK-Runner — ohne diese Pakete bricht `flutter build linux` beim CMake-Schritt ab.
+Compiles/links the native GTK runner — without these packages `flutter build linux` fails at the CMake step.
 
 ```bash
-# Flutter SDK, Variante A: per snap
+# Flutter SDK, option A: via snap
 sudo snap install flutter --classic
 
-# Variante B: manuell
+# Option B: manual
 git clone https://github.com/flutter/flutter.git -b stable ~/development/flutter
 echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 
 flutter config --enable-linux-desktop
-flutter doctor   # "Linux toolchain" muss ✓ zeigen
+flutter doctor   # "Linux toolchain" must show a checkmark
 ```
 
 ## Windows
@@ -31,35 +30,35 @@ git clone https://github.com/flutter/flutter.git -b stable C:\src\flutter
 setx PATH "%PATH%;C:\src\flutter\bin"
 ```
 
-`C:\src\flutter` statt eines Pfads unterm Nutzerprofil — Flutter hat Probleme mit Leerzeichen/OneDrive-Sync im Pfad.
-Neues Terminal öffnen, damit `PATH` greift.
+Use `C:\src\flutter` instead of a path under the user profile — Flutter has issues with spaces/OneDrive sync in the
+path. Open a new terminal afterward so `PATH` takes effect.
 
 ```powershell
 winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 ```
 
-Workload "Desktop development with C++" — nötig für `flutter build windows` (MSBuild/CMake). Alternativ über den
-[Visual Studio Installer](https://visualstudio.microsoft.com/downloads/).
+Workload "Desktop development with C++" — required for `flutter build windows` (MSBuild/CMake). Alternatively via
+the [Visual Studio Installer](https://visualstudio.microsoft.com/downloads/).
 
 ```powershell
 flutter config --enable-windows-desktop
-flutter doctor   # "Visual Studio" muss ✓ zeigen
+flutter doctor   # "Visual Studio" must show a checkmark
 ```
 
 ## macOS
 
-Volles [Xcode](https://apps.apple.com/app/xcode/id497799835) aus dem App Store (nicht nur Command Line Tools —
-Codesigning/Bundling brauchen die volle IDE), dann Lizenz akzeptieren:
+Full [Xcode](https://apps.apple.com/app/xcode/id497799835) from the App Store (not just the Command Line Tools —
+codesigning/bundling need the full IDE), then accept the license:
 
 ```bash
 sudo xcodebuild -license accept
 ```
 
 ```bash
-# Flutter SDK, Variante A: per Homebrew
+# Flutter SDK, option A: via Homebrew
 brew install --cask flutter
 
-# Variante B: manuell
+# Option B: manual
 git clone https://github.com/flutter/flutter.git -b stable ~/development/flutter
 echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 
@@ -67,12 +66,12 @@ flutter config --enable-macos-desktop
 flutter doctor
 ```
 
-## Datenverzeichnis (zur Orientierung beim Debuggen)
+## Data directory (for debugging orientation)
 
-| OS | Pfad |
+| OS | Path |
 |---|---|
 | Linux | `~/.local/share/de.finanzgecko.app/` |
 | macOS | `~/Library/Application Support/de.finanzgecko.app/` |
 | Windows | `%APPDATA%\de.finanzgecko.app\` |
 
-Details zu Verschlüsselung/Dateiformat: [architecture.md](architecture.md).
+Encryption/file format details: [architecture.md](architecture.md).
