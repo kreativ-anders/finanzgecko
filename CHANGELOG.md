@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.1 - 2026-07-20
+
+- 🔖 Version 1.5.1+12 (064056d)
+- 💚 fix CI build (d980619)
+- 📝 Changelog für v1.5.0 (eda50e0)
+
+
 ## v1.5.0 - 2026-07-20
 
 - 🔖 Version 1.5.0+11 (570f98c)
