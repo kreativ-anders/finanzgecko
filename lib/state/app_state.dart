@@ -8,6 +8,7 @@ import '../models/balance.dart';
 import '../models/subscription.dart';
 import '../services/currency_service.dart';
 import '../services/notification_service.dart';
+import '../services/update_service.dart';
 import '../utils/analysis.dart';
 import '../utils/formatting.dart';
 
@@ -31,13 +32,15 @@ class SubscriptionTotals {
 /// from the store afterwards and calls notifyListeners(), so all views stay
 /// in sync automatically (no manual per-route reload like the old SPA router).
 class AppState extends ChangeNotifier {
-  AppState(this.store, {NotificationService? notificationService})
+  AppState(this.store, {NotificationService? notificationService, UpdateService? updateService})
     : currencyService = CurrencyService(store),
-      notificationService = notificationService ?? NotificationService();
+      notificationService = notificationService ?? NotificationService(),
+      updateService = updateService ?? UpdateService();
 
   final AppStore store;
   final CurrencyService currencyService;
   final NotificationService notificationService;
+  final UpdateService updateService;
 
   bool ready = false;
 

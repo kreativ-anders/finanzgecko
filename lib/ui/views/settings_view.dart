@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants.dart';
+import '../../services/update_service.dart';
 import '../../state/app_state.dart';
 import '../app_view.dart';
 import '../theme.dart';
@@ -335,8 +336,11 @@ Future<void> _openInFileManager(BuildContext context, String path) async {
 /// layout bug reports and to tell a multi-monitor setup from a single
 /// built-in display. The API reachability check is a live probe (not the
 /// cached "last successful rate" state), because it doubles as the privacy
-/// answer: the Wechselkurs-API is the app's only external network
-/// destination, no telemetry/analytics of any kind.
+/// answer: the Wechselkurs-API is the app's only *automatic* external network
+/// destination, no telemetry/analytics of any kind. "Nach Updates suchen" is
+/// a second, deliberately manual-only network call (GitHub Releases API, see
+/// [UpdateService]) — no silent/background auto-updater, since there's no
+/// code-signing certificate to make an in-place binary swap trustworthy.
 class _HelpSection extends StatelessWidget {
   const _HelpSection();
 
@@ -392,9 +396,10 @@ class _HelpSection extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Der Abruf der EZB-Wechselkurse (api.frankfurter.dev) ist die einzige externe '
-            'Netzwerkverbindung der App — sonst findet keine Kommunikation statt, kein Tracking, '
-            'keine Analyse-Dienste.',
+            'Der Abruf der EZB-Wechselkurse (api.frankfurter.dev) ist die einzige automatische externe '
+            'Netzwerkverbindung der App. "Nach Updates suchen" unten fragt zusätzlich, aber nur wenn du '
+            'explizit darauf klickst, die öffentliche GitHub-Releases-API ab. Sonst findet keine '
+            'Kommunikation statt, kein Tracking, keine Analyse-Dienste.',
             style: TextStyle(color: kMuted, fontSize: 12),
           ),
           Divider(height: 28, color: kBorder),
@@ -402,6 +407,10 @@ class _HelpSection extends StatelessWidget {
             spacing: 20,
             runSpacing: 8,
             children: [
+              InkWell(
+                onTap: () => _checkForUpdates(context),
+                child: noSelect(const Text('Nach Updates suchen', style: TextStyle(color: kPrimary, fontSize: 13))),
+              ),
               InkWell(
                 onTap: _openSupportMail,
                 child: noSelect(const Text('E-Mail-Support', style: TextStyle(color: kPrimary, fontSize: 13))),
@@ -430,8 +439,36 @@ Future<void> _openSupportMail() async {
 }
 
 Future<void> _openIssueTracker() async {
-  final uri = Uri.parse('https://github.com/kreativanders/finanzgecko/issues/new');
+  final uri = Uri.parse('https://github.com/kreativ-anders/finanzgecko/issues/new');
   await launchUrl(uri);
+}
+
+/// Manual, user-triggered update check against the GitHub Releases API (see
+/// [UpdateService]) — never automatic, never downloads/executes anything
+/// itself, just compares version numbers and links to the release page.
+Future<void> _checkForUpdates(BuildContext context) async {
+  final appState = context.read<AppState>();
+  final info = await PackageInfo.fromPlatform();
+  final result = await appState.updateService.checkForUpdate(currentVersion: info.version);
+  if (!context.mounted) return;
+
+  switch (result.status) {
+    case UpdateCheckStatus.upToDate:
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Du verwendest bereits die neueste Version (${info.version}).')));
+    case UpdateCheckStatus.updateAvailable:
+      final releaseUrl = result.releaseUrl!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Neue Version ${result.latestVersion} verfügbar.'),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(label: 'Herunterladen', onPressed: () => launchUrl(Uri.parse(releaseUrl))),
+        ),
+      );
+    case UpdateCheckStatus.failed:
+      showErrorSnackBar(context, 'Update-Prüfung fehlgeschlagen — bitte später erneut versuchen.');
+  }
 }
 
 Future<void> _copyDebugInfo(BuildContext context, String displayLabel, Size windowSize) async {

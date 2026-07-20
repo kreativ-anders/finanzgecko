@@ -1,4 +1,4 @@
-# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart
+# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart, lib/services/update_service.dart
 # Implementierung: lib/ui/views/settings_view.dart
 @settings
 Feature: Einstellungen
@@ -71,12 +71,32 @@ Feature: Einstellungen
     And die Auflösung(en) aller angeschlossenen Bildschirme (macht einen Mehrschirm-/externen-Monitor-Aufbau
       auf einen Blick erkennbar) sowie die aktuelle Fenstergröße der App
     And einen Live-Erreichbarkeits-Check der Wechselkurs-API ("Erreichbar" / "Nicht erreichbar" / "Prüfe…"),
-      begleitet vom Hinweis, dass dies die einzige externe Netzwerkverbindung der App ist (kein Tracking,
-      keine Analyse-Dienste) — macht diese Zeile zugleich zur Antwort auf "welche Berechtigungen nutzt die App"
-    And einen Link "E-Mail-Support" (mailto an die Support-Adresse) sowie "Fehler melden (GitHub)"
-      zum Issue-Tracker des Projekts
+      begleitet vom Hinweis, dass dies die einzige automatische externe Netzwerkverbindung der App ist (kein
+      Tracking, keine Analyse-Dienste) — macht diese Zeile zugleich zur Antwort auf "welche Berechtigungen
+      nutzt die App"
+    And einen Link "Nach Updates suchen", "E-Mail-Support" (mailto an die Support-Adresse) sowie
+      "Fehler melden (GitHub)" zum Issue-Tracker des Projekts
     And einen Button "Debug-Informationen kopieren", der Version-, System- und Verbindungsinfos als Text in
       die Zwischenablage kopiert, bestätigt per Snackbar "Debug-Informationen kopiert."
+
+  Scenario: Manuelle Update-Prüfung im Hilfe-Bereich
+    Given ich bin im Abschnitt "Hilfe"
+    When ich auf den Link "Nach Updates suchen" klicke
+    Then fragt die App den neuesten Release-Tag der öffentlichen GitHub-Releases-API des Projekts
+      (kreativ-anders/finanzgecko) ab und vergleicht ihn mit der installierten Version
+    And diese Abfrage findet ausschließlich bei diesem Klick statt — kein automatischer Hintergrund-Check
+      beim App-Start oder periodisch währenddessen (kein In-App-Auto-Updater, siehe AI_MASTER.md Abschnitt 6:
+      es gibt kein Code-Signing-Zertifikat, das einen vertrauenswürdigen automatischen Binary-Austausch
+      erlauben würde)
+    Given eine neuere Version ist verfügbar
+    Then zeigt eine Snackbar "Neue Version <Tag> verfügbar." mit einer Aktion "Herunterladen", die die
+      GitHub-Release-Seite im Standardbrowser öffnet
+    Given die installierte Version ist bereits die neueste
+    Then zeigt eine Snackbar "Du verwendest bereits die neueste Version (<Version>)."
+    Given die Abfrage schlägt fehl (keine Internetverbindung, Repository noch nicht öffentlich, GitHub
+      nicht erreichbar, o. ä.)
+    Then wird kein Fehler geworfen, sondern eine Fehler-Snackbar "Update-Prüfung fehlgeschlagen — bitte
+      später erneut versuchen." angezeigt
 
   Scenario: App zurücksetzen erfordert eine getippte Bestätigungsphrase
     When ich im rot umrandeten Bereich "Zurücksetzen" auf "App zurücksetzen…" klicke

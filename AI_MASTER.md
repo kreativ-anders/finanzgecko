@@ -51,8 +51,9 @@ Weiterentwicklung stattdessen über eine freiwillige "Pay what you want"-Unterst
 | Lint | `flutter_lints` | ^6.0.0 |
 
 Es gibt **keine** Backend-Services, keine REST-API dieser App selbst, keine Datenbank-Engine, kein Auth-System.
-Einzige externe Netzwerkabhängigkeit: `api.frankfurter.dev` für Wechselkurse (mit Cache-Fallback, App bleibt offline
-nutzbar).
+Einzige *automatische* externe Netzwerkabhängigkeit: `api.frankfurter.dev` für Wechselkurse (mit Cache-Fallback, App
+bleibt offline nutzbar). Zusätzlich fragt "Nach Updates suchen" (Einstellungen → Hilfe) auf explizite Nutzeraktion
+hin die öffentliche GitHub-Releases-API ab (`UpdateService`, Abschnitt 6) — kein Hintergrund-Check, kein Auto-Update.
 
 ## 3. Ordnerstruktur
 
@@ -83,7 +84,8 @@ finanzgecko/
 │   ├── models/                   # Datenklassen mit fromJson/toJson: Account, Balance, Asset, Subscription
 │   ├── services/
 │   │   ├── currency_service.dart # Frankfurter.app-Anbindung inkl. Cache-Fallback
-│   │   └── notification_service.dart # Dünner `local_notifier`-Wrapper für native OS-Benachrichtigungen
+│   │   ├── notification_service.dart # Dünner `local_notifier`-Wrapper für native OS-Benachrichtigungen
+│   │   └── update_service.dart   # Manueller Update-Check gg. die GitHub-Releases-API (kein Auto-Updater)
 │   ├── state/
 │   │   └── app_state.dart        # Zentraler ChangeNotifier: CRUD-Fassade + berechnete Werte (Reminder, Summen) für die UI
 │   ├── utils/
@@ -390,7 +392,17 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   `.../releases/latest/download/<Alias-Dateiname>` — ein von GitHub garantiert stabiler Pfad, der immer auf das
   neueste Release zeigt, ohne dass die Website die aktuelle Versionsnummer kennen oder per API nachschlagen
   muss (bewusst kein clientseitiger JS-/GitHub-API-Aufruf auf einer sonst komplett statischen Seite).
-- Kein In-App-Auto-Updater — Update = neues Release-Artefakt laden (Installer erneut ausführen bzw. AppImage/.app ersetzen).
+- **Kein automatischer/silenter In-App-Auto-Updater** — mangels Apple-Developer- bzw. Microsoft-Signaturzertifikat
+  gäbe es keine vertrauenswürdige Grundlage, um ein heruntergeladenes Binary ohne Rückfrage zu installieren; ein
+  In-Place-Austausch würde Gatekeeper/SmartScreen-Warnungen ohnehin nicht vermeiden. Stattdessen ein **manueller
+  Check**: Einstellungen → Hilfe → "Nach Updates suchen" fragt nur bei diesem Klick (kein Hintergrund-/Start-Check)
+  über `UpdateService` (`lib/services/update_service.dart`) den neuesten Release-Tag der öffentlichen
+  GitHub-Releases-API (`api.github.com/repos/kreativ-anders/finanzgecko/releases/latest`) ab und vergleicht ihn
+  gegen die laufende Version (`PackageInfo`). Ergebnis nur als Snackbar: neue Version verfügbar (mit
+  "Herunterladen"-Aktion → öffnet die Release-Seite im Browser), bereits aktuell, oder — bei jedem Fehler
+  (offline, Repo (noch) privat, GitHub down, Rate-Limit) — ein generischer "bitte später erneut versuchen"-Hinweis
+  statt eines Fehlerdialogs; die App lädt/installiert dabei nie selbst etwas. Update selbst bleibt weiterhin: neues
+  Release-Artefakt laden (Installer erneut ausführen bzw. AppImage/.app ersetzen).
 - **`CHANGELOG.md`** wird ausschließlich vom `release`-Job in `release.yml` gepflegt: bei jedem tatsächlichen Release
   (Tag-Push oder Version-Bump-Dispatch, nicht bei einem reinen Testbuild mit `bump: none`) wird ein Abschnitt mit den
   Commit-Messages seit dem vorherigen Tag oben angehängt und direkt nach `main` gepusht. Bewusst **kein** eigener
@@ -484,6 +496,7 @@ und in `# Quelle:` gelistet ist.
 | `test/account_color_test.dart` | `resolveAccountColor` (bekannte Bank → Markenfarbe, leer → Kontotyp, unbekannt → Fehler) | `gherkin/accounts.feature`, `gherkin/backup_restore.feature` |
 | `test/backup_hardening_test.dart` | Backup-Export→Import-Round-Trip & Fehlertoleranz (AppSchema-Ebene) | `gherkin/backup_restore.feature` |
 | `test/csv_export_test.dart` | CSV-Export (Trennzeichen, Dezimalkomma, Sortierung, Quoting) | `gherkin/settings.feature` |
+| `test/update_service_test.dart` | Manueller Update-Check gg. gemockte GitHub-Releases-API: neuere/gleiche/ältere Version, HTTP-Fehler, Netzwerkfehler, unerwartete Antwortform — nie eine Exception nach außen | `gherkin/settings.feature` |
 | `test/tooling_test.dart` | **Regeneriert beim Testlauf** die Demodaten (`buildDemoBackup` → `demo/…json`) und die Linux-Hicolor-Icons (`generateLinuxIcons`) und validiert sie (Schema, Referenzen, Domänenwerte, Icon-Größen) | Dev-Tooling (kein Feature) |
 | `test/entries_view_orphan_test.dart` | Verwaiste Balances archivierter Konten | `gherkin/balances_entries.feature` |
 | `test/formatting_test.dart` | Zahlen-/Geldformatierung, Parsing | quer über alle Features (nicht-funktional) |
@@ -582,9 +595,10 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    `main.dart`. Jede Stufe gegen das jeweilige `gherkin/*.feature` verifizieren, bevor die nächste beginnt.
 
 8. **Nicht-funktionale Anforderungen nie vergessen**, auch wenn sie in keinem einzelnen Gherkin-Szenario explizit
-   auftauchen: rein lokal (kein Netzwerk außer Wechselkurs-API), Verschlüsselung ruht auf OS-Keychain, atomare
-   Schreibvorgänge, Offline-Fallback für Kurse, keine stillschweigende Datenvernichtung bei kaputten/fremden
-   Dateien (immer quarantänen statt überschreiben).
+   auftauchen: rein lokal (kein automatisches Netzwerk außer Wechselkurs-API; die GitHub-Releases-Abfrage für
+   "Nach Updates suchen" ist die einzige Ausnahme und läuft ausschließlich auf explizite Nutzeraktion), Verschlüsselung
+   ruht auf OS-Keychain, atomare Schreibvorgänge, Offline-Fallback für Kurse, keine stillschweigende Datenvernichtung
+   bei kaputten/fremden Dateien (immer quarantänen statt überschreiben).
 
 9. **Bei Unklarheit zwischen Code und Doku gilt: nachfragen bzw. beides angleichen, nicht raten.** Weicht der
    aktuelle Code von diesem Dokument ab, ist das ein Zeichen, dass die Doku beim letzten Change vergessen wurde —
