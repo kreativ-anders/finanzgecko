@@ -6,6 +6,15 @@ app's own data directory. Built with [Flutter](https://flutter.dev), runs locall
 Download for end users: [Website](https://kreativ-anders.github.io/finanzgecko/) ·
 [Download page](https://kreativ-anders.github.io/finanzgecko/download.html)
 
+## Built with AI — spec-first, not vibe-coded
+
+This entire codebase was written by AI (Claude), but not through freeform "vibe coding." Every behavior is
+specified as a [Gherkin](https://cucumber.io/docs/gherkin/) scenario in [gherkin/](gherkin/) and tied to
+[AI_MASTER.md](AI_MASTER.md), the single source of truth for architecture, data models, and conventions. New
+work navigates spec → owning file → test instead of re-deriving context from the whole repo each time — which
+keeps generated code consistent with what's already there, and keeps the context/token cost of each change down.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the actual workflow.
+
 ## License
 
 [GPL-3.0](LICENSE) with a ["Commons Clause"](https://commonsclause.com/) addition: source freely viewable,
