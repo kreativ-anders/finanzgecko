@@ -17,7 +17,7 @@ void main() {
 
     test('an unknown, non-empty bank throws', () {
       expect(() => resolveAccountColor(bank: 'Interactive Brokers', tag: 'Depot'), throwsFormatException);
-      expect(() => resolveAccountColor(bank: 'Bitpanda', tag: 'Krypto'), throwsFormatException);
+      expect(() => resolveAccountColor(bank: 'Kraken', tag: 'Krypto'), throwsFormatException);
     });
   });
 }

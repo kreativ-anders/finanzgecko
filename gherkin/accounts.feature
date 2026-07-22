@@ -5,6 +5,12 @@ Feature: Konten verwalten
   Als Nutzer:in verwalte ich meine Konten (Girokonto, Tagesgeld, Depot, Bargeld, Krypto, …), damit ich darauf
   monatlich Kontostände erfassen kann.
 
+  Hinweis zur bekannten Bankenliste: `kBanks` (`lib/constants.dart`) ist eine von Hand gepflegte, bewusst
+  nicht-erschöpfende Liste — aktuell u. a. deutsche Filial-, Genossenschafts-, Förder- und Autobanken, gängige
+  Neobanken/Fintechs und Broker sowie PayPal/Wise als internationale Zahlungsdienste. Sie wächst mit jeder
+  bestätigten Nutzeranfrage (siehe "Bank fehlt?"-Hinweis unten); `kBanks` selbst ist die einzige Quelle der
+  Wahrheit für den aktuellen Stand, nicht dieses Dokument.
+
   Background:
     Given die App ist gestartet und initialisiert
 

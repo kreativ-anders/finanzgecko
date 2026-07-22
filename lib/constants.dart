@@ -73,10 +73,11 @@ double intervalMonthFactor(String value) {
 
 /// Bekannte Banken & Markenfarben, für Autovervollständigung + Konto-Akzentfarbe.
 ///
-/// Von Hand gepflegte, bewusst unvollständige Liste — im Kern deutsche Banken plus PayPal/Wise als gebräuchliche
-/// Zahlungsdienste. `colorHex` ist jeweils die offizielle Markenfarbe der Bank, von Hand recherchiert (nicht
-/// algorithmisch abgeleitet). Neue Einträge kommen über die im Konto-Formular verlinkten Kanäle (GitHub-Issue/
-/// E-Mail) — siehe AI_MASTER.md §4.1 und `gherkin/accounts.feature`.
+/// Von Hand gepflegte, bewusst unvollständige Liste — deutsche Filial-, Genossenschafts- und Autobanken, gängige
+/// Direktbanken/Neobanken und Broker, plus PayPal/Wise/Revolut als gebräuchliche internationale Zahlungsdienste.
+/// `colorHex` ist jeweils die offizielle Markenfarbe der Bank, von Hand recherchiert (nicht algorithmisch
+/// abgeleitet). Neue Einträge kommen über die im Konto-Formular verlinkten Kanäle (GitHub-Issue/E-Mail) — siehe
+/// AI_MASTER.md §4.1 und `gherkin/accounts.feature`.
 class Bank {
   final String name;
   final String colorHex;
@@ -85,25 +86,60 @@ class Bank {
 }
 
 const List<Bank> kBanks = [
+  // Filialbanken (Großbanken, Sparkassen/Genossenschaftsbanken)
   Bank('Sparkasse', '#ff0000'),
   Bank('Volksbank Raiffeisenbank', '#0069b4'),
   Bank('Deutsche Bank', '#0018a8'),
   Bank('Commerzbank', '#ffcc00'),
+  Bank('HypoVereinsbank', '#e2001a'),
+  Bank('Targobank', '#e2001a'),
+  Bank('Santander', '#ec0000'),
+  Bank('Postbank', '#ffdd00'),
+  Bank('Sparda-Bank', '#0066b4'),
+  Bank('Apobank', '#17427f'),
+  Bank('BBBank', '#005ca9'),
+  Bank('norisbank', '#f08701'),
+  Bank('OLB', '#007858'),
+
+  // Direktbanken & Neobanken
   Bank('ING', '#ff6200'),
   Bank('DKB', '#003d7d'),
   Bank('N26', '#48ac98'),
   Bank('comdirect', '#ffe600'),
   Bank('Consorsbank', '#004a94'),
-  Bank('Postbank', '#ffdd00'),
-  Bank('HypoVereinsbank', '#e2001a'),
-  Bank('Targobank', '#e2001a'),
-  Bank('Santander', '#ec0000'),
   Bank('C24 Bank', '#000000'),
+  Bank('bunq', '#ff7819'),
+  Bank('Vivid Money', '#7d33f6'),
+  Bank('Openbank', '#e9004c'),
+  Bank('Solarisbank', '#ff633c'),
+  Bank('Klarna', '#ffa8cd'),
+  Bank('OSKAR', '#29b68c'),
+  Bank('Qonto', '#6b5aed'),
+
+  // Autobanken
+  Bank('Volkswagen Bank', '#007392'),
+  Bank('Mercedes-Benz Bank', '#000000'),
+  Bank('BMW Bank', '#0066b1'),
+  Bank('Audi Bank', '#f50537'),
+  Bank('Ford Bank', '#003478'),
+  Bank('Renault Bank', '#efdf00'),
+
+  // Broker & Krypto
+  Bank('Trade Republic', '#000000'),
+  Bank('Scalable Capital', '#00d3a5'),
+  Bank('Smartbroker', '#80ff04'),
+  Bank('eToro', '#13c636'),
+  Bank('Bitpanda', '#103e36'),
+
+  // Kreditkarten-/Nischenbanken
+  Bank('Advanzia Bank (Gebührenfrei)', '#00174a'),
+  Bank('Hanseatic Bank', '#e6323c'),
+  Bank('Barclays', '#00aeef'),
+
+  // Internationale Zahlungsdienste
   Bank('PayPal', '#003087'),
   Bank('Wise', '#9fe870'),
-  Bank('Trade Republic', '#000000'),
   Bank('Revolut', '#0075eb'),
-  Bank('Scalable Capital', '#00d3a5'),
 ];
 
 String? bankColorHex(String? bankName) {
