@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.5.2 - 2026-07-22
+
+- 🔖 Version 1.5.2+13 (074577a)
+- 📝 Expand known banks and sync docs/FAQ (9a92226)
+- 📝 Document AI spec-first development workflow (610d08a)
+- 📝 Changelog für v1.5.1 (4c5df60)
+
+
 ## v1.5.1 - 2026-07-20
 
 - 🔖 Version 1.5.1+12 (064056d)
