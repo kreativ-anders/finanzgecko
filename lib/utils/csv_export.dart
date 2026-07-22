@@ -39,15 +39,15 @@ String buildBalancesCsv(List<Account> accounts, List<Balance> balances, {require
     final acc = accountsById[b.accountId];
     buffer.writeln(
       [
-        b.period,
-        acc?.name ?? '(gelöscht)',
-        acc?.bank ?? '',
-        acc?.tag ?? '',
-        b.currencyOriginal,
-        dec(b.amountOriginal, 2),
-        dec(b.rate, 4),
-        dec(b.amountBase, 2),
-      ].map(_csvField).join(';'),
+        _csvField(b.period),
+        _csvUserField(acc?.name ?? '(gelöscht)'),
+        _csvUserField(acc?.bank ?? ''),
+        _csvField(acc?.tag ?? ''),
+        _csvField(b.currencyOriginal),
+        _csvField(dec(b.amountOriginal, 2)),
+        _csvField(dec(b.rate, 4)),
+        _csvField(dec(b.amountBase, 2)),
+      ].join(';'),
     );
   }
   return buffer.toString();
@@ -60,4 +60,18 @@ String _csvField(String value) {
     return '"${value.replaceAll('"', '""')}"';
   }
   return value;
+}
+
+/// Same RFC-4180 quoting as [_csvField], plus a guard against CSV/spreadsheet
+/// formula injection: if the value starts with `=`, `+`, `-`, or `@`,
+/// spreadsheet apps (Excel/LibreOffice) read it as the start of a
+/// formula/DDE command when the CSV is opened. Applied only to the free-text
+/// columns a user (or an imported backup) fully controls — Konto-Name and
+/// Bank — never to the app-generated numeric/enum columns (Kontotyp,
+/// Währung, Beträge), whose legitimate values (e.g. a negative amount) must
+/// stay unprefixed so spreadsheet formulas like SUM() keep working on them.
+String _csvUserField(String value) {
+  const triggerChars = '=+-@';
+  final guarded = value.isNotEmpty && triggerChars.contains(value[0]) ? "'$value" : value;
+  return _csvField(guarded);
 }

@@ -64,4 +64,19 @@ void main() {
     final csv = buildBalancesCsv([], [bal(1, 99, '2026-01', 5)], baseCurrency: 'EUR');
     expect(csv, contains('2026-01;(gelöscht)'));
   });
+
+  test('account name/bank starting with a formula-trigger char gets neutralized', () {
+    final csv = buildBalancesCsv(
+      [acc(1, '=cmd|calc', bank: '+1; Bank')],
+      [bal(1, 1, '2026-01', 1)],
+      baseCurrency: 'EUR',
+    );
+    final lines = csv.trim().split('\n');
+    expect(lines[1], "2026-01;'=cmd|calc;\"'+1; Bank\";Girokonto;EUR;1,00;1,0000;1,00");
+  });
+
+  test('a negative amount is not treated as a formula trigger', () {
+    final csv = buildBalancesCsv([acc(1, 'Giro')], [bal(1, 1, '2026-01', -5)], baseCurrency: 'EUR');
+    expect(csv, contains(';-5,00;'));
+  });
 }

@@ -62,6 +62,14 @@ Feature: Einstellungen
     And dieser Export zählt NICHT als Backup — der Backup-Reminder und "zuletzt exportiert" bleiben unberührt
     And die CSV ist bewusst nicht wieder importierbar (nur der JSON-Export ist ein verlustfreier Round-Trip)
 
+  Scenario: CSV-Export neutralisiert Formel-Injection in Konto-Name/Bank
+    Given ein Konto, dessen Name oder Bank mit "=", "+", "-" oder "@" beginnt (z. B. aus einem importierten Backup)
+    When ich die Kontostände als CSV exportiere
+    Then wird dem betroffenen Feld ein führendes "'" vorangestellt, damit Tabellenkalkulationen (Excel/LibreOffice)
+      es beim Öffnen nicht als Formel/DDE-Kommando interpretieren
+    And Zahlen-/Enum-Spalten (Kontotyp, Währung, Beträge) bleiben unverändert, damit z. B. negative Beträge
+      weiterhin normal in Summenformeln funktionieren
+
   Scenario: Hilfe-Bereich zeigt App- und Systeminformationen
     Then zeigt der Abschnitt "Hilfe" die installierte Version samt Build-Nummer, direkt aus der
       laufenden Installation ausgelesen (stimmt dadurch immer mit dem tatsächlich installierten Release
