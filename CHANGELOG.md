@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.5.3 - 2026-07-24
+
+- 🔖 Version 1.5.3+14 (622c7a3)
+- 💳 Add Stripe thank-you page and support CTA (96e7490)
+- 💄 Refine hero tag groups on landing page (3de26ce)
+- 📝 Clarify desktop-only platform rationale (0ceddf3)
+- 🔒️ Harden CSV export against formula injection (12cb212)
+- 💚 Fix macOS RunnerTests bundle identifier (69ee36d)
+- 📝 Changelog für v1.5.2 (c3ffdb5)
+
+
 ## v1.5.2 - 2026-07-22
 
 - 🔖 Version 1.5.2+13 (074577a)
