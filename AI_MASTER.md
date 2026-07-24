@@ -114,6 +114,8 @@ finanzgecko/
 │   ├── index.html                 # Startseite: Hero, Screenshots, Features, Download/Unterstützen, Trust-Strip, FAQ
 │   ├── download.html              # Download-Seite: ein Direktlink pro OS (Windows/macOS/Linux), s. u.
 │   ├── documentation.html         # Kurzanleitung für Endnutzer (kein Bezug zu AI_MASTER/gherkin)
+│   ├── danke.html                 # Bestätigungsseite nach Stripe-Checkout ("Entwicklung unterstützen"), `noindex`,
+│   │                               #   als "After payment"-Redirect im Stripe Payment Link zu hinterlegen
 │   └── assets/                    # style.css (teilt Farbtokens mit lib/ui/theme.dart), Icons, Screenshots
 └── .github/workflows/
     └── release.yml                # einziger Workflow. Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst

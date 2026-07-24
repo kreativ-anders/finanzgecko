@@ -340,11 +340,16 @@
           <div class="get-card">
             <h3>Entwicklung unterstützen</h3>
             <p>FinanzGecko bleibt kostenlos und quelloffen. Wer möchte, kann die Weiterentwicklung freiwillig unterstützen — zahl, was es dir wert ist.</p>
-            <!-- Platzhalter: echten Stripe Payment Link (Checkout mit frei wählbarem Betrag, "customer chooses price") eintragen, sobald eingerichtet. -->
-            <span class="btn btn-store" aria-disabled="true" title="Bald verfügbar">
-              Freiwillig unterstützen (Stripe)
-              <span class="store-badge">bald verfügbar</span>
-            </span>
+            <!--
+              TODO(Stripe): Sobald der Payment Link im Stripe Dashboard existiert (Produkt mit "customer chooses
+              price", siehe AI_MASTER.md §1), hier nur den href ersetzen:
+                1. href="STRIPE_PAYMENT_LINK_PLACEHOLDER" → echte Payment-Link-URL (https://buy.stripe.com/...)
+                2. Im Payment Link unter "After payment" die Bestätigungsseite auf
+                   https://kreativ-anders.github.io/finanzgecko/danke.html setzen (bereits vorbereitet).
+              Kein target="_blank": der Checkout soll den Tab ersetzen, damit der Stripe-Redirect danach im
+              selben Tab auf danke.html landet statt in einem verwaisten Zusatztab.
+            -->
+            <a class="btn btn-secondary" href="STRIPE_PAYMENT_LINK_PLACEHOLDER">Freiwillig unterstützen (Stripe)</a>
           </div>
         </div>
       </div>

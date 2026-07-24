@@ -385,24 +385,6 @@ header.site nav a:hover {
   gap: 10px;
 }
 
-.btn-store {
-  background: transparent;
-  color: var(--muted);
-  border: 1px dashed var(--border);
-  cursor: not-allowed;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 11px 18px;
-}
-
-.store-badge {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--primary);
-}
-
 .trust {
   padding: 40px 0;
   border-top: 1px solid var(--border);
