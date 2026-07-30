@@ -17,6 +17,10 @@
 
 html {
   color-scheme: dark;
+  /* Browser drucken/exportieren standardmäßig ohne Hintergrundfarben (Tinte sparen) — der für den
+     dunklen Hintergrund gewählte helle Text wäre dann auf weißem Papier fast unlesbar. */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
 body {
@@ -344,6 +348,71 @@ header.site nav a:hover {
   color: var(--muted);
   font-size: 14px;
   margin: 0;
+}
+
+.testimonials {
+  padding: 44px 0 56px;
+  border-top: 1px solid var(--border);
+}
+
+.testimonial-card {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 30px 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.testimonial-card blockquote {
+  margin: 0;
+  position: relative;
+}
+
+.testimonial-card blockquote p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.testimonial-card blockquote p::before {
+  content: "”";
+  display: block;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+
+.testimonial-card figcaption {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.github-stat {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 13px;
+}
+
+.github-stat a {
+  color: var(--muted);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.github-stat a:hover {
+  color: var(--text);
+}
+
+.github-stat a span[aria-hidden] {
+  color: var(--primary);
 }
 
 .get {

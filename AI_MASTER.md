@@ -111,7 +111,7 @@ finanzgecko/
 ├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
 ├── docs/                          # Statische Website (GitHub Pages, kein Build-Schritt, reines HTML/CSS)
-│   ├── index.html                 # Startseite: Hero, Screenshots, Features, Download/Unterstützen, Trust-Strip, FAQ
+│   ├── index.html                 # Startseite: Hero, Testimonial, Screenshots, Features, Trust-Strip, Download/Unterstützen, FAQ
 │   ├── download.html              # Download-Seite: ein Direktlink pro OS (Windows/macOS/Linux), s. u.
 │   ├── documentation.html         # Kurzanleitung für Endnutzer (kein Bezug zu AI_MASTER/gherkin)
 │   ├── danke.html                 # Bestätigungsseite nach Stripe-Checkout ("Entwicklung unterstützen"), `noindex`,
