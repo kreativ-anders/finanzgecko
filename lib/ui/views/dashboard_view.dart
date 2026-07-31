@@ -695,23 +695,26 @@ class _PresetChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? kPrimary : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? kPrimary : kBorder),
-        ),
-        child: noSelect(
-          Text(
-            label,
-            style: TextStyle(
-              color: selected ? const Color(0xFF04140D) : kMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+    return Semantics(
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? kPrimary : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: selected ? kPrimary : kBorder),
+          ),
+          child: noSelect(
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? const Color(0xFF04140D) : kMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -981,11 +984,9 @@ class _AccountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accPeriods = app.balances.where((b) => b.accountId == acc.id).map((b) => b.period).toSet().toList()..sort();
-    final points = [
-      for (final p in accPeriods)
-        ChartPoint(periodLabel(p), app.balances.firstWhere((b) => b.accountId == acc.id && b.period == p).amountBase),
-    ];
+    final accBalances = app.balances.where((b) => b.accountId == acc.id).toList()
+      ..sort((a, b) => a.period.compareTo(b.period));
+    final points = [for (final b in accBalances) ChartPoint(periodLabel(b.period), b.amountBase)];
     final latest = app.latestBalanceForAccount(acc.id);
 
     return Card(

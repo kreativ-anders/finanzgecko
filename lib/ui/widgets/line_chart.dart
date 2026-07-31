@@ -36,6 +36,20 @@ class ChartForecast {
   const ChartForecast({required this.monthlyDelta, required this.months, this.endLabel = ''});
 }
 
+const _kValueLabelStyle = TextStyle(fontSize: 11, fontWeight: FontWeight.w600);
+
+/// Real pixel width of [text] in [style], measured rather than guessed from
+/// character count — so the min/max/forecast value labels below don't clip
+/// or overlap if the label style ever changes.
+double _measureLabelWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  return painter.width;
+}
+
 /// Small, non-interactive line chart mirroring the previous hand-rolled SVG
 /// version: gaps (null values) are drawn as real gaps, not connected, and a
 /// dashed zero-line appears when values cross zero (e.g. credit accounts).
@@ -277,135 +291,150 @@ class AppLineChart extends StatelessWidget {
       ),
     );
 
-    return SizedBox(
-      height: height,
-      child: Column(
-        children: [
-          Expanded(
-            child: (!showMinMax && !showHover)
-                ? lineChart
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      final w = constraints.maxWidth;
-                      final h = constraints.maxHeight;
+    // Screen-reader summary standing in for the purely visual line/trend —
+    // the chart below is rendered with excludeSemantics so this replaces it
+    // rather than competing with the decorative min/max/hover text nodes.
+    final semanticBuffer = StringBuffer(
+      'Verlauf von ${points.first.label} bis ${points.last.label}: '
+      'von ${_fmtValue(values.first)} auf ${_fmtValue(values.last)}.',
+    );
+    if (hasTrend) {
+      final totalChange = trendSlope * lastIndex;
+      final threshold = (max - min).abs() * 0.05;
+      final direction = totalChange.abs() <= threshold ? 'stabil' : (totalChange > 0 ? 'steigend' : 'fallend');
+      semanticBuffer.write(' Trend $direction.');
+    }
+    if (useForecast) {
+      semanticBuffer.write(' Prognose: ${_fmtValue(forecastEndValue!)}.');
+    }
 
-                      // Direct value labels for the min/max points, placed by
-                      // hand (rather than fl_chart's touch-tooltip, which only
-                      // ever draws above the spot) so the max label can sit
-                      // above the line and the min label below it, each with
-                      // its own clear gap instead of crowding the vertex.
-                      Positioned label(int index, bool above) {
-                        final xFraction = chartMaxX == 0 ? 0.0 : index / chartMaxX;
-                        final value = points[index].value!;
-                        final yFraction = (axisMaxY - value) / (axisMaxY - axisMinY);
-                        final text = _fmtValue(value);
-                        const gap = 8.0;
-                        const blockHeight = 16.0;
-                        final estWidth = text.length * 6.8 + 6;
-                        final maxLeft = (w - estWidth).clamp(0.0, w);
-                        final left = (xFraction * w - estWidth / 2).clamp(0.0, maxLeft);
-                        final maxTop = (h - blockHeight).clamp(0.0, h);
-                        final rawTop = above ? yFraction * h - gap - blockHeight : yFraction * h + gap;
-                        return Positioned(
-                          left: left,
-                          top: rawTop.clamp(0.0, maxTop),
-                          // So this decorative label never steals a hover
-                          // event meant for the chart underneath it.
-                          child: IgnorePointer(
-                            child: Text(
-                              text,
-                              style: TextStyle(color: kMuted, fontSize: 11, fontWeight: FontWeight.w600),
+    return Semantics(
+      label: semanticBuffer.toString(),
+      excludeSemantics: true,
+      child: SizedBox(
+        height: height,
+        child: Column(
+          children: [
+            Expanded(
+              child: (!showMinMax && !showHover)
+                  ? lineChart
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final w = constraints.maxWidth;
+                        final h = constraints.maxHeight;
+
+                        // Direct value labels for the min/max points, placed by
+                        // hand (rather than fl_chart's touch-tooltip, which only
+                        // ever draws above the spot) so the max label can sit
+                        // above the line and the min label below it, each with
+                        // its own clear gap instead of crowding the vertex.
+                        Positioned label(int index, bool above) {
+                          final xFraction = chartMaxX == 0 ? 0.0 : index / chartMaxX;
+                          final value = points[index].value!;
+                          final yFraction = (axisMaxY - value) / (axisMaxY - axisMinY);
+                          final text = _fmtValue(value);
+                          const gap = 8.0;
+                          const blockHeight = 16.0;
+                          final estWidth = _measureLabelWidth(context, text, _kValueLabelStyle) + 6;
+                          final maxLeft = (w - estWidth).clamp(0.0, w);
+                          final left = (xFraction * w - estWidth / 2).clamp(0.0, maxLeft);
+                          final maxTop = (h - blockHeight).clamp(0.0, h);
+                          final rawTop = above ? yFraction * h - gap - blockHeight : yFraction * h + gap;
+                          return Positioned(
+                            left: left,
+                            top: rawTop.clamp(0.0, maxTop),
+                            // So this decorative label never steals a hover
+                            // event meant for the chart underneath it.
+                            child: IgnorePointer(
+                              child: Text(text, style: _kValueLabelStyle.copyWith(color: kMuted)),
                             ),
-                          ),
-                        );
-                      }
+                          );
+                        }
 
-                      return Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned.fill(child: lineChart),
-                          if (showMinMax) label(maxIndex, true),
-                          if (showMinMax && minIndex != maxIndex) label(minIndex, false),
-                          // Value at the projected endpoint — the "where do I
-                          // land" figure — in the forecast color so it reads as
-                          // a projection, not a recorded value. Anchored to the
-                          // right edge since the endpoint sits at maxX.
-                          if (useForecast)
-                            () {
-                              final value = forecastEndValue!;
-                              final text = _fmtValue(value);
-                              final yFraction = (axisMaxY - value) / (axisMaxY - axisMinY);
-                              const gap = 8.0;
-                              const blockHeight = 16.0;
-                              final estWidth = text.length * 6.8 + 6;
-                              final left = (w - estWidth).clamp(0.0, w);
-                              final maxTop = (h - blockHeight).clamp(0.0, h);
-                              final rawTop = yFraction * h - gap - blockHeight;
-                              return Positioned(
-                                left: left,
-                                top: rawTop.clamp(0.0, maxTop),
-                                child: IgnorePointer(
-                                  child: Text(
-                                    text,
-                                    style: TextStyle(color: forecastColor, fontSize: 11, fontWeight: FontWeight.w600),
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(child: lineChart),
+                            if (showMinMax) label(maxIndex, true),
+                            if (showMinMax && minIndex != maxIndex) label(minIndex, false),
+                            // Value at the projected endpoint — the "where do I
+                            // land" figure — in the forecast color so it reads as
+                            // a projection, not a recorded value. Anchored to the
+                            // right edge since the endpoint sits at maxX.
+                            if (useForecast)
+                              () {
+                                final value = forecastEndValue!;
+                                final text = _fmtValue(value);
+                                final yFraction = (axisMaxY - value) / (axisMaxY - axisMinY);
+                                const gap = 8.0;
+                                const blockHeight = 16.0;
+                                final estWidth = _measureLabelWidth(context, text, _kValueLabelStyle) + 6;
+                                final left = (w - estWidth).clamp(0.0, w);
+                                final maxTop = (h - blockHeight).clamp(0.0, h);
+                                final rawTop = yFraction * h - gap - blockHeight;
+                                return Positioned(
+                                  left: left,
+                                  top: rawTop.clamp(0.0, maxTop),
+                                  child: IgnorePointer(
+                                    child: Text(text, style: _kValueLabelStyle.copyWith(color: forecastColor)),
                                   ),
+                                );
+                              }(),
+                            // Painted last so its crosshair/tooltip sit above
+                            // everything, including the min/max labels.
+                            if (showHover)
+                              Positioned.fill(
+                                child: _HoverLayer(
+                                  width: w,
+                                  height: h,
+                                  chartMaxX: chartMaxX,
+                                  lastIndex: lastIndex,
+                                  axisMinY: axisMinY,
+                                  axisMaxY: axisMaxY,
+                                  points: points,
+                                  fmtValue: _fmtValue,
                                 ),
-                              );
-                            }(),
-                          // Painted last so its crosshair/tooltip sit above
-                          // everything, including the min/max labels.
-                          if (showHover)
-                            Positioned.fill(
-                              child: _HoverLayer(
-                                width: w,
-                                height: h,
-                                chartMaxX: chartMaxX,
-                                lastIndex: lastIndex,
-                                axisMinY: axisMinY,
-                                axisMaxY: axisMaxY,
-                                points: points,
-                                fmtValue: _fmtValue,
                               ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-          ),
-          const SizedBox(height: 4),
-          if (useForecast)
-            Row(
-              children: [
-                Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
-                Expanded(flex: lastIndex > 0 ? lastIndex : 1, child: const SizedBox()),
-                Text(
-                  fc.endLabel.isEmpty ? 'Prognose' : '${fc.endLabel} (Prognose)',
-                  style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
-                ),
-              ],
-            )
-          else if (hasTrend)
-            Row(
-              children: [
-                Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
-                Expanded(flex: lastIndex, child: const SizedBox()),
-                Text(points.last.label, style: TextStyle(color: kMuted, fontSize: 11)),
-                const Expanded(flex: 1, child: SizedBox()),
-                Text(
-                  'Prognose',
-                  style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
-                ),
-              ],
-            )
-          else
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
-                Text(points.last.label, style: TextStyle(color: kMuted, fontSize: 11)),
-              ],
+                          ],
+                        );
+                      },
+                    ),
             ),
-        ],
+            const SizedBox(height: 4),
+            if (useForecast)
+              Row(
+                children: [
+                  Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
+                  Expanded(flex: lastIndex > 0 ? lastIndex : 1, child: const SizedBox()),
+                  Text(
+                    fc.endLabel.isEmpty ? 'Prognose' : '${fc.endLabel} (Prognose)',
+                    style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              )
+            else if (hasTrend)
+              Row(
+                children: [
+                  Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
+                  Expanded(flex: lastIndex, child: const SizedBox()),
+                  Text(points.last.label, style: TextStyle(color: kMuted, fontSize: 11)),
+                  const Expanded(flex: 1, child: SizedBox()),
+                  Text(
+                    'Prognose',
+                    style: TextStyle(color: kMuted, fontSize: 11, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(points.first.label, style: TextStyle(color: kMuted, fontSize: 11)),
+                  Text(points.last.label, style: TextStyle(color: kMuted, fontSize: 11)),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }

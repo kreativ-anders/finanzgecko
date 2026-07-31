@@ -98,8 +98,11 @@ Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate
 
   try {
     final raw = await file.readAsString();
-    final imported = jsonDecode(raw) as Map<String, dynamic>;
-    await appState.importAllData(imported);
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Backup-JSON ist kein Objekt');
+    }
+    await appState.importAllData(decoded);
     if (!context.mounted) return;
     onNavigate(AppView.dashboard);
     showSavedSnackBar(context, onNavigate, message: 'Import abgeschlossen.');

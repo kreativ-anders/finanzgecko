@@ -13,7 +13,7 @@ import '../widgets/section_card.dart';
 
 Future<void> _openBankSuggestion(String typed) async {
   final title = Uri.encodeComponent('Bank vorschlagen: $typed');
-  final uri = Uri.parse('https://github.com/kreativanders/finanzgecko/issues/new?title=$title');
+  final uri = Uri.parse('https://github.com/kreativ-anders/finanzgecko/issues/new?title=$title');
   await launchUrl(uri);
 }
 

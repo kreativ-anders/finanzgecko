@@ -115,31 +115,43 @@ class AppStackedAreaChart extends StatelessWidget {
       ),
     );
 
+    // The legend below already lists every series as real text (with its
+    // latest-period share) — this label covers only the graphic itself,
+    // which the legend doesn't: the overall span and current total.
+    final latestTotal = currency.isEmpty ? totals.last.toStringAsFixed(0) : fmtMoney(totals.last, currency);
+    final areaSemanticLabel =
+        'Zusammensetzung über Zeit von ${periodLabels.first} bis ${periodLabels.last}, '
+        'aktueller Gesamtwert $latestTotal.';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: height,
-          child: !showHover
-              ? chart
-              : LayoutBuilder(
-                  builder: (context, constraints) => Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned.fill(child: chart),
-                      Positioned.fill(
-                        child: _StackedHoverLayer(
-                          width: constraints.maxWidth,
-                          height: constraints.maxHeight,
-                          periodLabels: periodLabels,
-                          active: active,
-                          totals: totals,
-                          currency: currency,
+        Semantics(
+          label: areaSemanticLabel,
+          excludeSemantics: true,
+          child: SizedBox(
+            height: height,
+            child: !showHover
+                ? chart
+                : LayoutBuilder(
+                    builder: (context, constraints) => Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned.fill(child: chart),
+                        Positioned.fill(
+                          child: _StackedHoverLayer(
+                            width: constraints.maxWidth,
+                            height: constraints.maxHeight,
+                            periodLabels: periodLabels,
+                            active: active,
+                            totals: totals,
+                            currency: currency,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+          ),
         ),
         const SizedBox(height: 4),
         Row(

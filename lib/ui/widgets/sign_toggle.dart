@@ -16,7 +16,7 @@ class SignToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isExpense ? kDanger : kPrimary;
+    final color = isExpense ? kDangerText : kPrimaryText;
     // Reuses the theme's default input text style (the same one TextField
     // applies to its editable text) so this decorator's content line box —
     // and therefore its overall height — matches the neighboring text

@@ -201,7 +201,7 @@ class _AssetRowState extends State<_AssetRow> {
                 Text(asset.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                 Text(
                   asset.lastEvaluatedAt != null
-                      ? 'zuletzt bewertet ${_formatDate(asset.lastEvaluatedAt!)}'
+                      ? 'zuletzt bewertet ${fmtDate(asset.lastEvaluatedAt!)}'
                       : 'noch nie bewertet',
                   style: TextStyle(color: kMuted, fontSize: 12),
                 ),
@@ -236,6 +236,3 @@ class _AssetRowState extends State<_AssetRow> {
     );
   }
 }
-
-String _formatDate(DateTime date) =>
-    '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';

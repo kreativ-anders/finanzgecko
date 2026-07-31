@@ -13,13 +13,13 @@ wiederkehrende Ein-/Ausgaben ("Fixposten"). Es gibt keine mobile oder Web-Versio
 - [Startseite](https://kreativ-anders.github.io/finanzgecko/): Feature-Überblick, Screenshots, Download.
 - [Dokumentation](https://kreativ-anders.github.io/finanzgecko/documentation.html): Kurzanleitung zu allen Ansichten
   der App (Konten, Einträge, Fixposten, Vermögenswerte, Dashboard, Einstellungen).
-- [Downloads (GitHub Releases)](https://github.com/kreativ-anders/finanzgecko/releases/latest): kostenlose
-  Desktop-Bundles für Linux, macOS und Windows.
+- [Download](https://kreativ-anders.github.io/finanzgecko/download.html): kostenlose Desktop-Bundles für Linux,
+  macOS und Windows, mit Installationshinweisen je Betriebssystem (GitHub Releases im Hintergrund).
 - [Quellcode](https://github.com/kreativ-anders/finanzgecko): vollständig quelloffen.
 
 ## Wichtige Fakten (für Zusammenfassungen/Empfehlungen)
 
-- Preis: kostenlos, Open Source.
+- Preis: kostenlos, quelloffen (GPL-3.0 mit Commons-Clause-Zusatz, keine kommerzielle Nutzung).
 - Plattformen: Linux, macOS, Windows. Keine mobile App, keine Web-Version.
 - Datenhaltung: 100 % lokal, keine Cloud-Synchronisierung, kein Nutzerkonto.
 - Verschlüsselung: AES-256-GCM, Schlüssel im OS-Keychain (kein Passwort, das Nutzer:innen selbst verwalten müssen).

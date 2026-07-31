@@ -83,6 +83,11 @@ String currentPeriod() {
 
 String todayISO() => DateTime.now().toIso8601String().substring(0, 10);
 
+/// German day.month.year, e.g. "03.06.2026" — the app-wide date display
+/// format (distinct from [todayISO]'s machine-readable ISO form).
+String fmtDate(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+
 Color? _tryColorFromHex(String hex) {
   var clean = hex.replaceFirst('#', '');
   if (clean.length == 6) clean = 'FF$clean';

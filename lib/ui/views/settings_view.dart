@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../constants.dart';
 import '../../services/update_service.dart';
 import '../../state/app_state.dart';
+import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
 import '../widgets/reset_confirm_dialog.dart';
@@ -301,9 +302,8 @@ class SettingsView extends StatelessWidget {
 }
 
 String _formatDateTime(DateTime date) {
-  final d = '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
   final t = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  return '$d, $t';
+  return '${fmtDate(date)}, $t';
 }
 
 String _keyStoreLabel() {
@@ -544,11 +544,11 @@ class _SecurityMetaRow extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(left: 4),
               child: SizedBox(
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 child: IconButton(
                   padding: EdgeInsets.zero,
-                  iconSize: 16,
+                  iconSize: 18,
                   tooltip: 'Im Dateimanager öffnen',
                   icon: Icon(Icons.folder_open, color: kMuted),
                   onPressed: onOpen,

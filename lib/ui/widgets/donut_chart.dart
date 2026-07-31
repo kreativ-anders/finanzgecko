@@ -46,71 +46,83 @@ class _AppDonutChartState extends State<AppDonutChart> {
     final hoverIndex = _hoverIndex;
     final hovered = (hoverIndex != null && hoverIndex < positive.length) ? positive[hoverIndex] : null;
 
+    // The itemized legend below is already real, readable text — this label
+    // just replaces the purely graphical wedge rendering with the one figure
+    // the visual gives at a glance (the largest share) rather than repeating
+    // the full legend a second time.
+    final largest = positive.reduce((a, b) => a.value > b.value ? a : b);
+    final pieSemanticLabel =
+        'Verteilung nach Kontotyp, größter Anteil: ${largest.label} mit ${fmtPercent(largest.value / total * 100)}.';
+
     return Wrap(
       spacing: 24,
       runSpacing: 16,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        SizedBox(
-          width: widget.height,
-          height: widget.height,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              PieChart(
-                PieChartData(
-                  sections: [
-                    for (var i = 0; i < positive.length; i++)
-                      PieChartSectionData(
-                        value: positive[i].value,
-                        color: positive[i].color,
-                        radius: i == hoverIndex ? 34 : 30,
-                        showTitle: false,
-                      ),
-                  ],
-                  centerSpaceRadius: 40,
-                  sectionsSpace: 1,
-                  // A PieChart's touch resolution is a discrete "which wedge
-                  // was hit", not a continuous position — none of the
-                  // interpolation drift that made AppLineChart hand-roll its
-                  // own hover instead of fl_chart's, so fl_chart's own touch
-                  // system is used directly here. The center space left by
-                  // centerSpaceRadius doubles as the hovered segment's label.
-                  pieTouchData: PieTouchData(
-                    touchCallback: (event, response) {
-                      final index = response?.touchedSection?.touchedSectionIndex;
-                      final next = (index != null && index >= 0) ? index : null;
-                      if (next != _hoverIndex) setState(() => _hoverIndex = next);
-                    },
-                  ),
-                ),
-              ),
-              if (hovered != null)
-                IgnorePointer(
-                  child: SizedBox(
-                    width: 76,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          hovered.label,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: kMuted),
+        Semantics(
+          label: pieSemanticLabel,
+          excludeSemantics: true,
+          child: SizedBox(
+            width: widget.height,
+            height: widget.height,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                PieChart(
+                  PieChartData(
+                    sections: [
+                      for (var i = 0; i < positive.length; i++)
+                        PieChartSectionData(
+                          value: positive[i].value,
+                          color: positive[i].color,
+                          radius: i == hoverIndex ? 34 : 30,
+                          showTitle: false,
                         ),
-                        Text(
-                          fmtPercent(hovered.value / total * 100),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                        ),
-                      ],
+                    ],
+                    centerSpaceRadius: 40,
+                    sectionsSpace: 1,
+                    // A PieChart's touch resolution is a discrete "which wedge
+                    // was hit", not a continuous position — none of the
+                    // interpolation drift that made AppLineChart hand-roll its
+                    // own hover instead of fl_chart's, so fl_chart's own touch
+                    // system is used directly here. The center space left by
+                    // centerSpaceRadius doubles as the hovered segment's label.
+                    pieTouchData: PieTouchData(
+                      touchCallback: (event, response) {
+                        final index = response?.touchedSection?.touchedSectionIndex;
+                        final next = (index != null && index >= 0) ? index : null;
+                        if (next != _hoverIndex) setState(() => _hoverIndex = next);
+                      },
                     ),
                   ),
                 ),
-            ],
+                if (hovered != null)
+                  IgnorePointer(
+                    child: SizedBox(
+                      width: 76,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            hovered.label,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11, color: kMuted),
+                          ),
+                          Text(
+                            fmtPercent(hovered.value / total * 100),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
         Column(

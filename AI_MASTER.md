@@ -565,6 +565,51 @@ im Release-Gate), leicht von einer KI les-/erweiterbar. `flutter_gherkin` ist au
 (`integration_test`) ausgelegt und wäre für reine Domänenlogik Overhead. **Nicht ohne Rücksprache durch das Paket
 ersetzen** (vgl. Regel 5 unten).
 
+## 9. Qualitäts-Audit (wiederkehrende Aufgabe)
+
+Es gibt bewusst **keinen** automatisierten CI-Schritt dafür (kein Push/PR-Workflow, siehe Abschnitt 6) — dieses
+Audit ist eine **manuell/auf Zuruf ausgelöste** Aufgabe für eine KI, sinnvoll etwa vor einem größeren Release oder
+wenn länger nicht mehr durchgeführt. Ziel ist ein **Befund-Report**, keine automatischen Breaking Changes — Umsetzung
+konkreter Fixes ist ein eigener, danach mit dem Menschen abgestimmter Schritt.
+
+Drei Teilbereiche, jeweils mit klarem Scope:
+
+1. **Usability & Accessibility der UI** — sowohl der Flutter-Desktop-App (`lib/ui/views/`, `lib/ui/widgets/`,
+   `lib/ui/theme.dart`) als auch der Landingpage (`docs/index.html`, `docs/download.html`,
+   `docs/documentation.html`, `docs/danke.html`, `docs/assets/style.css`). Prüfpunkte u. a.: Kontraste (siehe
+   `kPrimaryText`/`kDangerText`/`kWarningText`-Regel in Abschnitt 5 — WCAG 2.1 AA, 4,5:1), Tastaturbedienbarkeit,
+   Fokus-Reihenfolge/-sichtbarkeit, Screenreader-Semantik (`Semantics`-Widgets, `alt`-Texte, Landmark-Tags/`aria-*`
+   auf der statischen Seite), Lesbarkeit (Zeilenbreite, Schriftgrößen), Konsistenz der Interaktionsmuster
+   (Bestätigungsdialoge, Inline-Edit-Debounce, Hover/Tooltip-Verhalten, siehe Abschnitt 5).
+2. **SEO-Analyse der Website** (`docs/`) — Meta-Tags/Title/Description, strukturierte Daten, `docs/sitemap.xml` +
+   `docs/robots.txt` + `docs/llms.txt` (vorhanden, auf Aktualität/Vollständigkeit prüfen), Open-Graph-/Twitter-Card-
+   Tags (`docs/assets/og-image.png`), Heading-Hierarchie, interne Verlinkung, Ladezeit-relevante Faktoren (Asset-
+   Größen unter `docs/assets/`, Blocking Resources), sowie Marketing-/Conversion-Aspekte der statischen Seite:
+   Call-to-Actions (Download, "Entwicklung unterstützen"), Trust-Signale, Above-the-fold-Klarheit des Pitches.
+3. **Code-Optimierung ohne Breaking Changes** — schlanke Muster, Performance, Stabilität/Robustheit in `lib/`:
+   unnötige Rebuilds/`setState`, fehlende `const`-Konstruktoren (Ausnahme: die vier dynamischen Theme-Token, siehe
+   Abschnitt 5), Duplikation, ungenutzter Code, potenzielle Nullpointer-/Edge-Cases in `lib/utils/analysis.dart` und
+   den Persistenzpfaden (Abschnitt 4.1), fehlende Fehlerbehandlung an System-Boundaries (Datei-I/O, Netzwerk). Jeder
+   vorgeschlagene Fix muss die bestehenden Tests (`flutter analyze` + `flutter test`, inkl. `gherkin_sync_test.dart`)
+   weiter grün halten und darf **keine** der in Regel 5 gelisteten Architekturentscheidungen antasten.
+
+**Output — kein separates Report-Artefakt, direkt beheben statt nur auflisten:** Befunde werden **nicht** in eine
+separate Report-Datei/ein Artefakt geschrieben, sondern kompakt im Chat zusammengefasst. Für jeden Befund gilt:
+- **Kein UI-/UX-Verhaltenswechsel, keine Breaking Changes, kein neuer/fehlender Inhalt nötig** (Tippfehler, tote
+  Links, fehlende Meta-Tags, Farb-/Kontrast-Bugs die einen bereits etablierten Fix nur konsequent nachziehen,
+  reine Performance-/Duplikations-Refactorings ohne Verhaltensänderung, additive A11y-Semantik ohne visuelle
+  Änderung) → **direkt beheben**, ohne Rückfrage. Danach `flutter analyze` + `flutter test` grün halten (Pflicht).
+- **Ändert sichtbares Verhalten, Interaktionsmuster, Copy/Design-Entscheidung oder braucht Inhalte/Credentials, die
+  nur der Mensch hat** (z. B. eine echte Stripe-Payment-Link-URL, ein neues Testimonial, eine neue Light-Theme-
+  Variante der Website, ein neuer visueller Sättigungs-/Lade-Indikator) → **nicht selbst entscheiden**, sondern im
+  Chat kurz als offenen Punkt benennen und dem Menschen zur Entscheidung vorlegen.
+- Am Ende **kurze Zusammenfassung im Chat**: was direkt behoben wurde (mit Datei:Zeile), was offen bleibt und warum.
+  Kein Artefakt, keine neue Datei nur für den Report — dieses Dokument (§9) ist die einzige dauerhafte Spur des
+  Audit-Prozesses, nicht seiner Einzelbefunde.
+
+Ergibt der Audit einen Bedarf an Doku-/Gherkin-Änderungen (z. B. ein neues A11y-Kriterium), gilt dafür regulär
+Regel 1 unten.
+
 ---
 
 ## Regeln für KI-Agenten (PFLICHTLEKTÜRE)

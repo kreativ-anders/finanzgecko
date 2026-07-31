@@ -71,10 +71,11 @@ class _EntriesViewState extends State<EntriesView> {
   /// Best-effort exchange rate for the live running total, without hitting the
   /// network: 1 for base-currency accounts, otherwise the rate from this
   /// account's last stored balance (or any recent balance in that currency).
+  /// [prev] is the account's own previous balance, already resolved by the
+  /// caller so this doesn't re-scan `app.balances` on top of that lookup.
   /// Returns null when nothing is available to estimate with.
-  double? _rateEstimate(AppState app, Account acc) {
+  double? _rateEstimate(AppState app, Account acc, Balance? prev) {
     if (acc.currency == app.baseCurrency) return 1;
-    final prev = app.previousBalance(acc.id, _period);
     if (prev != null && prev.currencyOriginal == acc.currency && prev.rate != 0) return prev.rate;
     final sameCurrency = app.balances.where((b) => b.currencyOriginal == acc.currency && b.rate != 0).toList()
       ..sort((a, b) => a.period.compareTo(b.period));
@@ -83,7 +84,28 @@ class _EntriesViewState extends State<EntriesView> {
 
   /// Running preview of what "Alle speichern" will produce, computed from the
   /// text fields as the user types — no network, using [_rateEstimate].
+  ///
+  /// Rebuilds on every keystroke (see the amount fields' `onChanged` below),
+  /// so the per-account "previous balance" lookup is indexed once here
+  /// instead of re-filtering+sorting the full `app.balances` list per
+  /// account, as `AppState.previousBalance` does on its own.
   _LiveTotals _computeLiveTotals(AppState app) {
+    final byAccount = <int, List<Balance>>{};
+    for (final b in app.balances) {
+      (byAccount[b.accountId] ??= []).add(b);
+    }
+    for (final list in byAccount.values) {
+      list.sort((a, b) => a.period.compareTo(b.period));
+    }
+    Balance? previousFor(int accountId) {
+      final list = byAccount[accountId];
+      if (list == null) return null;
+      for (var i = list.length - 1; i >= 0; i--) {
+        if (list[i].period.compareTo(_period) < 0) return list[i];
+      }
+      return null;
+    }
+
     var running = 0.0;
     var baseline = 0.0;
     var filled = 0;
@@ -93,14 +115,14 @@ class _EntriesViewState extends State<EntriesView> {
       if (raw.isEmpty) continue;
       final amount = parseInputNumber(raw);
       if (amount == null) continue;
-      final rate = _rateEstimate(app, acc);
+      final prev = previousFor(acc.id);
+      final rate = _rateEstimate(app, acc, prev);
       if (rate == null) {
         withoutRate++;
         continue;
       }
       running += amount * rate;
       filled++;
-      final prev = app.previousBalance(acc.id, _period);
       if (prev != null) baseline += prev.amountBase;
     }
     return _LiveTotals(running: running, delta: running - baseline, filled: filled, withoutRate: withoutRate);
@@ -363,7 +385,7 @@ class _SaveFooter extends StatelessWidget {
                       Text(
                         '${fmtSignedMoney(totals.delta, baseCurrency)} ggü. vorherigem Stand',
                         style: TextStyle(
-                          color: totals.delta >= 0 ? kPrimary : kDanger,
+                          color: totals.delta >= 0 ? kPrimaryText : kDangerText,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),

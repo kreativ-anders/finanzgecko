@@ -27,6 +27,9 @@ String describeError(Object err) {
     return 'Import abgebrochen bei Konto "${err.accountName}": '
         'Unbekannte Bank "${err.unknownBank}" — bitte eine Bank aus der Liste verwenden.';
   }
+  if (err is FormatException) {
+    return 'Diese Datei ist kein gültiges FinanzGecko-Backup.';
+  }
   return '$err';
 }
 
@@ -79,6 +82,13 @@ void showErrorSnackBar(BuildContext context, String message) {
   final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
-    SnackBar(content: Text(message), duration: const Duration(seconds: 4), backgroundColor: kDanger),
+    SnackBar(
+      // Same near-black-on-danger pairing as OverspendBanner/reset_confirm_dialog:
+      // white text on kDanger measures ~2.8:1, short of WCAG AA's 4.5:1 minimum,
+      // since kDanger is deliberately identical light/dark (see theme.dart).
+      content: Text(message, style: const TextStyle(color: Color(0xFF2B0000))),
+      duration: const Duration(seconds: 4),
+      backgroundColor: kDanger,
+    ),
   );
 }
