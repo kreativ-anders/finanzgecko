@@ -1,4 +1,8 @@
-/* FinanzGecko docs — shares the app's dark theme tokens (see lib/ui/theme.dart) */
+/* FinanzGecko docs — teilt die Farbtokens der App (siehe lib/ui/theme.dart).
+   Dunkel ist der Standard: die Tokens in :root sind die dunkle Palette, die helle
+   Variante überschreibt sie weiter unten per prefers-color-scheme. Browser ohne
+   Media-Query-Support bleiben damit auf Dunkel — genau wie die <img>-Fallbacks
+   der Screenshots in index.html/documentation.html. */
 
 :root {
   --bg: #0a0f0c;
@@ -9,6 +13,30 @@
   --primary-ink: #04140d;
   --danger: #ff6b6b;
   --text: #f2f5f3;
+  /* kPrimary als *Glyphenfarbe* statt als Fläche — auf dem hellen Hintergrund
+     verfehlt #00c878 die WCAG-AA-Grenze von 4,5:1, deshalb dort abgedunkelt.
+     Entspricht kPrimaryText in lib/ui/theme.dart. */
+  --primary-text: #00c878;
+  --prose: #cfd8d2;
+  --lead: #c3ccc7;
+  --shot-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Helle Palette — 1:1 die Light-Tokens aus lib/ui/theme.dart, damit Website und
+   App im selben Systemtheme gleich aussehen. Die Markenfarben (--primary,
+   --danger) bleiben in beiden Themes identisch, siehe AI_MASTER.md §5. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f7f5;
+    --surface: #ffffff;
+    --border: #dce3de;
+    --muted: #5b6b62;
+    --text: #10160f;
+    --primary-text: #00814d;
+    --prose: #3c4842;
+    --lead: #44514a;
+    --shot-shadow: 0 18px 40px rgba(16, 22, 15, 0.12);
+  }
 }
 
 * {
@@ -16,7 +44,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light dark;
   /* Browser drucken/exportieren standardmäßig ohne Hintergrundfarben (Tinte sparen) — der für den
      dunklen Hintergrund gewählte helle Text wäre dann auf weißem Papier fast unlesbar. */
   print-color-adjust: exact;
@@ -33,14 +61,14 @@ body {
 }
 
 a {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 a:focus-visible,
 button:focus-visible,
 summary:focus-visible,
 .hint:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -204,7 +232,7 @@ header.site nav a:hover {
 }
 
 .tag-feature {
-  color: var(--primary);
+  color: var(--primary-text);
   border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
   background: color-mix(in srgb, var(--primary) 10%, var(--surface));
 }
@@ -291,7 +319,7 @@ header.site nav a:hover {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shot-shadow);
 }
 
 .hero-shot figcaption,
@@ -319,7 +347,7 @@ header.site nav a:hover {
   letter-spacing: 0.09em;
   font-size: 12px;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .shot-story h3 {
@@ -331,7 +359,7 @@ header.site nav a:hover {
 .shot-story p.shot-lead {
   margin: 0;
   font-size: 15.5px;
-  color: #c3ccc7;
+  color: var(--lead);
   max-width: 60ch;
 }
 
@@ -403,7 +431,7 @@ header.site nav a:hover {
   display: block;
   font-size: 40px;
   line-height: 1;
-  color: var(--primary);
+  color: var(--primary-text);
   margin-bottom: 6px;
 }
 
@@ -433,7 +461,7 @@ header.site nav a:hover {
 }
 
 .github-stat a span[aria-hidden] {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .get {
@@ -536,7 +564,7 @@ header.site nav a:hover {
 .faq-list summary::after {
   content: "+";
   float: right;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .faq-list details[open] summary::after {
@@ -716,7 +744,7 @@ footer.site .wrap {
 }
 
 .doc-content h2 .step {
-  color: var(--primary);
+  color: var(--primary-text);
   font-variant-numeric: tabular-nums;
   font-size: 14px;
 }
@@ -728,7 +756,7 @@ footer.site .wrap {
 }
 
 .doc-content p {
-  color: #cfd8d2;
+  color: var(--prose);
   margin: 0 0 12px;
 }
 
@@ -755,7 +783,7 @@ footer.site .wrap {
 ul.feature-list {
   margin: 0 0 12px;
   padding-left: 20px;
-  color: #cfd8d2;
+  color: var(--prose);
 }
 
 ul.feature-list li {

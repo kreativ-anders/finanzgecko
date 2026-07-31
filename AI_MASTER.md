@@ -106,6 +106,8 @@ finanzgecko/
 
 ├── tool/generate_icons.dart       # Icon-Pipeline (ein Master-PNG → alle Plattform-Icon-Formate)
 ├── tool/generate_demo_data.dart   # buildDemoBackup() → demo/finanzgecko-demo.json (an "heute" verankert); auch von flutter test aufgerufen
+├── tool/capture_screenshots.sh    # macOS-Helfer: nimmt die 7 Website-Screenshots je Theme in nativer Retina-Auflösung
+│                                  #   auf (`screencapture -l <windowid>`, nur das App-Fenster) → build/screenshots/<theme>/
 ├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots (generiert, .gitignore) — via "Backup importieren…"
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü, build_appimage.sh → FinanzGecko-<Version>-x86_64.AppImage
 ├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
@@ -116,7 +118,11 @@ finanzgecko/
 │   ├── documentation.html         # Kurzanleitung für Endnutzer (kein Bezug zu AI_MASTER/gherkin)
 │   ├── danke.html                 # Bestätigungsseite nach Stripe-Checkout ("Entwicklung unterstützen"), `noindex`,
 │   │                               #   als "After payment"-Redirect im Stripe Payment Link zu hinterlegen
-│   └── assets/                    # style.css (teilt Farbtokens mit lib/ui/theme.dart), Icons, Screenshots
+│   └── assets/                    # style.css (teilt Farbtokens mit lib/ui/theme.dart; Hell/Dunkel via
+│                                   #   prefers-color-scheme, Dunkel bleibt der Default), Icons, Screenshots
+│       └── screenshots/           # je Ansicht vier Dateien: `{light,dark}-<name>.{png,webp}`. Die Seiten liefern
+│                                   #   beide Themes per `<picture>` + `media="(prefers-color-scheme: light)"` aus;
+│                                   #   Dunkel ist Default und `<img>`-Fallback. Neu aufnehmen: tool/capture_screenshots.sh
 └── .github/workflows/
     └── release.yml                # einziger Workflow. Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst
                                    #   `gate`-Job (analyze + test + Icon-Pipeline), dann 3 native Build-Jobs

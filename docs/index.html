@@ -182,9 +182,15 @@
 
         <figure class="hero-shot">
           <picture>
-            <source type="image/webp" srcset="assets/screenshots/finanzgecko-gesamtvermoegen-verlauf-prognose.webp" />
-            <img src="assets/screenshots/finanzgecko-gesamtvermoegen-verlauf-prognose.png"
-                 width="2000" height="972" loading="eager" decoding="async"
+            <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                 bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+            <source media="(prefers-color-scheme: light)" type="image/webp"
+                    srcset="assets/screenshots/light-finanzgecko-gesamtvermoegen-verlauf-prognose.webp" />
+            <source media="(prefers-color-scheme: light)" type="image/png"
+                    srcset="assets/screenshots/light-finanzgecko-gesamtvermoegen-verlauf-prognose.png" />
+            <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-gesamtvermoegen-verlauf-prognose.webp" />
+            <img src="assets/screenshots/dark-finanzgecko-gesamtvermoegen-verlauf-prognose.png"
+                 width="986" height="484" loading="eager" decoding="async"
                  alt="FinanzGecko Dashboard mit Gesamtvermögen von 74.191,40 €, monatlichem Vermögensverlauf und Trend-Prognose bis Dezember 2026" />
           </picture>
           <figcaption>Das Dashboard: dein Gesamtvermögen, der Verlauf und die Prognose auf einen Blick.</figcaption>
@@ -222,9 +228,15 @@
             <p class="shot-lead">Einmal im Monat trägst du deine Kontostände ein — alle auf einer Seite, jeweils mit dem letzten Wert als Gedächtnisstütze. In zwei Minuten bist du fertig, den Rest erledigt FinanzGecko. Kein Tabellen-Wirrwarr, keine zwanzig offenen Tabs, kein Copy-and-Paste.</p>
             <figure class="shot">
               <picture>
-                <source type="image/webp" srcset="assets/screenshots/finanzgecko-kontostaende-monatlich-erfassen.webp" />
-                <img src="assets/screenshots/finanzgecko-kontostaende-monatlich-erfassen.png"
-                     width="2000" height="821" loading="lazy" decoding="async"
+                <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                     bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+                <source media="(prefers-color-scheme: light)" type="image/webp"
+                        srcset="assets/screenshots/light-finanzgecko-kontostaende-monatlich-erfassen.webp" />
+                <source media="(prefers-color-scheme: light)" type="image/png"
+                        srcset="assets/screenshots/light-finanzgecko-kontostaende-monatlich-erfassen.png" />
+                <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-kontostaende-monatlich-erfassen.webp" />
+                <img src="assets/screenshots/dark-finanzgecko-kontostaende-monatlich-erfassen.png"
+                     width="986" height="480" loading="lazy" decoding="async"
                      alt="FinanzGecko Einträge-Ansicht: monatliche Kontostände für Girokonto, Tagesgeld, ETF-Depot, US-Aktien, Krypto und Bargeld erfassen" />
               </picture>
               <figcaption>Einträge — alle Kontostände eines Monats in einem Rutsch, jederzeit rückwirkend korrigierbar.</figcaption>
@@ -237,9 +249,15 @@
             <p class="shot-lead">Wie viel steckt im Depot, wie viel liegt einfach bar herum? Die Verteilung nach Kontotyp zeigt es in Sekunden. Direkt daneben laufen deine Fixposten zusammen: Einnahmen, Ausgaben und der monatliche Überschuss, der deinen ganzen Verlauf antreibt.</p>
             <figure class="shot">
               <picture>
-                <source type="image/webp" srcset="assets/screenshots/finanzgecko-verteilung-nach-kontotyp-kennzahlen.webp" />
-                <img src="assets/screenshots/finanzgecko-verteilung-nach-kontotyp-kennzahlen.png"
-                     width="2000" height="462" loading="lazy" decoding="async"
+                <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                     bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+                <source media="(prefers-color-scheme: light)" type="image/webp"
+                        srcset="assets/screenshots/light-finanzgecko-verteilung-nach-kontotyp-kennzahlen.webp" />
+                <source media="(prefers-color-scheme: light)" type="image/png"
+                        srcset="assets/screenshots/light-finanzgecko-verteilung-nach-kontotyp-kennzahlen.png" />
+                <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-verteilung-nach-kontotyp-kennzahlen.webp" />
+                <img src="assets/screenshots/dark-finanzgecko-verteilung-nach-kontotyp-kennzahlen.png"
+                     width="986" height="256" loading="lazy" decoding="async"
                      alt="FinanzGecko Kennzahlen: Verteilung des Vermögens nach Kontotyp als Ringdiagramm sowie monatlicher Überschuss aus Fixposten" />
               </picture>
               <figcaption>Kennzahlen — Verteilung nach Kontotyp, monatlicher Überschuss und Sachwerte nebeneinander.</figcaption>
@@ -252,9 +270,15 @@
             <p class="shot-lead">Jede Farbe ein Kontotyp, jeder Monat eine Schicht mehr: Die Zusammensetzung über Zeit zeigt dir, ob dein Depot oder dein Sparkonto den Ausschlag gibt — und wie sich das über die Monate verschiebt.</p>
             <figure class="shot">
               <picture>
-                <source type="image/webp" srcset="assets/screenshots/finanzgecko-vermoegen-zusammensetzung-ueber-zeit.webp" />
-                <img src="assets/screenshots/finanzgecko-vermoegen-zusammensetzung-ueber-zeit.png"
-                     width="2060" height="491" loading="lazy" decoding="async"
+                <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                     bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+                <source media="(prefers-color-scheme: light)" type="image/webp"
+                        srcset="assets/screenshots/light-finanzgecko-vermoegen-zusammensetzung-ueber-zeit.webp" />
+                <source media="(prefers-color-scheme: light)" type="image/png"
+                        srcset="assets/screenshots/light-finanzgecko-vermoegen-zusammensetzung-ueber-zeit.png" />
+                <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-vermoegen-zusammensetzung-ueber-zeit.webp" />
+                <img src="assets/screenshots/dark-finanzgecko-vermoegen-zusammensetzung-ueber-zeit.png"
+                     width="986" height="295" loading="lazy" decoding="async"
                      alt="FinanzGecko Diagramm der Vermögens-Zusammensetzung über Zeit, gestapelt nach Kontotyp von Januar bis Juli 2026" />
               </picture>
               <figcaption>Zusammensetzung über Zeit — wie sich dein Vermögen Monat für Monat aufbaut.</figcaption>
@@ -267,9 +291,15 @@
             <p class="shot-lead">E-Bike, MacBook, das Auto — Sachwerte gehören zu deinem Vermögen, tauchen auf keinem Kontoauszug auf. Erfasse sie mit ihrem aktuellen Wert, und FinanzGecko erinnert dich, sie hin und wieder neu zu bewerten. Per Schalter nimmst du sie ins Gesamtvermögen auf oder lässt sie bewusst außen vor.</p>
             <figure class="shot">
               <picture>
-                <source type="image/webp" srcset="assets/screenshots/finanzgecko-vermoegenswerte-sachwerte.webp" />
-                <img src="assets/screenshots/finanzgecko-vermoegenswerte-sachwerte.png"
-                     width="2000" height="1028" loading="lazy" decoding="async"
+                <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                     bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+                <source media="(prefers-color-scheme: light)" type="image/webp"
+                        srcset="assets/screenshots/light-finanzgecko-vermoegenswerte-sachwerte.webp" />
+                <source media="(prefers-color-scheme: light)" type="image/png"
+                        srcset="assets/screenshots/light-finanzgecko-vermoegenswerte-sachwerte.png" />
+                <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-vermoegenswerte-sachwerte.webp" />
+                <img src="assets/screenshots/dark-finanzgecko-vermoegenswerte-sachwerte.png"
+                     width="986" height="516" loading="lazy" decoding="async"
                      alt="FinanzGecko Vermögenswerte: Sachwerte wie E-Bike, MacBook Pro und VW Golf mit aktuellem Wert und Datum der letzten Bewertung" />
               </picture>
               <figcaption>Vermögenswerte — Sachwerte wie Elektronik, Möbel oder Fahrzeuge, inklusive Erinnerung zur Neubewertung.</figcaption>
@@ -282,9 +312,15 @@
             <p class="shot-lead">Wiederkehrende Ein- und Ausgaben pflegst du ein einziges Mal, ob monatlich, vierteljährlich oder jährlich. FinanzGecko normiert alles auf ein Monatsäquivalent, damit dein Überschuss stimmt und die Prognose weiß, womit sie rechnet.</p>
             <figure class="shot">
               <picture>
-                <source type="image/webp" srcset="assets/screenshots/finanzgecko-fixposten-einnahmen-ausgaben.webp" />
-                <img src="assets/screenshots/finanzgecko-fixposten-einnahmen-ausgaben.png"
-                     width="2000" height="1042" loading="lazy" decoding="async"
+                <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                     bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+                <source media="(prefers-color-scheme: light)" type="image/webp"
+                        srcset="assets/screenshots/light-finanzgecko-fixposten-einnahmen-ausgaben.webp" />
+                <source media="(prefers-color-scheme: light)" type="image/png"
+                        srcset="assets/screenshots/light-finanzgecko-fixposten-einnahmen-ausgaben.png" />
+                <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-fixposten-einnahmen-ausgaben.webp" />
+                <img src="assets/screenshots/dark-finanzgecko-fixposten-einnahmen-ausgaben.png"
+                     width="986" height="548" loading="lazy" decoding="async"
                      alt="FinanzGecko Fixposten: wiederkehrende Einnahmen und Ausgaben wie Gehalt, Miete und Abos mit Intervall und Monatsäquivalent" />
               </picture>
               <figcaption>Fixposten — wiederkehrende Ein- und Ausgaben, sauber auf ein Monatsäquivalent normiert.</figcaption>
@@ -297,9 +333,15 @@
             <p class="shot-lead">Girokonto, Tagesgeld, Depot, Krypto, Bargeld: Lege so viele Konten an, wie du brauchst, in Euro oder Fremdwährung. Über 40 gängige Banken und Neobanken bekommen automatisch ihre echte Markenfarbe<span class="hint" title="Fehlt deine Bank in der Liste? Du kannst sie direkt im Konto-Formular vorschlagen.">ⓘ</span> — alles bleibt dabei auf deinem Rechner, AES-256-verschlüsselt. Kein Bank-Login, keine Cloud, kein Konto bei uns.</p>
             <figure class="shot">
               <picture>
-                <source type="image/webp" srcset="assets/screenshots/finanzgecko-konten-uebersicht.webp" />
-                <img src="assets/screenshots/finanzgecko-konten-uebersicht.png"
-                     width="2000" height="972" loading="lazy" decoding="async"
+                <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                     bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+                <source media="(prefers-color-scheme: light)" type="image/webp"
+                        srcset="assets/screenshots/light-finanzgecko-konten-uebersicht.webp" />
+                <source media="(prefers-color-scheme: light)" type="image/png"
+                        srcset="assets/screenshots/light-finanzgecko-konten-uebersicht.png" />
+                <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-konten-uebersicht.webp" />
+                <img src="assets/screenshots/dark-finanzgecko-konten-uebersicht.png"
+                     width="986" height="510" loading="lazy" decoding="async"
                      alt="FinanzGecko Konten-Übersicht: Girokonto, Tagesgeld, Depots, Krypto und Bargeld verschiedener Banken in Euro und US-Dollar" />
               </picture>
               <figcaption>Konten — alle Geldtöpfe an einem Ort, mehrwährungsfähig und vollständig lokal.</figcaption>

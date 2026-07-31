@@ -97,9 +97,15 @@
         </p>
         <figure class="shot doc-shot">
           <picture>
-            <source type="image/webp" srcset="assets/screenshots/finanzgecko-konten-uebersicht.webp" />
-            <img src="assets/screenshots/finanzgecko-konten-uebersicht.png"
-                 width="2000" height="972" loading="lazy" decoding="async"
+            <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                 bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+            <source media="(prefers-color-scheme: light)" type="image/webp"
+                    srcset="assets/screenshots/light-finanzgecko-konten-uebersicht.webp" />
+            <source media="(prefers-color-scheme: light)" type="image/png"
+                    srcset="assets/screenshots/light-finanzgecko-konten-uebersicht.png" />
+            <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-konten-uebersicht.webp" />
+            <img src="assets/screenshots/dark-finanzgecko-konten-uebersicht.png"
+                 width="986" height="510" loading="lazy" decoding="async"
                  alt="FinanzGecko Konten-Ansicht mit bestehenden Konten (Girokonto, Tagesgeld, ETF-Depot, US-Aktien in USD, Krypto, Bargeld) samt Bank, Kontotyp und Währung sowie Formular für ein neues Konto" />
           </picture>
           <figcaption>Ansicht „Konten“: bestehende Konten bearbeiten oder archivieren und neue Konten anlegen.</figcaption>
@@ -126,9 +132,15 @@
         </p>
         <figure class="shot doc-shot">
           <picture>
-            <source type="image/webp" srcset="assets/screenshots/finanzgecko-kontostaende-monatlich-erfassen.webp" />
-            <img src="assets/screenshots/finanzgecko-kontostaende-monatlich-erfassen.png"
-                 width="2000" height="821" loading="lazy" decoding="async"
+            <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                 bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+            <source media="(prefers-color-scheme: light)" type="image/webp"
+                    srcset="assets/screenshots/light-finanzgecko-kontostaende-monatlich-erfassen.webp" />
+            <source media="(prefers-color-scheme: light)" type="image/png"
+                    srcset="assets/screenshots/light-finanzgecko-kontostaende-monatlich-erfassen.png" />
+            <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-kontostaende-monatlich-erfassen.webp" />
+            <img src="assets/screenshots/dark-finanzgecko-kontostaende-monatlich-erfassen.png"
+                 width="986" height="480" loading="lazy" decoding="async"
                  alt="FinanzGecko Einträge-Ansicht: Kontostände für Juli 2026 pro Konto eingeben, jeweils mit dem zuletzt erfassten Wert des Vormonats als Referenz" />
           </picture>
           <figcaption>Ansicht „Einträge“: alle Kontostände eines Monats erfassen — der letzte Wert steht als Referenz daneben.</figcaption>
@@ -156,9 +168,15 @@
         </p>
         <figure class="shot doc-shot">
           <picture>
-            <source type="image/webp" srcset="assets/screenshots/finanzgecko-fixposten-einnahmen-ausgaben.webp" />
-            <img src="assets/screenshots/finanzgecko-fixposten-einnahmen-ausgaben.png"
-                 width="2000" height="1042" loading="lazy" decoding="async"
+            <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                 bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+            <source media="(prefers-color-scheme: light)" type="image/webp"
+                    srcset="assets/screenshots/light-finanzgecko-fixposten-einnahmen-ausgaben.webp" />
+            <source media="(prefers-color-scheme: light)" type="image/png"
+                    srcset="assets/screenshots/light-finanzgecko-fixposten-einnahmen-ausgaben.png" />
+            <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-fixposten-einnahmen-ausgaben.webp" />
+            <img src="assets/screenshots/dark-finanzgecko-fixposten-einnahmen-ausgaben.png"
+                 width="986" height="548" loading="lazy" decoding="async"
                  alt="FinanzGecko Fixposten-Ansicht mit wiederkehrenden Posten wie Gehalt, Miete, Krankenversicherung und Abos, je mit Intervall, Typ und errechnetem Monatsäquivalent" />
           </picture>
           <figcaption>Ansicht „Fixposten“: Einnahmen und Ausgaben inline pflegen — rechts das errechnete Monatsäquivalent.</figcaption>
@@ -185,9 +203,15 @@
         </p>
         <figure class="shot doc-shot">
           <picture>
-            <source type="image/webp" srcset="assets/screenshots/finanzgecko-vermoegenswerte-sachwerte.webp" />
-            <img src="assets/screenshots/finanzgecko-vermoegenswerte-sachwerte.png"
-                 width="2000" height="1028" loading="lazy" decoding="async"
+            <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                 bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+            <source media="(prefers-color-scheme: light)" type="image/webp"
+                    srcset="assets/screenshots/light-finanzgecko-vermoegenswerte-sachwerte.webp" />
+            <source media="(prefers-color-scheme: light)" type="image/png"
+                    srcset="assets/screenshots/light-finanzgecko-vermoegenswerte-sachwerte.png" />
+            <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-vermoegenswerte-sachwerte.webp" />
+            <img src="assets/screenshots/dark-finanzgecko-vermoegenswerte-sachwerte.png"
+                 width="986" height="516" loading="lazy" decoding="async"
                  alt="FinanzGecko Vermögenswerte-Ansicht mit Sachwerten E-Bike, MacBook Pro und VW Golf samt aktuellem Wert und Datum der letzten Bewertung sowie Formular für einen neuen Vermögenswert" />
           </picture>
           <figcaption>Ansicht „Vermögenswerte“: Sachwerte mit aktuellem Wert — jede Änderung gilt als Neubewertung.</figcaption>
@@ -209,27 +233,45 @@
         </p>
         <figure class="shot doc-shot">
           <picture>
-            <source type="image/webp" srcset="assets/screenshots/finanzgecko-gesamtvermoegen-verlauf-prognose.webp" />
-            <img src="assets/screenshots/finanzgecko-gesamtvermoegen-verlauf-prognose.png"
-                 width="2000" height="972" loading="lazy" decoding="async"
+            <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                 bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+            <source media="(prefers-color-scheme: light)" type="image/webp"
+                    srcset="assets/screenshots/light-finanzgecko-gesamtvermoegen-verlauf-prognose.webp" />
+            <source media="(prefers-color-scheme: light)" type="image/png"
+                    srcset="assets/screenshots/light-finanzgecko-gesamtvermoegen-verlauf-prognose.png" />
+            <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-gesamtvermoegen-verlauf-prognose.webp" />
+            <img src="assets/screenshots/dark-finanzgecko-gesamtvermoegen-verlauf-prognose.png"
+                 width="986" height="484" loading="lazy" decoding="async"
                  alt="FinanzGecko Dashboard: Gesamtvermögen 74.191,40 € mit Veränderung zum Vormonat sowie Verlaufsdiagramm inklusive gestrichelter Trend-Prognose bis Dezember 2026" />
           </picture>
           <figcaption>Dashboard-Kopf: Gesamtvermögen, Veränderung zum Vormonat und Verlauf mit Prognose.</figcaption>
         </figure>
         <figure class="shot doc-shot">
           <picture>
-            <source type="image/webp" srcset="assets/screenshots/finanzgecko-verteilung-nach-kontotyp-kennzahlen.webp" />
-            <img src="assets/screenshots/finanzgecko-verteilung-nach-kontotyp-kennzahlen.png"
-                 width="2000" height="462" loading="lazy" decoding="async"
+            <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                 bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+            <source media="(prefers-color-scheme: light)" type="image/webp"
+                    srcset="assets/screenshots/light-finanzgecko-verteilung-nach-kontotyp-kennzahlen.webp" />
+            <source media="(prefers-color-scheme: light)" type="image/png"
+                    srcset="assets/screenshots/light-finanzgecko-verteilung-nach-kontotyp-kennzahlen.png" />
+            <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-verteilung-nach-kontotyp-kennzahlen.webp" />
+            <img src="assets/screenshots/dark-finanzgecko-verteilung-nach-kontotyp-kennzahlen.png"
+                 width="986" height="256" loading="lazy" decoding="async"
                  alt="FinanzGecko Dashboard-Karten: Verteilung nach Kontotyp als Ringdiagramm, Fixposten-Übersicht mit Einnahmen, Ausgaben und Überschuss sowie Summe der Vermögenswerte" />
           </picture>
           <figcaption>Verteilung nach Kontotyp, Fixposten-Überschuss und Vermögenswerte als kompakte Karten.</figcaption>
         </figure>
         <figure class="shot doc-shot">
           <picture>
-            <source type="image/webp" srcset="assets/screenshots/finanzgecko-vermoegen-zusammensetzung-ueber-zeit.webp" />
-            <img src="assets/screenshots/finanzgecko-vermoegen-zusammensetzung-ueber-zeit.png"
-                 width="2060" height="491" loading="lazy" decoding="async"
+            <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support
+                 bleibt die dunkle Variante der Standard (wie das <img>-Fallback unten). -->
+            <source media="(prefers-color-scheme: light)" type="image/webp"
+                    srcset="assets/screenshots/light-finanzgecko-vermoegen-zusammensetzung-ueber-zeit.webp" />
+            <source media="(prefers-color-scheme: light)" type="image/png"
+                    srcset="assets/screenshots/light-finanzgecko-vermoegen-zusammensetzung-ueber-zeit.png" />
+            <source type="image/webp" srcset="assets/screenshots/dark-finanzgecko-vermoegen-zusammensetzung-ueber-zeit.webp" />
+            <img src="assets/screenshots/dark-finanzgecko-vermoegen-zusammensetzung-ueber-zeit.png"
+                 width="986" height="295" loading="lazy" decoding="async"
                  alt="FinanzGecko Dashboard-Diagramm „Zusammensetzung über Zeit“: gestapelte Flächen je Kontotyp von Januar bis Juli 2026" />
           </picture>
           <figcaption>„Zusammensetzung über Zeit“: der Verlauf gestapelt nach Kontotyp.</figcaption>
