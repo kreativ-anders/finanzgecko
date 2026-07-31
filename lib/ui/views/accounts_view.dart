@@ -225,7 +225,7 @@ class _AccountFormFields extends StatelessWidget {
             Expanded(
               child: DropdownButtonFormField<String>(
                 initialValue: tag,
-                decoration: const InputDecoration(labelText: 'Typ'),
+                decoration: const InputDecoration(labelText: 'Kontotyp'),
                 items: [for (final t in tagOptions) DropdownMenuItem(value: t, child: Text(t))],
                 onChanged: onTagChanged,
               ),

@@ -69,7 +69,7 @@ class _AssetsViewState extends State<AssetsView> {
               children: [
                 Text(
                   'Anschaffungen wie Elektronik, Möbel oder Fahrzeuge mit ihrem aktuellen Wert. Werte direkt in der '
-                  'Liste bearbeiten — beim Ändern gilt der Eintrag als heute neu bewertet.',
+                  'Liste bearbeiten — jede Bearbeitung gilt als heute neu bewertet.',
                   style: TextStyle(color: kMuted),
                 ),
                 const SizedBox(height: 14),

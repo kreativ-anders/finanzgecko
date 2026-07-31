@@ -1094,10 +1094,10 @@ class _AssetsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (app.assets.isEmpty)
-            const EmptyHint('Noch keine Vermögenswerte erfasst.')
+            const EmptyHint('Noch keine Vermögenswerte angelegt.')
           else ...[
             Text(fmtMoney(total, app.baseCurrency), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            Text('${app.assets.length} Gegenstände erfasst', style: TextStyle(color: kMuted, fontSize: 13)),
+            Text('${app.assets.length} Vermögenswerte erfasst', style: TextStyle(color: kMuted, fontSize: 13)),
             const SizedBox(height: 4),
             Text(
               'Standardmäßig nicht im Gesamtvermögen — oben zuschaltbar.',
@@ -1110,7 +1110,7 @@ class _AssetsSection extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: OutlinedButton(
               onPressed: () => onNavigate(AppView.assets),
-              child: noSelect(Text(overdue ? 'Vermögenswerte re-evaluieren' : 'Vermögenswerte verwalten')),
+              child: noSelect(Text(overdue ? 'Vermögenswerte neu bewerten' : 'Vermögenswerte verwalten')),
             ),
           ),
         ],
@@ -1135,7 +1135,7 @@ class _SubscriptionsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (app.subscriptions.isEmpty)
-            const EmptyHint('Noch keine wiederkehrenden Ein-/Ausgaben erfasst.')
+            const EmptyHint('Noch keine Fixposten erfasst.')
           else
             Wrap(
               spacing: 32,
