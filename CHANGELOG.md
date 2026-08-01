@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.6.0 - 2026-08-01
+
+- 🔖 Version 1.6.0+15 (39c9a10)
+- 📝 Add Haushaltsbuch FAQ to homepage (c60c9c0)
+- 💬 Harmonize German UI labels in views (34256bd)
+- 💄 Add light/dark screenshot pairs for docs website (4414593)
+- 🔍️ Improve docs SEO and UI accessibility (a2f1ab8)
+- 💬 Add testimonial section and GitHub star badge (0e8e0da)
+- 📝 Changelog für v1.5.3 (311b600)
+
+
 ## v1.5.3 - 2026-07-24
 
 - 🔖 Version 1.5.3+14 (622c7a3)
