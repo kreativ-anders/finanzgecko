@@ -209,12 +209,21 @@
     <section id="testimonials" class="testimonials">
       <div class="wrap">
         <h2 class="sr-only">Was Nutzer:innen sagen</h2>
-        <figure class="testimonial-card">
-          <blockquote>
-            <p>„Die App sieht nice aus! Hatte direkt Lust mein Budget zu planen!“</p>
-          </blockquote>
-          <figcaption>— Jennifer T.</figcaption>
-        </figure>
+        <div class="testimonial-grid">
+          <figure class="testimonial-card">
+            <blockquote>
+              <p>„Die App sieht nice aus! Hatte direkt Lust mein Budget zu planen!“</p>
+            </blockquote>
+            <figcaption>— Jennifer T.</figcaption>
+          </figure>
+          <figure class="testimonial-card">
+            <blockquote>
+              <p>„Die App ist visuell so ruhig gestaltet und die Erklärungen so eingängig, dass ich sie entspannt
+                und angstfrei nutzen kann, obwohl das Thema Finanzen für mich eine Herausforderung darstellt!“</p>
+            </blockquote>
+            <figcaption>— Charleen K. (Autismus/ADHS)</figcaption>
+          </figure>
+        </div>
         <p class="github-stat" id="github-stat" hidden>
           <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">
             <span aria-hidden="true">★</span> <span id="github-stat-count"></span> auf GitHub
@@ -425,18 +434,17 @@
             <p class="micro-trust"><a href="#faq-install">Wie installiere ich es für Windows, macOS oder Linux? →</a></p>
           </div>
           <div class="get-card">
-            <h3>Entwicklung unterstützen</h3>
-            <p>FinanzGecko bleibt kostenlos und quelloffen. Wer möchte, kann die Weiterentwicklung freiwillig unterstützen — zahl, was es dir wert ist.</p>
+            <h3>Zahl, was es dir wert ist</h3>
+            <p>FinanzGecko ist und bleibt kostenlos. Wer möchte, unterstützt die Weiterentwicklung freiwillig — mit einem Betrag deiner Wahl, ganz ohne Abo oder Verpflichtung.</p>
             <!--
-              TODO(Stripe): Sobald der Payment Link im Stripe Dashboard existiert (Produkt mit "customer chooses
-              price", siehe AI_MASTER.md §1), hier nur den href ersetzen:
-                1. href="STRIPE_PAYMENT_LINK_PLACEHOLDER" → echte Payment-Link-URL (https://buy.stripe.com/...)
-                2. Im Payment Link unter "After payment" die Bestätigungsseite auf
-                   https://kreativ-anders.github.io/finanzgecko/danke.html setzen (bereits vorbereitet).
-              Kein target="_blank": der Checkout soll den Tab ersetzen, damit der Stripe-Redirect danach im
-              selben Tab auf danke.html landet statt in einem verwaisten Zusatztab.
+              TODO: sobald im Payment Link (Anbieter-Dashboard → Payment Links → diesen Link → Edit → "After
+              payment") eine eigene Bestätigungsseite hinterlegt werden kann, dort
+              https://kreativ-anders.github.io/finanzgecko/danke.html eintragen (bereits vorbereitet). Bis dahin
+              zeigt der Zahlungsanbieter seine eigene Standard-Bestätigungsseite — funktional keine Einschränkung.
+              Kein target="_blank": der Checkout soll den Tab ersetzen, damit ein späterer Redirect im selben Tab
+              auf danke.html landet statt in einem verwaisten Zusatztab.
             -->
-            <a class="btn btn-secondary" href="STRIPE_PAYMENT_LINK_PLACEHOLDER">Freiwillig unterstützen (Stripe)</a>
+            <a class="btn btn-secondary" href="https://buy.stripe.com/4gM8wP8ld0bEbMBg18es000">Freiwillig unterstützen →</a>
           </div>
         </div>
       </div>
