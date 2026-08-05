@@ -489,8 +489,12 @@ header.site nav a:hover {
   padding: 28px;
 }
 
+/* --primary-text, nicht --primary: als Rahmenindikator gilt die AI_MASTER-§5-Regel
+   (Markenfarbe, die einen Rahmen/Fokus färbt → *Text-Variante). #00c878 erreicht
+   auf dem hellen Theme nur 2,2:1 gegen --surface und wäre als 1px-Rahmen praktisch
+   unsichtbar; #00814d liegt bei 4,9:1. Im Dark Theme sind beide Tokens identisch. */
 .get-card-primary {
-  border-color: var(--primary);
+  border-color: var(--primary-text);
 }
 
 .get-card h3 {
@@ -682,7 +686,10 @@ footer.site .wrap {
    beiden anderen bleiben bewusst gleich groß und sichtbar — eine Fehlerkennung
    soll niemanden vom richtigen Download abschneiden. */
 .download-card-primary {
-  border-color: var(--primary);
+  /* Siehe .get-card-primary: --primary-text, sonst ist der Rahmen auf dem hellen
+     Theme (2,2:1) nicht wahrnehmbar — das Badge darüber nutzt bereits denselben
+     Token und war deshalb sichtbar, während die Umrandung zu fehlen schien. */
+  border-color: var(--primary-text);
 }
 
 .download-badge {
@@ -807,7 +814,8 @@ footer.site .wrap {
 }
 
 .card.note {
-  border-left: 3px solid var(--primary);
+  /* Siehe .get-card-primary — Rahmenindikator, also --primary-text. */
+  border-left: 3px solid var(--primary-text);
 }
 
 .card.warn {

@@ -365,7 +365,10 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   nutzt die `*Text`-Variante** — Flächen/Fills (Button-/Chip-Hintergrund, `AppLineChart`-Linienfarbe, farbige
   Badges mit dunklem Text obendrauf) bleiben bei der Original-Konstante. Ausnahme: der Marken-Schriftzug
   "🦎 FinanzGecko" im Kopfbereich (`navigation_shell.dart`) bleibt `kPrimary`, da Logos/Markennamen laut WCAG 1.4.3
-  von der Kontrastvorgabe ausgenommen sind.
+  von der Kontrastvorgabe ausgenommen sind. **Dieselbe Regel gilt für `docs/assets/style.css`**, das die Tokens der
+  App spiegelt: dort trat der Fehler bereits einmal auf — die per JS hervorgehobene Download-Karte
+  (`.download-card-primary`) bekam `border-color: var(--primary)` und war auf dem hellen Theme mit 2,2:1 gegen
+  `--surface` unsichtbar, während das Badge darüber (`--primary-text`, 4,9:1) korrekt erschien.
 - **Kein natives Menü** unter Linux/Windows (Flutters `PlatformMenuBar` nur macOS) → In-App-"Datei"-Bereich im
   Fensterkopf, plattformübergreifend identisch, plus globale Tastenkürzel (`Strg`/`⌘`+E/I/Q) via `CallbackShortcuts`.
 - **Geld-/Zahlenformat:** immer über `fmtMoney`/`fmtPercent`/`fmtInputNumber`/`parseInputNumber` aus `formatting.dart`
