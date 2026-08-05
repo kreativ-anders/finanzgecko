@@ -398,6 +398,11 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 - **Lesbare Zeilenbreite:** Fließtext in einer Dashboard-Karte (z. B. der Fremdwährungs-Rundungshinweis) wird auf
   eine feste `maxWidth` begrenzt (`ConstrainedBox`), statt über die volle, auf breiten Fenstern sehr lange
   Karten-/Dashboard-Breite (bis zu 1100px, siehe `navigation_shell.dart`) zu laufen.
+- **Splash-Dauer (1100ms Standzeit + 400ms Überblendung, `splash_screen.dart`)** ist eine bewusste Marken-, keine
+  Lade-Entscheidung: `main()` ruft `windowManager.show()` **vor** `runApp()`, das Fenster ist also bereits (leer, in
+  `kBackground`) sichtbar, bevor der Splash überhaupt erscheint — beide Werte kommen zu dieser Init-Zeit hinzu, der
+  Start wirkt insgesamt ~1,5s lang gebrandet. Eine Verkürzung würde den Start spürbar reaktionsschneller machen;
+  genau das wurde geprüft (Issue #11) und verworfen. Werte daher nicht ohne Rücksprache ändern.
 
 ## 6. Plattform-Besonderheiten (siehe auch [dev/setup.md](dev/setup.md) und [dev/building.md](dev/building.md) für Details)
 
@@ -694,6 +699,7 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    - `usesDataProtectionKeychain: false` auf macOS — Abschnitt 4.1.
    - App-Sandbox deaktiviert auf macOS — Abschnitt 4.1.
    - Fensterposition wird bewusst nicht gespeichert — Abschnitt 4.3.
+   - Splash-Dauer 1100ms + 400ms Überblendung — Abschnitt 5.
    - Keine DB-Engine, eine einzige JSON-Datei — Abschnitt 2.
    - Schema-Versionsschutz auf dem Start-Ladepfad (Downgrade-Guard + `pre-migrate-backup` + Golden-File-Fixture) —
      Abschnitt 4.1/4.2. Die Datendatei ist die einzige Quelle der Wahrheit; kein neuer Build darf bestehende Daten

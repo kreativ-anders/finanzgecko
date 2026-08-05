@@ -27,3 +27,9 @@ Feature: Fensterverhalten und Splash
     Then wird für mindestens 1100ms ein Marken-Splash (Logo + "🦎 FinanzGecko") gezeigt — Store und Fenster sind zu
       diesem Zeitpunkt bereits vollständig initialisiert, der Splash gated also keinen echten Ladevorgang
     And danach blendet die App über 400ms zur Dashboard-Ansicht über
+
+  Scenario: Splash-Dauer ist eine bewusste Marken-Entscheidung
+    Given main.dart ruft windowManager.show() bereits vor runApp auf
+    Then ist vor dem Splash für die Dauer der Initialisierung ein leeres Fenster in kBackground sichtbar
+    And die 1100ms + 400ms kommen zu dieser Zeit hinzu, der Start wirkt also insgesamt ~1,5s lang gebrandet
+    And genau diese Werte wurden geprüft und bewusst beibehalten — sie sind ohne Rücksprache nicht zu "optimieren"

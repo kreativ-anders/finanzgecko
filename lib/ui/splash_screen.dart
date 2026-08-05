@@ -8,6 +8,15 @@ import 'theme.dart';
 /// is already loaded by the time [main] calls runApp, so this is purely a
 /// timed brand moment (not gating on any real loading work) — held for at
 /// least [minDuration] and faded into [child].
+///
+/// The 1100ms + 400ms fade were reviewed deliberately (issue #11) and kept:
+/// they are a brand decision, not a placeholder. Note that they land *on top
+/// of* the time the window is already visible — [main] runs
+/// `windowManager.show()` before `runApp`, so the user first sees an empty
+/// [kBackground] window, then this splash, for ~1.5s total. Shortening it
+/// would make startup feel snappier; that trade-off was considered and
+/// declined, so don't "optimize" these values without asking (see AI_MASTER
+/// §5 and `gherkin/window.feature`).
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.child, this.minDuration = const Duration(milliseconds: 1100)});
 
