@@ -781,6 +781,12 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    - **Kein wählbarer Speicherort für die Datendatei** — Abschnitt 4.1. Wurde einmal gebaut und bewusst wieder
      entfernt; wer ihn erneut vorschlägt, sollte zuerst dort nachlesen, warum er den Anwendungsfall nicht löst.
    - Export-Passwort ist optional, ohne Passwort bleibt es beim bisherigen Klartext-JSON — Abschnitt 4.1.
+   - **Kein automatisches Backup.** Wurde durchgerechnet und verworfen: es bräuchte eine Ableitung des Schlüssels
+     pro Sitzung, ein gespeichertes Passwort, eine Versionshaltung, eine Gesundheitsüberwachung *und* einen Umbau
+     der bestehenden Reminder-Rangfolge — und seine typische Fehlerart (still gescheitert) merkt man erst, wenn man
+     das Backup braucht. Stattdessen führt die vorhandene Backup-Erinnerung zum manuellen Export und erklärt dabei
+     die zwei Dinge, auf die es ankommt: außerhalb dieses Rechners aufbewahren, und nur das Backup ist übertragbar
+     (`AppState.getBackupReminder`).
    - Keine DB-Engine, eine einzige JSON-Datei — Abschnitt 2.
    - Schema-Versionsschutz auf dem Start-Ladepfad (Downgrade-Guard + `pre-migrate-backup` + Golden-File-Fixture) —
      Abschnitt 4.1/4.2. Die Datendatei ist die einzige Quelle der Wahrheit; kein neuer Build darf bestehende Daten

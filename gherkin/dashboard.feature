@@ -191,7 +191,11 @@ Feature: Dashboard — Vermögensübersicht
       Given es existiert mindestens ein Konto, Kontostand, Vermögenswert oder Fixposten
       And noch nie ein Export durchgeführt wurde
       And die früheste erfasste Aktivität liegt mindestens kBackupReminderFirstDays (182, ~6 Monate) zurück
-      Then erscheint ein Banner "Noch nie exportiert — leg jetzt ein erstes Backup an."
+      Then erscheint ein Banner "Noch nie exportiert — leg jetzt ein erstes Backup an und bewahre es außerhalb
+        dieses Computers auf. Nur das Backup lässt sich auf einem anderen Rechner öffnen."
+      And der Text nennt bewusst beides — den Aufbewahrungsort und die Übertragbarkeit: die Erinnerung ist für die
+        meisten Nutzer die einzige Stelle, an der sie je vom Export erfahren, und ein automatisches Backup gibt es
+        bewusst nicht (siehe AI_MASTER §4.1)
       Given die früheste erfasste Aktivität liegt weniger als kBackupReminderFirstDays zurück
       Then erscheint noch kein Backup-Reminder-Banner (nur eine unauffällige Info in den Einstellungen)
 

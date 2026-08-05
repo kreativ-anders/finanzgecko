@@ -244,7 +244,10 @@ class SettingsView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Schreibt eine unverschlüsselte JSON-Datei mit allen Konten und Kontoständen an einen Ort deiner Wahl.',
+                  'Schreibt eine JSON-Datei mit allen Konten und Kontoständen an einen Ort deiner Wahl — auf Wunsch '
+                  'mit einem Passwort geschützt. Das ist deine einzige Sicherung, die sich auch auf einem anderen '
+                  'Computer wieder einlesen lässt. Bewahre sie außerhalb dieses Rechners auf, etwa auf einer '
+                  'externen Platte oder in einer Cloud.',
                   style: TextStyle(color: kMuted),
                 ),
                 const SizedBox(height: 6),
