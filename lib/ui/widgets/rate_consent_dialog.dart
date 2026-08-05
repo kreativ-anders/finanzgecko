@@ -94,8 +94,9 @@ Future<double?> resolveRate(
     if (!context.mounted) return null;
   }
 
-  final rate = (await app.currencyService.getExchangeRate(from, to, dateISO))?.rate;
+  final service = app.currencyService;
+  final rate = (await service.getExchangeRate(from, to, dateISO))?.rate;
   if (rate != null) return rate;
   if (!context.mounted) return null;
-  return promptManualRate(context, from: from, to: to);
+  return promptManualRate(context, from: from, to: to, reason: service.lastFailure?.message);
 }

@@ -4,9 +4,18 @@ import '../../utils/formatting.dart';
 import '../theme.dart';
 
 /// Asks the user for a manual "1 [from] = ? [to]" rate when neither the live
-/// API nor the local cache has one (e.g. offline on first use of a currency
-/// pair). Returns null if cancelled or the input isn't a valid positive number.
-Future<double?> promptManualRate(BuildContext context, {required String from, required String to}) async {
+/// API nor the local cache has one. Returns null if cancelled or the input
+/// isn't a valid positive number.
+///
+/// [reason] names the actual cause — the dialog used to guess "(offline?)"
+/// even when the real reason was a missing opt-in, which sent people looking
+/// for a network problem that wasn't there.
+Future<double?> promptManualRate(
+  BuildContext context, {
+  required String from,
+  required String to,
+  String? reason,
+}) async {
   final ctrl = TextEditingController();
   try {
     final result = await showDialog<double>(
@@ -17,7 +26,9 @@ Future<double?> promptManualRate(BuildContext context, {required String from, re
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Kein Wechselkurs $from → $to verfügbar (offline?). Bitte Kurs manuell eingeben:'),
+            Text(reason ?? 'Für $from → $to liegt kein Wechselkurs vor.'),
+            const SizedBox(height: 8),
+            Text('Bitte Kurs manuell eingeben:', style: TextStyle(color: kMuted)),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,

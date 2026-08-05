@@ -78,6 +78,21 @@ Feature: Wechselkurse — Zustimmung, Abruf, Cache und manueller Fallback
       Then liefert der Service keinen Kurs (null)
       And die aufrufende Ansicht fragt den Nutzer nach einem manuellen Kurs
 
+    Scenario: Der Dialog nennt den tatsächlichen Grund
+      Given kein Kurs konnte ermittelt werden
+      Then nennt der Dialog den konkreten Grund statt pauschal "(offline?)"
+      And bei fehlender Zustimmung lautet er "Der Online-Abruf … ist nicht erlaubt (Einstellungen → Wechselkurse)"
+      And bei erteilter Zustimmung mit gescheitertem Abruf "… konnte nicht abgerufen werden (keine Verbindung
+        oder Störung der API)"
+      And der technische Grund (HTTP-Status, Timeout, Parse-Fehler, Zustimmungszustand) steht zusätzlich als
+        debugPrint im Log
+
+    Scenario: Ein fehlgeschlagener Cache-Schreibvorgang kostet keinen Kurs
+      Given ein Kurs wurde erfolgreich von der API abgerufen
+      When das Schreiben der Kursdatei fehlschlägt (z. B. Datenträger voll, Verzeichnis schreibgeschützt)
+      Then wird der abgerufene Kurs trotzdem verwendet
+      And der Fehlschlag wird nur geloggt, nicht in "kein Wechselkurs verfügbar" umgedeutet
+
     Scenario: Manuellen Kurs eingeben
       Given ein Dialog "Kein Wechselkurs verfügbar" wird angezeigt für "1 <von> = ? <nach>"
       When ich eine positive Zahl eingebe und auf "Übernehmen" klicke

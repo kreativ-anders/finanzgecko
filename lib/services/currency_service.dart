@@ -1,13 +1,48 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../data/app_store.dart';
 
+/// Where a rate came from — mirrors the "Quelle" wording in
+/// `gherkin/currency_exchange.feature`.
+enum RateSource { identity, live, cache }
+
 class RateResult {
   final double rate;
+  final RateSource source;
 
-  const RateResult({required this.rate});
+  const RateResult({required this.rate, required this.source});
+}
+
+/// Why no rate could be produced.
+///
+/// Exists because every failure used to collapse into a bare `null`, so the
+/// manual-rate dialog claimed "(offline?)" even when the real cause was a
+/// missing opt-in or a rejected response — undiagnosable from the outside.
+/// [message] sitzt bewusst **im Enum** und nicht in einer Extension: eine
+/// Extension ist nur sichtbar, wo ihre Datei direkt importiert wird, und der
+/// einzige Aufrufer (`ui/widgets/rate_consent_dialog.dart`) kennt den Typ nur
+/// indirekt über `AppState`. Als Enum-Getter funktioniert es überall.
+enum RateFailure {
+  /// Rate lookups aren't allowed (opt-in `unset`/`denied`) and nothing cached.
+  notAllowed(
+    'Der Online-Abruf von Wechselkursen ist nicht erlaubt (Einstellungen → Wechselkurse), '
+        'und für dieses Währungspaar liegt kein gespeicherter Kurs vor.',
+  ),
+
+  /// Allowed, but the request failed (no connection, timeout, HTTP error,
+  /// unparsable answer) and nothing cached.
+  requestFailed(
+    'Der Wechselkurs konnte nicht abgerufen werden (keine Verbindung oder Störung der API), '
+        'und für dieses Währungspaar liegt kein gespeicherter Kurs vor.',
+  );
+
+  const RateFailure(this.message);
+
+  /// Shown to the user above the manual-rate field.
+  final String message;
 }
 
 /// Exchange rates via the free Frankfurter.app API (ECB reference rates).
@@ -51,39 +86,68 @@ class CurrencyService {
     }
   }
 
+  /// Last reason [getExchangeRate] came back empty, for the manual-rate dialog.
+  ///
+  /// Diagnostic only — set on every failing lookup and never read for control
+  /// flow. Safe because rate lookups happen strictly sequentially inside one
+  /// save operation (see `resolveRate`), which reads it immediately after.
+  RateFailure? lastFailure;
+
   /// dateStr must be "YYYY-MM-DD". Returns null only if neither the API nor
-  /// the cache can supply a rate (caller then asks the user for a manual one).
+  /// the cache can supply a rate; [lastFailure] then says why and the caller
+  /// asks the user for a manual rate.
   Future<RateResult?> getExchangeRate(String from, String to, String dateStr) async {
     if (from == to) {
-      return const RateResult(rate: 1);
+      lastFailure = null;
+      return const RateResult(rate: 1, source: RateSource.identity);
     }
 
     final key = _cacheKey(from, to, dateStr);
 
+    RateResult? fromCache(RateFailure failure) {
+      final cached = _store.getCachedRate(key);
+      if (cached != null) {
+        lastFailure = null;
+        return RateResult(rate: cached, source: RateSource.cache);
+      }
+      lastFailure = failure;
+      return null;
+    }
+
     // Opt-in gate. Deliberately enforced *here* rather than only at the call
     // sites: this is the one place that opens a socket, so no future caller can
     // forget the check. Without consent the local cache is still fair game — it
-    // is a file on this machine, reading it contacts nobody. Callers that get
-    // null then fall back to promptManualRate, exactly as when offline.
+    // is a file on this machine, reading it contacts nobody.
     if (!mayFetchRates) {
-      final cached = _store.getCachedRate(key);
-      return cached != null ? RateResult(rate: cached) : null;
+      debugPrint('CurrencyService: Abruf $from→$to übersprungen (Zustimmung: ${_store.rateFetchConsent.name}).');
+      return fromCache(RateFailure.notAllowed);
     }
 
     try {
       final uri = Uri.parse('$_apiBase/$dateStr?from=${Uri.encodeComponent(from)}&to=${Uri.encodeComponent(to)}');
       final res = await http.get(uri).timeout(_requestTimeout);
-      if (res.statusCode != 200) throw Exception('Frankfurter API: HTTP ${res.statusCode}');
+      if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       final rates = data['rates'] as Map<String, dynamic>?;
       final rate = rates?[to];
       if (rate is! num) throw Exception('Kein Kurs in der Antwort enthalten');
       final rateD = rate.toDouble();
-      await _store.setCachedRate(key, rateD);
-      return RateResult(rate: rateD);
-    } catch (_) {
-      final cached = _store.getCachedRate(key);
-      return cached != null ? RateResult(rate: cached) : null;
+
+      // Caching is best-effort and must never cost the user a rate we already
+      // hold: a failing write to finanzgecko-rates.json (read-only directory,
+      // full disk) previously landed in the outer catch and turned a perfectly
+      // good live rate into "kein Wechselkurs verfügbar".
+      try {
+        await _store.setCachedRate(key, rateD);
+      } catch (err) {
+        debugPrint('CurrencyService: Kurs $from→$to abgerufen, aber Cache-Schreiben fehlgeschlagen: $err');
+      }
+
+      lastFailure = null;
+      return RateResult(rate: rateD, source: RateSource.live);
+    } catch (err) {
+      debugPrint('CurrencyService: Abruf $from→$to für $dateStr fehlgeschlagen: $err');
+      return fromCache(RateFailure.requestFailed);
     }
   }
 }
