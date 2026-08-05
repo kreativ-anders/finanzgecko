@@ -414,14 +414,29 @@ class AppState extends ChangeNotifier {
       }
       final days = daysSince(firstActivityAt);
       if (days >= kBackupReminderFirstDays) {
-        return const BackupReminder(overdue: true, message: 'Noch nie exportiert — leg jetzt ein erstes Backup an.');
+        // Die Erinnerung ist die einzige Stelle, an der die meisten Nutzer je
+        // vom Export erfahren — deshalb sagt sie nicht nur "mach ein Backup",
+        // sondern auch die zwei Dinge, die daran zählen: woanders aufbewahren,
+        // und dass NUR diese Datei auf einem anderen Rechner funktioniert. Die
+        // Datendatei selbst kann das nicht (siehe AppStore.resolveDataDirectory).
+        return const BackupReminder(
+          overdue: true,
+          message:
+              'Noch nie exportiert — leg jetzt ein erstes Backup an und bewahre es außerhalb dieses Computers '
+              'auf. Nur das Backup lässt sich auf einem anderen Rechner öffnen.',
+        );
       }
       return const BackupReminder(overdue: false, message: 'Noch nie exportiert.');
     }
 
     final days = daysSince(lastExportAt);
     if (days >= kBackupReminderRepeatDays) {
-      return BackupReminder(overdue: true, message: 'Letztes Backup vor $days Tagen — Zeit für ein neues Backup.');
+      return BackupReminder(
+        overdue: true,
+        message:
+            'Letztes Backup vor $days Tagen — Zeit für ein neues Backup. Bewahre es außerhalb dieses Computers '
+            'auf; nur das Backup lässt sich auf einem anderen Rechner öffnen.',
+      );
     }
     return BackupReminder(overdue: false, message: 'Letztes Backup vor $days Tag${days == 1 ? '' : 'en'}.');
   }

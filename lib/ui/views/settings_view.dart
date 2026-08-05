@@ -163,6 +163,29 @@ class SettingsView extends StatelessWidget {
           ),
           cardGap,
           SectionCard(
+            title: 'Benachrichtigungen',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Erinnert dich per nativer System-Benachrichtigung ans Backup-Exportieren und an fällige '
+                  'Neubewertungen von Vermögenswerten — höchstens einmal je überfälligem Zustand, nicht bei jedem '
+                  'App-Start erneut. Dafür muss die App laufen; es gibt keinen Hintergrunddienst, der '
+                  'benachrichtigt, während sie geschlossen ist.',
+                  style: TextStyle(color: kMuted),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: noSelect(const Text('Desktop-Benachrichtigungen')),
+                  value: app.notificationsEnabled,
+                  onChanged: (v) => context.read<AppState>().setNotificationsEnabled(v),
+                ),
+              ],
+            ),
+          ),
+          cardGap,
+          SectionCard(
             title: 'Sicherheit',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,29 +234,6 @@ class SettingsView extends StatelessWidget {
                 // Jahre später noch nachlesbar sein, wenn jemand die Datei in
                 // einem Cloud-Ordner sieht und sie für ein Backup hält.
                 _DeviceBoundHint(onExport: onExport),
-              ],
-            ),
-          ),
-          cardGap,
-          SectionCard(
-            title: 'Benachrichtigungen',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Erinnert dich per nativer System-Benachrichtigung ans Backup-Exportieren und an fällige '
-                  'Neubewertungen von Vermögenswerten — höchstens einmal je überfälligem Zustand, nicht bei jedem '
-                  'App-Start erneut. Dafür muss die App laufen; es gibt keinen Hintergrunddienst, der '
-                  'benachrichtigt, während sie geschlossen ist.',
-                  style: TextStyle(color: kMuted),
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: noSelect(const Text('Desktop-Benachrichtigungen')),
-                  value: app.notificationsEnabled,
-                  onChanged: (v) => context.read<AppState>().setNotificationsEnabled(v),
-                ),
               ],
             ),
           ),
