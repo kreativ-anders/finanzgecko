@@ -113,9 +113,15 @@ finanzgecko/
 ├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
 ├── docs/                          # Statische Website (GitHub Pages, kein Build-Schritt, reines HTML/CSS)
+│   ├── CNAME                      # Custom Domain: finanzgecko.app — **alle** absoluten URLs (canonical, og:url,
+│   │                               #   og:image, twitter:image, sitemap.xml, robots.txt, llms.txt, README.md sowie
+│   │                               #   `_downloadPageUrl` in lib/ui/views/settings_view.dart) zeigen auf diese Domain,
+│   │                               #   nicht mehr auf kreativ-anders.github.io/finanzgecko
 │   ├── index.html                 # Startseite: Hero, Testimonial, Screenshots, Features, Trust-Strip, Download/Unterstützen, FAQ
 │   ├── download.html              # Download-Seite: ein Direktlink pro OS (Windows/macOS/Linux), s. u.
 │   ├── documentation.html         # Kurzanleitung für Endnutzer (kein Bezug zu AI_MASTER/gherkin)
+│   ├── datenschutz.html           # Datenschutzerklärung (Pirsch, GitHub Pages, Stripe, GitHub-API, App-Netzwerkpfade),
+│   │                               #   im Footer aller Seiten verlinkt — bei jeder neuen Drittanbieter-Einbindung nachziehen
 │   ├── danke.html                 # Bestätigungsseite nach Stripe-Checkout ("Entwicklung unterstützen"), `noindex`,
 │   │                               #   als "After payment"-Redirect im Stripe Payment Link zu hinterlegen
 │   └── assets/                    # style.css (teilt Farbtokens mit lib/ui/theme.dart; Hell/Dunkel via
@@ -417,6 +423,16 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   `.../releases/latest` (GitHubs stabiler Redirect auf die neueste Release-Seite); Nutzer:innen wählen dort die
   passende Datei. Bewusst weiterhin kein clientseitiger JS-/GitHub-API-Aufruf auf der sonst komplett statischen
   Seite, um die exakte Asset-URL clientseitig zusammenzubauen.
+- **Website unter eigener Domain `finanzgecko.app`** (GitHub Pages + `docs/CNAME`). Absolute URLs gehören konsequent
+  auf diese Domain — `kreativ-anders.github.io/finanzgecko` darf nirgends mehr auftauchen (GitHub redirectet zwar,
+  aber ein `canonical`/`og:url` auf den alten Host spaltet SEO- und Analytics-Signale auf zwei Hostnames).
+- **Reichweitenmessung mit Pirsch Analytics** (`<script defer src="https://api.pirsch.io/pa.js" id="pianjs"
+  data-code="…">` im `<head>` **jeder** Seite unter `docs/`, neue Seiten nicht vergessen). Bewusst gewählt, weil
+  cookiefrei, ohne IP-Speicherung und in Deutschland gehostet: damit kein Cookie-Banner und keine Einwilligung nach
+  § 25 TDDDG nötig, was zum Datenschutz-Versprechen des Produkts passt. Das gilt **nur für die Website** — die App
+  selbst sendet weiterhin **keine** Telemetrie; diese Trennung in `docs/index.html`, `docs/llms.txt` und
+  `docs/datenschutz.html` sauber halten. Jede weitere Drittanbieter-Einbindung muss in `docs/datenschutz.html`
+  ergänzt werden.
 - **Kein automatischer/silenter In-App-Auto-Updater** — mangels Apple-Developer- bzw. Microsoft-Signaturzertifikat
   gäbe es keine vertrauenswürdige Grundlage, um ein heruntergeladenes Binary ohne Rückfrage zu installieren; ein
   In-Place-Austausch würde Gatekeeper/SmartScreen-Warnungen ohnehin nicht vermeiden. Stattdessen ein **manueller
