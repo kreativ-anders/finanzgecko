@@ -46,6 +46,12 @@ here has to be checked by hand or by a throwaway script. The traps, in the order
   the *same* element — both set `padding`, the later rule in `style.css` wins, and the horizontal padding silently
   disappears. That bit `download.html` once: the card grid ran edge-to-edge on narrow windows while the hero above
   it was correctly inset. Nothing in CI catches this; check any new section at ~380px width by hand.
+- **There is exactly one breakpoint, `@media (max-width: 700px)` at the bottom of `style.css`, and all
+  mobile-specific rules belong in it.** Scattering per-rule media queries next to their base rules is what let
+  every section except `.hero` keep its full desktop vertical padding on phones. A new section with vertical
+  padding, a heading size, or a fixed-column grid needs a matching entry there. Desktop paddings are deliberately
+  *not* uniform (the hero breathes more than the trust strip); the breakpoint compresses that scale, it doesn't
+  flatten it — so use explicit per-section values, not one shared token.
 - **Every new third-party call or embed must be added to `docs/datenschutz.html`** (currently: Pirsch, GitHub
   Pages, the GitHub API on index + download, Stripe). The page is linked from all footers; a German site that
   loads something undisclosed is the one failure mode here with legal weight.
