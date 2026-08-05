@@ -419,7 +419,11 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   von der Kontrastvorgabe ausgenommen sind. **Dieselbe Regel gilt für `docs/assets/style.css`**, das die Tokens der
   App spiegelt: dort trat der Fehler bereits einmal auf — die per JS hervorgehobene Download-Karte
   (`.download-card-primary`) bekam `border-color: var(--primary)` und war auf dem hellen Theme mit 2,2:1 gegen
-  `--surface` unsichtbar, während das Badge darüber (`--primary-text`, 4,9:1) korrekt erschien.
+  `--surface` unsichtbar, während das Badge darüber (`--primary-text`, 4,9:1) korrekt erschien. Zweiter Fall,
+  gefunden im Qualitäts-Audit (Abschnitt 9): `.card.warn` färbte seinen linken Rahmenindikator mit `--danger`
+  (2,6:1 gegen `--bg` hell). Deshalb gibt es in `style.css` jetzt — analog zur App — auch ein `--danger-text`
+  (`#FF6B6B` dunkel / `#BA4E4E` hell, spiegelt `kDangerText`); `--danger` bleibt als Markenfarbe stehen, ist
+  aktuell aber nirgends mehr referenziert.
 - **Bankfarben sind Logofarben, keine Textfarben.** `kBanks` enthält u. a. `#000000` (Trade Republic, C24,
   Mercedes-Benz Bank) und `#ffe600` (comdirect) — als Fläche oder 10px-Punkt unproblematisch, als Beschriftung auf
   `kSurface` unlesbar (bis herunter zu 1,06:1). Wo eine Kontofarbe **Text** einfärbt (aktuell der Kontotyp-Chip auf

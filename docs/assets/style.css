@@ -17,6 +17,10 @@
      verfehlt #00c878 die WCAG-AA-Grenze von 4,5:1, deshalb dort abgedunkelt.
      Entspricht kPrimaryText in lib/ui/theme.dart. */
   --primary-text: #00c878;
+  /* Dasselbe Spiel für kDanger: als Randindikator auf hellem Hintergrund kommt
+     #ff6b6b nur auf 2,6:1 und verschwindet praktisch. Entspricht kDangerText in
+     lib/ui/theme.dart — im Dunkelmodus identisch mit --danger. */
+  --danger-text: #ff6b6b;
   --prose: #cfd8d2;
   --lead: #c3ccc7;
   --shot-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
@@ -33,6 +37,7 @@
     --muted: #5b6b62;
     --text: #10160f;
     --primary-text: #00814d;
+    --danger-text: #ba4e4e;
     --prose: #3c4842;
     --lead: #44514a;
     --shot-shadow: 0 18px 40px rgba(16, 22, 15, 0.12);
@@ -826,7 +831,8 @@ footer.site .wrap {
 }
 
 .card.warn {
-  border-left: 3px solid var(--danger);
+  /* Siehe .card.note — Rahmenindikator, also --danger-text statt --danger. */
+  border-left: 3px solid var(--danger-text);
 }
 
 ul.feature-list {

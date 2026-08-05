@@ -132,6 +132,12 @@ class CurrencyService {
       final rate = rates?[to];
       if (rate is! num) throw Exception('Kein Kurs in der Antwort enthalten');
       final rateD = rate.toDouble();
+      // Ein Kurs <= 0 (oder NaN/Infinity) ist keine gültige Antwort und würde
+      // sonst gecacht und in `Balance.rate`/`Subscription.rate` geschrieben —
+      // entries_view muss dort bereits `rate != 0` abfangen. Lieber hier als
+      // Fehlschlag behandeln (Cache/manuelle Eingabe greift), denn die
+      // manuelle Eingabe validiert dieselbe Bedingung seit jeher.
+      if (!rateD.isFinite || rateD <= 0) throw Exception('Unplausibler Kurs in der Antwort: $rateD');
 
       // Caching is best-effort and must never cost the user a rate we already
       // hold: a failing write to finanzgecko-rates.json (read-only directory,
