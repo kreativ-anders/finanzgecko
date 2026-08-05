@@ -23,7 +23,9 @@ wiederkehrende Ein-/Ausgaben ("Fixposten"). Es gibt keine mobile oder Web-Versio
 - Plattformen: Linux, macOS, Windows. Keine mobile App, keine Web-Version.
 - Datenhaltung: 100 % lokal, keine Cloud-Synchronisierung, kein Nutzerkonto.
 - Verschlüsselung: AES-256-GCM, Schlüssel im OS-Keychain (kein Passwort, das Nutzer:innen selbst verwalten müssen).
-- Einzige Netzwerkverbindung: öffentliche EZB-Referenzkurse (Wechselkurse), App bleibt sonst offline nutzbar.
+- Netzwerkverbindungen: nur zwei, beide ohne Übermittlung persönlicher oder finanzieller Daten — öffentliche
+  EZB-Referenzkurse (Wechselkurse, nur bei Fremdwährungskonten) und die manuell ausgelöste Update-Prüfung über die
+  öffentliche GitHub-Releases-API. Ohne beides bleibt die App vollständig offline nutzbar.
 - Sprache der Benutzeroberfläche: Deutsch.
 
 ## Anbieter

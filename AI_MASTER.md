@@ -123,7 +123,14 @@ finanzgecko/
 │   ├── datenschutz.html           # Datenschutzerklärung (Pirsch, GitHub Pages, Stripe, GitHub-API, App-Netzwerkpfade),
 │   │                               #   im Footer aller Seiten verlinkt — bei jeder neuen Drittanbieter-Einbindung nachziehen
 │   ├── danke.html                 # Bestätigungsseite nach Stripe-Checkout ("Entwicklung unterstützen"), `noindex`,
-│   │                               #   als "After payment"-Redirect im Stripe Payment Link zu hinterlegen
+│   │                               #   als "After payment"-Redirect im Stripe Payment Link zu hinterlegen —
+│   │                               #   exakt https://finanzgecko.app/danke.html (die Redirect-URL lebt in Stripe,
+│   │                               #   nicht im Repo, und wird von keinem Test erfasst: bei Domain-/Pfadwechsel
+│   │                               #   dort **manuell** nachziehen)
+│   ├── 404.html                    # GitHub Pages liefert diese Seite für jeden unbekannten Pfad aus, `noindex`.
+│   │                               #   Nutzt als einzige Seite **root-absolute** Pfade (`/assets/…`, `/index.html`),
+│   │                               #   da sie unter beliebig tiefen URLs gerendert wird — relative Pfade brächen dort.
+│   │                               #   Meldet den angefragten Pfad per `window.pirschNotFound()` an Pirsch
 │   └── assets/                    # style.css (teilt Farbtokens mit lib/ui/theme.dart; Hell/Dunkel via
 │                                   #   prefers-color-scheme, Dunkel bleibt der Default), Icons, Screenshots
 │       └── screenshots/           # je Ansicht vier Dateien: `{light,dark}-<name>.{png,webp}`. Die Seiten liefern
@@ -415,14 +422,34 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   Build-Job aus `pubspec.yaml` gelesen (nicht aus dem Git-Tag), damit auch ungetaggte Ad-hoc-Testbuilds
   (`workflow_dispatch`, `bump: none`) einen versionierten Dateinamen bekommen. `packaging/linux/install.sh` bleibt als
   Alternative fürs Linux-Startmenü aus einem entpackten Bundle bestehen.
-- **Keine unversionierten Alias-Assets mehr:** jedes Release trägt pro Plattform genau **eine** Binärdatei (den
+- **Keine unversionierten Alias-Assets:** jedes Release trägt pro Plattform genau **eine** Binärdatei (den
   versionierten Namen). Ein früherer Ansatz lud zusätzlich eine byte-identische unversionierte Kopie hoch
   (`cp`/`Copy-Item` vor dem jeweiligen `upload-artifact`-Schritt), damit `docs/download.html` fest auf
-  `.../releases/latest/download/<fester Name>` verlinken konnte — das verdoppelte aber Upload/Storage pro Release
-  für reine Duplikate. `docs/download.html` verlinkt die drei OS-Buttons deshalb stattdessen auf
-  `.../releases/latest` (GitHubs stabiler Redirect auf die neueste Release-Seite); Nutzer:innen wählen dort die
-  passende Datei. Bewusst weiterhin kein clientseitiger JS-/GitHub-API-Aufruf auf der sonst komplett statischen
-  Seite, um die exakte Asset-URL clientseitig zusammenzubauen.
+  `.../releases/latest/download/<fester Name>` verlinken konnte — das verdoppelte aber Upload und Asset-Liste pro
+  Release für reine Duplikate. Bleibt abgeschafft.
+- **`docs/download.html` löst das konkrete Asset clientseitig auf** (Progressive Enhancement, seit August 2026).
+  Ausgeliefert werden drei gleichwertige Karten, deren `href` statisch auf `.../releases/latest` zeigt — genau der
+  Stand, der ohne JavaScript, ohne Netz und bei API-Rate-Limit stehen bleibt. Ein Skript am Seitenende ergänzt
+  darauf zwei unabhängige Verbesserungen:
+  1. **OS-Erkennung** (`navigator.userAgentData.platform`, Fallback `navigator.platform`/User-Agent): die passende
+     Karte rückt per `grid.insertBefore` nach vorn und bekommt `.download-card-primary` + ein „Für dein System
+     erkannt“-Badge. Die anderen beiden bleiben **gleich groß und sichtbar** — eine Fehlerkennung darf niemanden
+     vom richtigen Download abschneiden. Deshalb bewusst *kein* einzelner großer Button. Mobile UAs (iOS/Android)
+     werden absichtlich nicht erkannt: es gibt keine mobile Version, dort bleiben alle drei Karten gleichwertig.
+  2. **Asset-Auflösung** über `api.github.com/repos/.../releases/latest`: pro Karte wird das Asset per
+     `data-asset-suffix` (`-Setup.exe`, `-mac.app.zip`, `-x86_64.AppImage`) gematcht, der Button auf dessen
+     `browser_download_url` gesetzt und Version + Dateigröße in `.download-meta` eingeblendet. Findet sich kein
+     passendes Asset (etwa weil ein Plattform-Build im Release fehlgeschlagen ist), bleibt für **diese** Karte der
+     Fallback-Link stehen.
+
+  Grund für die Kehrtwende gegenüber der früheren „keine JS-/GitHub-API-Aufrufe auf der statischen Seite“-Regel:
+  alle drei Buttons endeten auf derselben Release-Seite, wo Nutzer:innen aus fünf Assets (drei Binaries + zwei
+  Source-Archive) das richtige heraussuchen mussten — für die Zielgruppe die größte Hürde der ganzen Seite. Die
+  Regel war ohnehin schon durchbrochen, weil `docs/index.html` dieselbe API für den Sterne-Zähler abfragt.
+  **Die Suffixe sind an die Artefaktnamen aus `release.yml` gekoppelt** — ändert sich dort ein Dateiname, müssen
+  die `data-asset-suffix`-Attribute mitgezogen werden, sonst fällt die Seite still auf die Release-Seite zurück
+  (kein sichtbarer Fehler, deshalb leicht zu übersehen). Jeder neue Netzwerkaufruf der Website gehört zusätzlich
+  in `docs/datenschutz.html`.
 - **Website unter eigener Domain `finanzgecko.app`** (GitHub Pages + `docs/CNAME`). Absolute URLs gehören konsequent
   auf diese Domain — `kreativ-anders.github.io/finanzgecko` darf nirgends mehr auftauchen (GitHub redirectet zwar,
   aber ein `canonical`/`og:url` auf den alten Host spaltet SEO- und Analytics-Signale auf zwei Hostnames).

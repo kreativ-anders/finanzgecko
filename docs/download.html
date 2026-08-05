@@ -51,26 +51,37 @@
       </div>
     </section>
 
-    <section class="download-grid wrap">
-      <div class="download-card">
+    <!-- Die drei Karten sind bewusst gleichwertig ausgeliefert: das `href` zeigt
+         statisch auf .../releases/latest und funktioniert ohne JavaScript exakt wie
+         bisher. Das Skript am Seitenende ist reines Progressive Enhancement — es
+         ersetzt den Link durch die konkrete Asset-URL und hebt die erkannte
+         Plattform hervor. Schlägt es fehl, bleibt dieser Stand stehen. -->
+    <section class="download-grid wrap" id="download-grid">
+      <div class="download-card" data-os="windows" data-asset-suffix="-Setup.exe">
         <h2>Windows</h2>
         <p class="download-req">Installer (.exe) · Windows 10/11 · 64-Bit</p>
-        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">Für Windows herunterladen →</a>
-        <p class="install-hint">Auf der Release-Seite <code>FinanzGecko-&lt;Version&gt;-Setup.exe</code> laden, starten und den Anweisungen folgen. Zeigt Windows SmartScreen eine Warnung, auf „Weitere Informationen&#8220; → „Trotzdem ausführen&#8220; tippen (kein Codesigning-Zertifikat, siehe <a href="documentation.html">Dokumentation</a>).</p>
+        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
+          Für Windows herunterladen →</a>
+        <p class="download-meta" hidden></p>
+        <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; SmartScreen-Warnung →</a></p>
       </div>
 
-      <div class="download-card">
+      <div class="download-card" data-os="macos" data-asset-suffix="-mac.app.zip">
         <h2>macOS</h2>
         <p class="download-req">Gezipptes App-Bundle (.app.zip) · Apple Silicon &amp; Intel</p>
-        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">Für macOS herunterladen →</a>
-        <p class="install-hint">Auf der Release-Seite <code>FinanzGecko-&lt;Version&gt;-mac.app.zip</code> laden, entpacken, FinanzGecko.app in den Programme-Ordner ziehen. Zeigt Gatekeeper „nicht verifizierter Entwickler&#8220;, per Rechtsklick → „Öffnen&#8220; einmalig bestätigen.</p>
+        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
+          Für macOS herunterladen →</a>
+        <p class="download-meta" hidden></p>
+        <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; in Datenschutz &amp; Sicherheit freigeben →</a></p>
       </div>
 
-      <div class="download-card">
+      <div class="download-card" data-os="linux" data-asset-suffix="-x86_64.AppImage">
         <h2>Linux</h2>
         <p class="download-req">AppImage · x86_64 · jede gängige Distribution</p>
-        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">Für Linux herunterladen →</a>
-        <p class="install-hint">Auf der Release-Seite <code>FinanzGecko-&lt;Version&gt;-x86_64.AppImage</code> laden, mit <code>chmod +x</code> ausführbar machen und per Doppelklick starten — nichts zu entpacken, nichts zu installieren.</p>
+        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
+          Für Linux herunterladen →</a>
+        <p class="download-meta" hidden></p>
+        <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; ausführbar machen →</a></p>
       </div>
     </section>
 
@@ -92,5 +103,82 @@
       </nav>
     </div>
   </footer>
+
+  <script>
+    // Progressive Enhancement für die drei Download-Karten. Zwei unabhängige
+    // Schritte, die beide fehlschlagen dürfen:
+    //   1. OS erkennen → passende Karte nach vorn und hervorheben (rein lokal).
+    //   2. Neuestes Release abfragen → Button auf die konkrete Asset-URL zeigen
+    //      lassen und Version/Größe anzeigen (ein GET auf die öffentliche
+    //      GitHub-API, siehe datenschutz.html).
+    // Ohne JS, ohne Netz oder bei Rate-Limit bleibt der ausgelieferte Stand
+    // stehen: drei gleichwertige Karten, die auf .../releases/latest zeigen.
+    (function () {
+      var grid = document.getElementById('download-grid');
+      if (!grid) return;
+      var cards = Array.prototype.slice.call(grid.querySelectorAll('.download-card'));
+
+      function detectOs() {
+        // userAgentData ist zuverlässiger, aber noch nicht überall vorhanden.
+        var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+        var ua = navigator.userAgent || '';
+        var hay = (p + ' ' + ua).toLowerCase();
+        // iOS/Android bewusst nicht abgedeckt: es gibt keine mobile Version, dort
+        // bleiben alle drei Karten gleichwertig statt eine falsche zu bewerben.
+        if (/android|iphone|ipad|ipod/.test(hay)) return null;
+        if (/win/.test(hay)) return 'windows';
+        if (/mac|darwin/.test(hay)) return 'macos';
+        if (/linux|x11|cros/.test(hay)) return 'linux';
+        return null;
+      }
+
+      var os = detectOs();
+      if (os) {
+        cards.forEach(function (card) {
+          if (card.getAttribute('data-os') !== os) return;
+          card.classList.add('download-card-primary');
+          var badge = document.createElement('p');
+          badge.className = 'download-badge';
+          badge.textContent = 'Für dein System erkannt';
+          card.insertBefore(badge, card.firstElementChild);
+          grid.insertBefore(card, grid.firstElementChild);
+        });
+      }
+
+      function formatSize(bytes) {
+        if (typeof bytes !== 'number' || bytes <= 0) return null;
+        return (bytes / 1048576).toFixed(1).replace('.', ',') + ' MB';
+      }
+
+      fetch('https://api.github.com/repos/kreativ-anders/finanzgecko/releases/latest')
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (data) {
+          if (!data || !Array.isArray(data.assets)) return;
+          var version = typeof data.tag_name === 'string' ? data.tag_name.replace(/^v/i, '') : null;
+          cards.forEach(function (card) {
+            var suffix = card.getAttribute('data-asset-suffix');
+            var link = card.querySelector('a.btn');
+            var meta = card.querySelector('.download-meta');
+            if (!suffix || !link) return;
+            var asset = data.assets.filter(function (a) {
+              return typeof a.name === 'string' && a.name.slice(-suffix.length) === suffix;
+            })[0];
+            // Kein passendes Asset (z. B. ein Plattform-Build ist im Release
+            // fehlgeschlagen)? Dann bleibt der Fallback-Link auf die Release-Seite.
+            if (!asset || !asset.browser_download_url) return;
+            link.href = asset.browser_download_url;
+            if (!meta) return;
+            var parts = [];
+            if (version) parts.push('Version ' + version);
+            var size = formatSize(asset.size);
+            if (size) parts.push(size);
+            if (!parts.length) return;
+            meta.textContent = parts.join(' · ');
+            meta.hidden = false;
+          });
+        })
+        .catch(function () { /* Offline/Rate-Limit: Buttons behalten den Link auf die Release-Seite. */ });
+    })();
+  </script>
 </body>
 </html>

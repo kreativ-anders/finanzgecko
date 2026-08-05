@@ -27,6 +27,35 @@ broke — read its message before hunting.
 **Keep docs in sync** (AI_MASTER.md + `gherkin/`) with every change, and don't revert a documented decision (see
 AI_MASTER "Regeln für KI-Agenten") without asking.
 
+## The website (`docs/`) — things no test covers
+
+`docs/` is plain HTML/CSS with no build step and **no test suite**: `flutter test` never touches it, so every rule
+here has to be checked by hand or by a throwaway script. The traps, in the order they tend to bite:
+
+- **`docs/download.html` resolves release assets client-side.** The three cards ship with a static
+  `.../releases/latest` link (the no-JS fallback) and a script rewrites each `href` to the concrete asset, matched
+  by the `data-asset-suffix` attribute. **Those suffixes are coupled to the artifact names in
+  `.github/workflows/release.yml`** — rename an artifact there and the page silently falls back to the release
+  page with no visible error. Change both together. See AI_MASTER §6 for the full rationale.
+- **Install instructions live in exactly one place:** the `#faq-install` entry in `docs/index.html`. The three
+  download cards link to it cross-page; a small script on `index.html` force-opens a `<details>` addressed by
+  fragment, because browsers don't do that reliably and the link would otherwise land on a collapsed line.
+  Don't re-add per-card prose — it drifted out of sync with macOS's actual behaviour once already.
+- **Every new third-party call or embed must be added to `docs/datenschutz.html`** (currently: Pirsch, GitHub
+  Pages, the GitHub API on index + download, Stripe). The page is linked from all footers; a German site that
+  loads something undisclosed is the one failure mode here with legal weight.
+- **New page? Copy the whole `<head>` contract:** the Pirsch snippet (`api.pirsch.io/pa.js`, `id="pianjs"`), a
+  `canonical` on `https://finanzgecko.app/…`, and either an entry in `docs/sitemap.xml` or `noindex`.
+- **`docs/404.html` is the one page using root-absolute paths** (`/assets/…`). GitHub Pages serves it at whatever
+  depth the bad URL had, so relative paths break it. Don't "fix" them to match the other pages.
+- **`docs/CNAME` pins `finanzgecko.app`.** No absolute URL anywhere in the repo may point at
+  `kreativ-anders.github.io` — that includes `README.md` and `_downloadPageUrl` in `lib/ui/views/settings_view.dart`.
+- **Claims about the app's network access appear in four places** — `docs/index.html` (feature card),
+  `docs/llms.txt`, `docs/datenschutz.html`, and AI_MASTER. The app makes exactly two calls: exchange rates
+  (`api.frankfurter.dev`) and the manual update check (`api.github.com`). Keep all four in agreement.
+- **The Stripe "after payment" redirect lives in Stripe's dashboard, not the repo**, and points at
+  `https://finanzgecko.app/danke.html`. Nothing in CI will catch it after a domain or path change.
+
 ## Regenerating the website screenshots
 
 `docs/` ships seven app screenshots, each in four files: `docs/assets/screenshots/{light,dark}-<slug>.{png,webp}`.

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Seite nicht gefunden — FinanzGecko</title>
+  <meta name="description" content="Diese Seite gibt es nicht (mehr). Zurück zur Startseite, zum Download oder zur Dokumentation von FinanzGecko." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32.png" />
+  <link rel="apple-touch-icon" href="/assets/icon-192.png" />
+  <link rel="stylesheet" href="/assets/style.css" />
+  <meta name="theme-color" content="#0a0f0c" />
+  <script defer src="https://api.pirsch.io/pa.js" id="pianjs" data-code="DKo22RMuBesw3XMADDNrwe0fQ7544AG1"></script>
+</head>
+<body>
+  <header class="site">
+    <div class="wrap">
+      <img class="logo" src="/assets/icon-192.png" width="32" height="32" alt="" />
+      <a class="brand" href="/index.html">FinanzGecko</a>
+      <nav>
+        <a href="/index.html">Start</a>
+        <a href="/documentation.html">Dokumentation</a>
+        <a href="/download.html">Download</a>
+        <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="download-hero">
+      <div class="wrap">
+        <h1>Diese Seite gibt es nicht</h1>
+        <p>Der Link ist vermutlich veraltet oder hat sich vertippt. Deine Daten sind davon nicht betroffen —
+          die liegen ohnehin nur auf deinem eigenen Rechner.</p>
+      </div>
+    </section>
+
+    <section class="download-all">
+      <div class="wrap">
+        <div class="cta-group">
+          <a class="btn" href="/index.html">Zur Startseite</a>
+          <a class="btn btn-secondary" href="/download.html">Zum Download</a>
+          <a class="btn btn-secondary" href="/documentation.html">Zur Dokumentation</a>
+        </div>
+        <p>Du hast einen kaputten Link auf dieser Website gefunden?
+          <a href="https://github.com/kreativ-anders/finanzgecko/issues/new?title=Kaputter%20Link%20auf%20der%20Website" target="_blank" rel="noopener">Melde ihn als GitHub-Issue</a>
+          oder schreib eine <a href="https://kreativ-anders.de/kontakt" target="_blank" rel="noopener">Nachricht</a>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site">
+    <div class="wrap footer-content">
+      <span>© 2026 kreativ-anders | Manuel Steinberg</span>
+      <nav class="footer-nav">
+        <a href="https://kreativ-anders.de/impressum" target="_blank" rel="noopener">Impressum</a>
+        <a href="/datenschutz.html">Datenschutz</a>
+        <a href="https://kreativ-anders.de/kontakt" target="_blank" rel="noopener">Kontakt</a>
+        <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    // pa.js defines window.pirschNotFound() inside pirschInit(), which it registers
+    // on DOMContentLoaded — so the earliest safe moment to call it is "load".
+    // Reports the requested path as a "404 Page Not Found" event, which is how
+    // broken inbound links become visible in Pirsch instead of vanishing silently.
+    window.addEventListener('load', function () {
+      if (typeof window.pirschNotFound === 'function') window.pirschNotFound();
+    });
+  </script>
+</body>
+</html>

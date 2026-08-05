@@ -677,6 +677,33 @@ footer.site .wrap {
   margin: 14px 0 0;
 }
 
+/* Vom Skript in download.html gesetzt, sobald das Betriebssystem erkannt wurde:
+   die passende Karte rückt an die erste Position und wird hervorgehoben. Die
+   beiden anderen bleiben bewusst gleich groß und sichtbar — eine Fehlerkennung
+   soll niemanden vom richtigen Download abschneiden. */
+.download-card-primary {
+  border-color: var(--primary);
+}
+
+.download-badge {
+  align-self: center;
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--primary-text);
+}
+
+/* Version und Dateigröße des konkreten Assets — erst sichtbar, wenn die
+   GitHub-API geantwortet hat (sonst bleibt das <p> hidden). */
+.download-meta {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  margin: 10px 0 0;
+}
+
 .download-all {
   text-align: center;
   padding-bottom: 64px;
