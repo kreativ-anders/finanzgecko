@@ -74,6 +74,11 @@ class AppSchema {
   /// Einstellungen → Erscheinungsbild (System/Hell/Dunkel), Standard: System.
   AppThemeMode themeMode;
 
+  /// Zustimmung zum Wechselkurs-Abruf. Fehlt der Schlüssel (jede vor diesem
+  /// Feature geschriebene Datei), ergibt sich `unset` — die App fragt dann beim
+  /// nächsten echten Kursbedarf einmalig nach. Siehe gherkin/currency_exchange.feature.
+  RateFetchConsent rateFetchConsent;
+
   AppSchema({
     required this.schemaVersion,
     required this.baseCurrency,
@@ -92,6 +97,7 @@ class AppSchema {
     this.backupOverdueNotified = false,
     List<int>? assetOverdueNotifiedIds,
     this.themeMode = AppThemeMode.system,
+    this.rateFetchConsent = RateFetchConsent.unset,
   }) : assetOverdueNotifiedIds = assetOverdueNotifiedIds ?? [];
 
   factory AppSchema.defaults() => AppSchema(
@@ -159,6 +165,7 @@ class AppSchema {
             ]
           : <int>[],
       themeMode: appThemeModeFromJson(meta['themeMode'] as String?),
+      rateFetchConsent: rateFetchConsentFromJson(meta['rateFetchConsent'] as String?),
     );
   }
 
@@ -179,6 +186,7 @@ class AppSchema {
       'backupOverdueNotified': backupOverdueNotified,
       'assetOverdueNotifiedIds': assetOverdueNotifiedIds,
       'themeMode': appThemeModeToJson(themeMode),
+      'rateFetchConsent': rateFetchConsentToJson(rateFetchConsent),
     },
     'window': window.toJson(),
   };

@@ -352,6 +352,19 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
+  /// Zustimmung zum Wechselkurs-Abruf (Issue #16). `unset` heißt "noch nie
+  /// gefragt" und wird wie eine Ablehnung behandelt, bis der Nutzer im
+  /// Erfassungsmoment tatsächlich gefragt wurde — siehe
+  /// `ui/widgets/rate_consent_dialog.dart`.
+  RateFetchConsent get rateFetchConsent => store.rateFetchConsent;
+
+  bool get mayFetchRates => store.mayFetchRates;
+
+  Future<void> setRateFetchConsent(RateFetchConsent value) async {
+    await store.setRateFetchConsent(value);
+    await _reloadAndNotify();
+  }
+
   DateTime? get lastExportAt => store.lastExportAt;
 
   /// Where the encrypted database lives on disk — surfaced read-only in

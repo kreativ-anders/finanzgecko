@@ -838,6 +838,27 @@ class AppStore {
     }
   }
 
+  // ---------- Wechselkurs-Abruf (Opt-in) ----------
+
+  RateFetchConsent get rateFetchConsent => _requireData.rateFetchConsent;
+
+  /// Einzige Stelle, an der entschieden wird, ob die App die Kurs-API
+  /// kontaktieren darf. `unset` zählt bewusst als **nicht** erlaubt: solange
+  /// niemand gefragt wurde, geht nichts raus.
+  bool get mayFetchRates => rateFetchConsent == RateFetchConsent.granted;
+
+  Future<void> setRateFetchConsent(RateFetchConsent value) async {
+    final data = _requireData;
+    final previous = data.rateFetchConsent;
+    data.rateFetchConsent = value;
+    try {
+      await _persist();
+    } catch (_) {
+      data.rateFetchConsent = previous;
+      rethrow;
+    }
+  }
+
   Future<void> markBackupOverdueNotified() async {
     final data = _requireData;
     final previous = data.backupOverdueNotified;

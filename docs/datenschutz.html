@@ -126,17 +126,23 @@
           <strong>keine</strong> Finanzdaten und sendet <strong>keine</strong> Telemetrie oder Absturzberichte. Alle
           Daten liegen AES-256-GCM-verschlüsselt in einer einzigen Datei auf dem eigenen Rechner; der Schlüssel liegt im
           Schlüsselbund des Betriebssystems.</p>
-        <p>Netzwerkverbindungen baut die App nur in diesen zwei Fällen auf, jeweils ohne Übermittlung persönlicher
-          oder finanzieller Daten:</p>
+        <p>Von sich aus baut die App überhaupt keine Netzwerkverbindung auf. Es gibt genau zwei Fälle, in denen
+          das überhaupt geschieht — beide setzen eine ausdrückliche Entscheidung von dir voraus, und in beiden
+          werden keine persönlichen oder finanziellen Daten übermittelt:</p>
         <ul class="feature-list">
           <li><strong>Wechselkurse</strong> — Abruf öffentlicher Referenzkurse über <span class="kbd">api.frankfurter.dev</span>
-            (basierend auf den Referenzkursen der Europäischen Zentralbank), sofern Konten in Fremdwährung geführt
-            werden.</li>
+            (basierend auf den Referenzkursen der Europäischen Zentralbank). Der Abruf erfolgt <em>nur nach
+            ausdrücklicher Zustimmung</em>: sobald zum ersten Mal ein Betrag in Fremdwährung umgerechnet werden
+            soll, fragt die App einmalig nach. Bis dahin — und nach einer Ablehnung — wird nichts abgerufen.
+            Übertragen werden dabei ausschließlich das Währungspaar und das Datum. Die Entscheidung lässt sich
+            jederzeit unter Einstellungen → Wechselkurse ändern.</li>
           <li><strong>Update-Prüfung</strong> — Abfrage der neuesten Release-Version über die öffentliche GitHub-API
-            (<span class="kbd">api.github.com</span>).</li>
+            (<span class="kbd">api.github.com</span>), ausschließlich wenn du in den Einstellungen auf
+            „Nach Updates suchen“ klickst.</li>
         </ul>
         <p>In beiden Fällen ist für den jeweiligen Anbieter technisch bedingt die IP-Adresse sichtbar. Wer das
-          vermeiden möchte, kann die App ohne Fremdwährungen und ohne Update-Prüfung vollständig offline nutzen.</p>
+          vermeiden möchte, lehnt den Kursabruf ab und verzichtet auf die Update-Prüfung — die App bleibt dann
+          vollständig offline nutzbar; Kurse lassen sich weiterhin von Hand eintragen.</p>
       </section>
 
       <section id="rechte">

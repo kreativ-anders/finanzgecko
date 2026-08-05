@@ -109,6 +109,59 @@ class SettingsView extends StatelessWidget {
             ),
           ),
           cardGap,
+          // Bewusst schon sichtbar, bevor jemals gefragt wurde ("Noch nicht
+          // entschieden"): wer wissen will, ob die App ins Netz geht, soll das
+          // hier nachlesen können, ohne erst einen Fremdwährungsbetrag erfassen
+          // zu müssen. Das Anzeigen löst selbst nie einen Abruf oder Dialog aus.
+          SectionCard(
+            title: 'Wechselkurse',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Beträge in Fremdwährung brauchen einen Wechselkurs. FinanzGecko kann ihn bei '
+                  'api.frankfurter.dev abrufen (EZB-Referenzkurse) — dabei werden nur Währungspaar und Datum '
+                  'übertragen, keine Beträge und keine Kontodaten. Ohne Abruf werden bereits gespeicherte '
+                  'Kurse genutzt, sonst fragt die App dich nach dem Kurs.',
+                  style: TextStyle(color: kMuted),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<RateFetchConsent>(
+                  segments: const [
+                    ButtonSegment(
+                      value: RateFetchConsent.unset,
+                      label: Text('Noch nicht entschieden'),
+                      icon: Icon(Icons.help_outline),
+                    ),
+                    ButtonSegment(
+                      value: RateFetchConsent.granted,
+                      label: Text('Abrufen'),
+                      icon: Icon(Icons.cloud_download_outlined),
+                    ),
+                    ButtonSegment(
+                      value: RateFetchConsent.denied,
+                      label: Text('Nicht abrufen'),
+                      icon: Icon(Icons.cloud_off_outlined),
+                    ),
+                  ],
+                  selected: {app.rateFetchConsent},
+                  onSelectionChanged: (selection) {
+                    context.read<AppState>().setRateFetchConsent(selection.first);
+                    showSavedSnackBar(context, onNavigate);
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  app.rateFetchConsent == RateFetchConsent.unset
+                      ? 'Solange nichts entschieden ist, wird nichts abgerufen. Gefragt wirst du erst, wenn '
+                            'das erste Mal wirklich ein Kurs gebraucht wird.'
+                      : 'Diese Entscheidung lässt sich hier jederzeit ändern.',
+                  style: TextStyle(color: kMuted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          cardGap,
           SectionCard(
             title: 'Sicherheit',
             child: Column(
@@ -384,22 +437,13 @@ class _HelpSection extends StatelessWidget {
             value: displayLabel,
           ),
           _SecurityMetaRow(label: 'Fenstergröße', value: '${windowSize.width.round()}×${windowSize.height.round()}'),
-          FutureBuilder<bool>(
-            future: context.read<AppState>().currencyService.isApiReachable(),
-            builder: (context, snapshot) {
-              final label = switch (snapshot.connectionState) {
-                ConnectionState.done => (snapshot.data ?? false) ? 'Erreichbar' : 'Nicht erreichbar',
-                _ => 'Prüfe…',
-              };
-              return _SecurityMetaRow(label: 'Wechselkurs-API', value: label);
-            },
-          ),
+          const _ApiReachabilityRow(),
           const SizedBox(height: 10),
           Text(
-            'Der Abruf der EZB-Wechselkurse (api.frankfurter.dev) ist die einzige automatische externe '
-            'Netzwerkverbindung der App. "Nach Updates suchen" unten fragt zusätzlich, aber nur wenn du '
-            'explizit darauf klickst, die öffentliche GitHub-Releases-API ab. Sonst findet keine '
-            'Kommunikation statt, kein Tracking, keine Analyse-Dienste.',
+            'FinanzGecko baut von sich aus keine Netzwerkverbindung auf. Die EZB-Wechselkurse '
+            '(api.frankfurter.dev) werden nur abgerufen, wenn du das oben unter "Wechselkurse" erlaubt hast, '
+            'und die öffentliche GitHub-Releases-API nur, wenn du unten explizit auf "Nach Updates suchen" '
+            'klickst. Sonst findet keine Kommunikation statt, kein Tracking, keine Analyse-Dienste.',
             style: TextStyle(color: kMuted, fontSize: 12),
           ),
           Divider(height: 28, color: kBorder),
@@ -509,7 +553,14 @@ Future<void> _copyDebugInfo(BuildContext context, String displayLabel, Size wind
     'Dart-Laufzeit: ${Platform.version.split(' ').first}',
     'Bildschirm(e): $displayLabel',
     'Fenstergröße: ${windowSize.width.round()}×${windowSize.height.round()}',
-    'Wechselkurs-API erreichbar: ${apiReachable ? 'ja' : 'nein'}',
+    // isApiReachable liefert null, wenn der Abruf nicht erlaubt ist, und geht
+    // dann gar nicht erst ins Netz — die Debug-Info darf keine stille Ausnahme
+    // von der Zustimmung sein, auch nicht "nur zur Diagnose".
+    'Wechselkurs-API erreichbar: ${switch (apiReachable) {
+      true => 'ja',
+      false => 'nein',
+      null => 'nicht geprüft (Abruf nicht erlaubt)',
+    }}',
   ].join('\n');
   await Clipboard.setData(ClipboardData(text: text));
   if (!context.mounted) return;
@@ -521,6 +572,63 @@ Future<void> _copyDebugInfo(BuildContext context, String displayLabel, Size wind
 /// an attacker could use (algorithm name and storage path are public
 /// implementation facts, not secrets). When [onOpen] is set, an "open in
 /// file manager" button is shown after the value.
+/// "Wechselkurs-API"-Zeile im Hilfe-Bereich.
+///
+/// Pingt bewusst **nicht** beim Aufbau der Ansicht: das wäre ein Netzabruf,
+/// den niemand ausgelöst hat, und ein Zustimmungsdialog beim bloßen Öffnen der
+/// Einstellungen wäre für Nutzer nicht nachvollziehbar. Ohne erteilte
+/// Zustimmung steht hier deshalb nur der gespeicherte Zustand; erst der Klick
+/// auf "Jetzt prüfen" ist die ausdrückliche Handlung, die einen Abruf
+/// rechtfertigt — analog zu "Nach Updates suchen".
+class _ApiReachabilityRow extends StatefulWidget {
+  const _ApiReachabilityRow();
+
+  @override
+  State<_ApiReachabilityRow> createState() => _ApiReachabilityRowState();
+}
+
+class _ApiReachabilityRowState extends State<_ApiReachabilityRow> {
+  String? _result;
+  bool _checking = false;
+
+  Future<void> _check(AppState app) async {
+    setState(() => _checking = true);
+    final reachable = await app.currencyService.isApiReachable();
+    if (!mounted) return;
+    setState(() {
+      _checking = false;
+      _result = switch (reachable) {
+        true => 'Erreichbar',
+        false => 'Nicht erreichbar',
+        // Zustimmung wurde zwischenzeitlich entzogen.
+        null => 'Nicht geprüft (Abruf nicht erlaubt)',
+      };
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final value = switch ((_checking, _result, app.mayFetchRates)) {
+      (true, _, _) => 'Prüfe…',
+      (_, final r?, _) => r,
+      (_, _, false) => 'Nicht geprüft (Abruf nicht erlaubt)',
+      _ => 'Nicht geprüft',
+    };
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: _SecurityMetaRow(label: 'Wechselkurs-API', value: value)),
+        if (app.mayFetchRates && !_checking)
+          InkWell(
+            onTap: () => _check(app),
+            child: noSelect(Text('Jetzt prüfen', style: TextStyle(color: kPrimaryText, fontSize: 13))),
+          ),
+      ],
+    );
+  }
+}
+
 class _SecurityMetaRow extends StatelessWidget {
   const _SecurityMetaRow({required this.label, required this.value, this.onOpen});
 

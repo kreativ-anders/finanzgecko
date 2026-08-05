@@ -288,3 +288,17 @@ String appThemeModeToJson(AppThemeMode mode) => mode.name;
 
 AppThemeMode appThemeModeFromJson(String? value) =>
     AppThemeMode.values.firstWhere((m) => m.name == value, orElse: () => AppThemeMode.system);
+
+/// Zustimmung zum Abruf von Wechselkursen bei api.frankfurter.dev.
+///
+/// Bewusst dreiwertig statt `bool`: [unset] ist "noch nie gefragt" und
+/// unterscheidet sich für die Einstellungen sichtbar von einem ausdrücklichen
+/// [denied]. Voreinstellung für neue **und** bestehende Installationen ist
+/// [unset] — gefragt wird erst, wenn das erste Mal wirklich ein Kurs gebraucht
+/// wird, nie beim bloßen Öffnen einer Ansicht.
+enum RateFetchConsent { unset, granted, denied }
+
+String rateFetchConsentToJson(RateFetchConsent value) => value.name;
+
+RateFetchConsent rateFetchConsentFromJson(String? value) =>
+    RateFetchConsent.values.firstWhere((c) => c.name == value, orElse: () => RateFetchConsent.unset);

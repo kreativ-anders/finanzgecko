@@ -9,8 +9,8 @@ import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
 import '../widgets/app_snackbar.dart';
-import '../widgets/manual_rate_dialog.dart';
 import '../widgets/month_picker_field.dart';
+import '../widgets/rate_consent_dialog.dart';
 import '../widgets/section_card.dart';
 
 /// Single screen for both capturing new balances and correcting/deleting
@@ -182,12 +182,17 @@ class _EntriesViewState extends State<EntriesView> {
       }
 
       if (!rateCache.containsKey(acc.currency)) {
-        var rate = (await app.currencyService.getExchangeRate(acc.currency, app.baseCurrency, dateISO))?.rate;
-        if (rate == null) {
-          if (!mounted) return;
-          rate = await promptManualRate(context, from: acc.currency, to: app.baseCurrency);
-        }
-        rateCache[acc.currency] = rate;
+        if (!mounted) return;
+        // resolveRate asks for the online-lookup consent once (only when a
+        // foreign currency is actually involved), then falls back to the cache
+        // and finally to a manually entered rate — see rate_consent_dialog.dart.
+        rateCache[acc.currency] = await resolveRate(
+          context,
+          app,
+          from: acc.currency,
+          to: app.baseCurrency,
+          dateISO: dateISO,
+        );
       }
 
       final rate = rateCache[acc.currency];

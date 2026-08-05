@@ -51,9 +51,18 @@ Weiterentwicklung stattdessen über eine freiwillige "Pay what you want"-Unterst
 | Lint | `flutter_lints` | ^6.0.0 |
 
 Es gibt **keine** Backend-Services, keine REST-API dieser App selbst, keine Datenbank-Engine, kein Auth-System.
-Einzige *automatische* externe Netzwerkabhängigkeit: `api.frankfurter.dev` für Wechselkurse (mit Cache-Fallback, App
-bleibt offline nutzbar). Zusätzlich fragt "Nach Updates suchen" (Einstellungen → Hilfe) auf explizite Nutzeraktion
-hin die öffentliche GitHub-Releases-API ab (`UpdateService`, Abschnitt 6) — kein Hintergrund-Check, kein Auto-Update.
+Die App baut **von sich aus gar keine** Netzwerkverbindung auf; es gibt genau zwei Aufrufe, und beide setzen eine
+ausdrückliche Nutzerentscheidung voraus:
+1. `api.frankfurter.dev` für Wechselkurse — **Opt-in** (`RateFetchConsent`, Standard `unset` = nicht erlaubt).
+   Gefragt wird einmalig im Moment des ersten echten Kursbedarfs, nie beim Öffnen einer Ansicht; die Sperre sitzt
+   in `CurrencyService.getExchangeRate` selbst, nicht nur an den Aufrufstellen. Ohne Zustimmung bleiben der lokale
+   Cache und der manuelle Kurs-Dialog, die App ist voll nutzbar. Umkehrbar unter Einstellungen → Wechselkurse.
+2. Die öffentliche GitHub-Releases-API über "Nach Updates suchen" (Einstellungen → Hilfe) auf Klick
+   (`UpdateService`, Abschnitt 6) — kein Hintergrund-Check, kein Auto-Update.
+
+Auch die Erreichbarkeitsanzeige der Kurs-API in Einstellungen → Hilfe pingt nichts beim Aufbau der Ansicht: sie
+zeigt den gespeicherten Zustand und prüft erst auf Klick auf "Jetzt prüfen". Ein Zustimmungsdialog beim bloßen
+Öffnen der Einstellungen wäre für Nutzer nicht nachvollziehbar — deshalb wird dort **nie** gefragt.
 
 ## 3. Ordnerstruktur
 
@@ -100,6 +109,8 @@ finanzgecko/
 │       ├── theme.dart            # Farb-Konstanten (Hell/Dunkel/System via `ThemeScope`), ThemeData, `noSelect()`-Helper
 │       ├── views/                # Eine Datei pro Hauptansicht (siehe Tabelle unten)
 │       └── widgets/               # Wiederverwendbare Bausteine (Charts, Dialoge, Banner, Formularelemente)
+│                                  #   rate_consent_dialog.dart: Opt-in-Dialog + `resolveRate()` — der EINE Kursweg
+│                                  #   für Einträge und Fixposten (Zustimmung → Abruf/Cache → manueller Kurs)
 ├── test/                         # Dart-Unit-/Widget-Tests, gespiegelt zu den Gherkin-Szenarien (siehe Abschnitt 8)
 │   ├── support/gherkin_runner.dart # winziger, abhängigkeitsfreier Gherkin-Runner (führt @executable-Features aus)
 │   └── bdd/                        # BDD-Testdateien: rufen runFeature(...) + registrieren Step-Defs gegen lib/
@@ -273,7 +284,11 @@ automatisch über `Provider`.
 (`nextAccountId` etc.), `lastExportAt`, `window` (`WindowPrefs`), sowie das Reminder-Notification-Tracking
 `notificationsEnabled`, `backupOverdueNotified`, `assetOverdueNotifiedIds` (episodenbasiert, siehe §4.4 und
 `gherkin/notifications.feature`), sowie `themeMode` (`AppThemeMode`, Standard `system`, siehe §5
-"Erscheinungsbild") — alles additive `meta`-Felder, kein `schemaVersion`-Bump nötig. `fromDynamic()` ist **fehlertolerant pro Eintrag**:
+"Erscheinungsbild") und `rateFetchConsent` (`RateFetchConsent`, Standard `unset`, siehe §2 und
+`gherkin/currency_exchange.feature`) — alles additive `meta`-Felder, kein `schemaVersion`-Bump nötig.
+Bei `rateFetchConsent` ist das ausdrücklich beabsichtigt: ein fehlender Schlüssel (jede vor dem Feature
+geschriebene Datei) ergibt `unset`, also **keine** angenommene Zustimmung — bestehende Installationen werden
+einmalig gefragt statt stillschweigend übernommen. `fromDynamic()` ist **fehlertolerant pro Eintrag**:
 eine kaputte Zeile in einer Liste wird übersprungen statt die ganze Datei unlesbar zu machen. `toExportJson()` ist
 bewusst schlanker als `toJson()` (kein `ratesCache`/`meta`/`window` — internes Implementierungsdetail, nicht Teil
 eines Backups) **und ohne `account.color`** (`Account.toExportJson`): die Farbe ist aus der Bank ableitbar und wird
@@ -554,7 +569,7 @@ Alle Verhaltensspezifikationen auf einen Blick — Einstieg für eine KI, um vom
 | `gherkin/notifications.feature` | OS-Benachrichtigungen für Backup-/Asset-Reminder, episodenbasiert, Ein-/Ausschalten | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/backup_restore.feature` | Export/Import (JSON), Schemaprüfung, Bank→Farbe-Import, Fehlertoleranz | Unit (`app_store_ops_test`, `backup_hardening_test`) |
 | `gherkin/data_security.feature` | AES-256-GCM, OS-Keychain, Quarantäne, Schema-Parsing | Unit (`app_schema_test`, `app_store_encryption_test`) |
-| `gherkin/currency_exchange.feature` | Wechselkurse (frankfurter.dev), Cache, Offline-Fallback, manueller Kurs | nur UI/Integration (kein Unit-Test) |
+| `gherkin/currency_exchange.feature` | Opt-in zum Kursabruf (`RateFetchConsent`), Wechselkurse (frankfurter.dev), Cache, Offline-Fallback, manueller Kurs | nur UI/Integration (kein Unit-Test) |
 | `gherkin/window.feature` | Fenstergröße/Maximiert-Status, Standard-/Mindestgröße, Splash | nur UI/Integration (kein Unit-Test) |
 | `gherkin/navigation.feature` | Top-Navigation (6 Ansichten), Banner-Sprünge, In-App-Datei-Menü, Tastenkürzel, Textauswahl | nur UI/Integration (kein Unit-Test) |
 | `gherkin/executable/account_color.feature` | resolveAccountColor-Regeln | **ausführbar** (`test/bdd/account_color_bdd_test.dart`) |

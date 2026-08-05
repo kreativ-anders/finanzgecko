@@ -10,7 +10,7 @@ import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
 import '../widgets/app_snackbar.dart';
-import '../widgets/manual_rate_dialog.dart';
+import '../widgets/rate_consent_dialog.dart';
 import '../widgets/section_card.dart';
 import '../widgets/sign_toggle.dart';
 
@@ -57,12 +57,8 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
       return;
     }
 
-    final rateResult = await app.currencyService.getExchangeRate(currency, app.baseCurrency, todayISO());
-    var rate = rateResult?.rate;
-    if (rate == null) {
-      if (!mounted) return;
-      rate = await promptManualRate(context, from: currency, to: app.baseCurrency);
-    }
+    if (!mounted) return;
+    final rate = await resolveRate(context, app, from: currency, to: app.baseCurrency, dateISO: todayISO());
     if (rate == null) {
       if (!mounted) return;
       showErrorSnackBar(context, 'Kein Wechselkurs verfügbar — Fixposten wurde nicht gespeichert.');
@@ -252,12 +248,8 @@ class _SubscriptionRowState extends State<_SubscriptionRow> {
       return;
     }
 
-    final rateResult = await app.currencyService.getExchangeRate(currency, app.baseCurrency, todayISO());
-    var rate = rateResult?.rate;
-    if (rate == null) {
-      if (!mounted) return;
-      rate = await promptManualRate(context, from: currency, to: app.baseCurrency);
-    }
+    if (!mounted) return;
+    final rate = await resolveRate(context, app, from: currency, to: app.baseCurrency, dateISO: todayISO());
     if (rate == null) {
       if (!mounted) return;
       showErrorSnackBar(context, 'Kein Wechselkurs verfügbar — Änderung wurde nicht gespeichert.');
