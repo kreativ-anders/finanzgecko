@@ -3,8 +3,8 @@
 Native desktop net-worth tracker. No server, no cloud, no account — all data lives in a single JSON file in the
 app's own data directory. Built with [Flutter](https://flutter.dev), runs locally on Linux, macOS, and Windows.
 
-Download for end users: [Website](https://kreativ-anders.github.io/finanzgecko/) ·
-[Download page](https://kreativ-anders.github.io/finanzgecko/download.html)
+Download for end users: [Website](https://finanzgecko.app/) ·
+[Download page](https://finanzgecko.app/download.html)
 
 ## Built with AI — spec-first, not vibe-coded
 

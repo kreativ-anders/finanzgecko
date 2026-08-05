@@ -447,7 +447,7 @@ Future<void> _openIssueTracker() async {
 /// button per platform, the same link end users already get via the website.
 /// Deliberately not GitHub's release page: that would leave picking the right
 /// asset (Setup.exe / .app.zip / .AppImage) to the user.
-const _downloadPageUrl = 'https://kreativ-anders.github.io/finanzgecko/download.html';
+const _downloadPageUrl = 'https://finanzgecko.app/download.html';
 
 /// Manual, user-triggered update check against the GitHub Releases API (see
 /// [UpdateService]) — never automatic, never downloads/executes anything

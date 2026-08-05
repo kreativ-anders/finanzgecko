@@ -10,10 +10,10 @@ wiederkehrende Ein-/Ausgaben ("Fixposten"). Es gibt keine mobile oder Web-Versio
 
 ## Produkt
 
-- [Startseite](https://kreativ-anders.github.io/finanzgecko/): Feature-Überblick, Screenshots, Download.
-- [Dokumentation](https://kreativ-anders.github.io/finanzgecko/documentation.html): Kurzanleitung zu allen Ansichten
+- [Startseite](https://finanzgecko.app/): Feature-Überblick, Screenshots, Download.
+- [Dokumentation](https://finanzgecko.app/documentation.html): Kurzanleitung zu allen Ansichten
   der App (Konten, Einträge, Fixposten, Vermögenswerte, Dashboard, Einstellungen).
-- [Download](https://kreativ-anders.github.io/finanzgecko/download.html): kostenlose Desktop-Bundles für Linux,
+- [Download](https://finanzgecko.app/download.html): kostenlose Desktop-Bundles für Linux,
   macOS und Windows, mit Installationshinweisen je Betriebssystem (GitHub Releases im Hintergrund).
 - [Quellcode](https://github.com/kreativ-anders/finanzgecko): vollständig quelloffen.
 
@@ -30,4 +30,6 @@ wiederkehrende Ein-/Ausgaben ("Fixposten"). Es gibt keine mobile oder Web-Versio
 
 - Herausgeber: kreativ-anders | Manuel Steinberg.
 - [Impressum](https://kreativ-anders.de/impressum)
+- [Datenschutzerklärung](https://finanzgecko.app/datenschutz.html): cookiefreie Webanalyse (Pirsch), Hosting, Stripe;
+  die App selbst sendet keine Telemetrie.
 - [Kontakt](https://kreativ-anders.de/kontakt)
