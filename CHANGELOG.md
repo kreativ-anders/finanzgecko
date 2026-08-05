@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.6.1 - 2026-08-05
+
+- 🔖 Version 1.6.1+16 (a29a25c)
+- 🚸 Add 404 page and client-side asset resolution on download page (f871a97)
+- 📈 Move site to finanzgecko.app (2a7986d)
+- Create CNAME (7f55cab)
+- feat: add Pirsch analytics to website (22412e3)
+- Initial plan (cf914b4)
+- 💬 Add second testimonial, activate Stripe link (21a73d1)
+- 📝 Changelog für v1.6.0 (d26061d)
+
+
 ## v1.6.0 - 2026-08-01
 
 - 🔖 Version 1.6.0+15 (39c9a10)
