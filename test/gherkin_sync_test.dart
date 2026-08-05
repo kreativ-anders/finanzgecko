@@ -21,7 +21,10 @@ void main() {
   // test). Adding coverage for one — or adding a new untested feature — must
   // update this set, on purpose.
   const featuresWithoutUnitTest = {
-    'gherkin/currency_exchange.feature',
+    // currency_exchange ist seit dem Opt-in (Issue #16) durch
+    // test/rate_consent_test.dart abgedeckt — allerdings nur der Gate-Teil
+    // (darf abgerufen werden?), nicht der HTTP-Aufruf selbst, der weiterhin
+    // UI-/Integrationssache bleibt.
     'gherkin/window.feature',
     'gherkin/navigation.feature',
   };

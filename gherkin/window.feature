@@ -28,6 +28,15 @@ Feature: Fensterverhalten und Splash
       diesem Zeitpunkt bereits vollständig initialisiert, der Splash gated also keinen echten Ladevorgang
     And danach blendet die App über 400ms zur Dashboard-Ansicht über
 
+  Scenario: Splash-Logo folgt dem aktiven Theme
+    Given die App startet im dunklen Theme
+    Then zeigt der Splash das helle Logo (weiße Schrift), das dort 13,7:1 erreicht
+    Given die App startet im hellen Theme
+    Then zeigt der Splash das dunkle Logo (schwarze Schrift) mit 6,4:1
+    And beide Dateien haben denselben Zuschnitt (512×333), der Splash sieht in beiden Themes gleich aus
+    And schon das leere Fenster vor dem Splash hat die richtige Hintergrundfarbe — main.dart löst die Helligkeit
+      über primeThemeBrightness auf, bevor die WindowOptions gebaut werden
+
   Scenario: Splash-Dauer ist eine bewusste Marken-Entscheidung
     Given main.dart ruft windowManager.show() bereits vor runApp auf
     Then ist vor dem Splash für die Dauer der Initialisierung ein leeres Fenster in kBackground sichtbar

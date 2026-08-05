@@ -369,6 +369,7 @@ class AppState extends ChangeNotifier {
 
   /// Where the encrypted database lives on disk — surfaced read-only in
   /// Einstellungen → Sicherheit, and to open it in the OS file manager.
+  /// Der Ort ist nicht wählbar, siehe [AppStore.resolveDataDirectory].
   String get dataDirectoryPath => AppStore.resolveDataDirectory().path;
 
   Future<void> markExported() async {

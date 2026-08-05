@@ -52,6 +52,11 @@ Future<void> main() async {
     await store.ensureInitialized();
     final windowPrefs = store.windowPrefs;
 
+    // Muss vor dem WindowOptions-Aufbau stehen: dessen backgroundColor liest
+    // kBackground, und das steht ohne diesen Aufruf noch auf dem dunklen
+    // Standard, weil ThemeScope erst nach runApp() baut.
+    primeThemeBrightness(store.themeMode);
+
     await windowManager.ensureInitialized();
     final windowOptions = WindowOptions(
       size: Size(windowPrefs.width, windowPrefs.height),
@@ -76,6 +81,13 @@ Future<void> main() async {
     await appState.init();
 
     runApp(FinanzGeckoApp(appState: appState));
+  } on ForeignKeyDataException catch (err) {
+    // Kein Fehler im eigentlichen Sinn, sondern eine Situation, die erklärt
+    // werden muss: die Datei ist in Ordnung, sie gehört nur zu einem anderen
+    // Computer. Wichtig ist vor allem, was hier NICHT passiert — es wird
+    // nichts verschoben und nichts geschrieben.
+    debugPrint('FinanzGecko: Datei gehört zu einer anderen Installation: ${err.filePath}');
+    runApp(_ForeignDataApp(filePath: err.filePath));
   } catch (err, stack) {
     // A failure this early (e.g. no OS keychain/secret-service daemon
     // available for SecureKeyStore) would otherwise crash before a single
@@ -83,6 +95,70 @@ Future<void> main() async {
     // minimal, dependency-free error screen instead of a silent crash.
     debugPrint('FinanzGecko startup failed: $err\n$stack');
     runApp(_StartupErrorApp(error: err));
+  }
+}
+
+/// Erklärt in Alltagssprache, warum eine mitgebrachte Datendatei sich hier
+/// nicht öffnen lässt — ohne "Schlüssel", "Keychain" oder "Verschlüsselung"
+/// als Erklärung zu benutzen. Wer die Datei aus einem Cloud-Ordner kennt,
+/// erwartet, dass sie sich überall öffnen lässt; diese Erwartung muss der
+/// Text abräumen und gleichzeitig sagen, was stattdessen zu tun ist.
+class _ForeignDataApp extends StatelessWidget {
+  const _ForeignDataApp({required this.filePath});
+
+  final String filePath;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'FinanzGecko',
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(),
+      home: Scaffold(
+        backgroundColor: kBackground,
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, color: kPrimary, size: 40),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Diese Datei gehört zu einem anderen Computer',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Deine Daten sind so gespeichert, dass nur der Computer sie lesen kann, auf dem sie '
+                    'angelegt wurden. Diese Datei wurde auf einem anderen Computer erstellt und lässt '
+                    'sich hier deshalb nicht öffnen.',
+                    style: TextStyle(color: kMuted, height: 1.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Um deine Daten hierher zu holen, öffne FinanzGecko auf dem ursprünglichen Computer, '
+                    'wähle dort "Backup exportieren" und lies die entstandene Datei hier über '
+                    '"Backup importieren" wieder ein.',
+                    style: TextStyle(color: kMuted, height: 1.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Es wurde nichts verändert und nichts gelöscht. Die Datei liegt unverändert hier:',
+                    style: TextStyle(color: kMuted, height: 1.5),
+                  ),
+                  const SizedBox(height: 6),
+                  SelectableText(filePath, style: const TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -54,7 +54,19 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset('assets/logo/kreativ-anders-light-512.png', width: 160, height: 160),
+          // ACHTUNG, die Namen bezeichnen die *Bildfarbe*, nicht das Theme —
+          // so heißen sie auch im Quell-Repo kreativ-anders/static-assets:
+          //   …-light-…  = helles Logo (weiße Schrift) → für den DUNKLEN Grund
+          //   …-dark-…   = dunkles Logo (schwarze Schrift) → für den HELLEN Grund
+          // Vor dieser Zuordnung lief das helle Logo in beiden Themes und war
+          // auf Hell mit 1,3:1 praktisch unsichtbar. Nicht "geradeziehen".
+          Image.asset(
+            kIsDarkTheme
+                ? 'assets/logo/kreativ-anders-light-512.png'
+                : 'assets/logo/kreativ-anders-dark-512.png',
+            width: 160,
+            height: 160,
+          ),
           const SizedBox(height: 24),
           Text(
             '🦎 FinanzGecko',

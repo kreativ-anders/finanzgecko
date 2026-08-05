@@ -5,12 +5,14 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/backup_crypto.dart';
 import '../state/app_state.dart';
 import '../utils/csv_export.dart';
 import '../utils/formatting.dart';
 import 'app_view.dart';
 import 'theme.dart';
 import 'widgets/app_snackbar.dart';
+import 'widgets/backup_passphrase_dialog.dart';
 
 /// Export-/Import-Fluss für Backups (native Datei-Dialoge, Sicherheitsabfrage,
 /// Bestätigungs-/Fehler-Snackbars). Reine UI-Orchestrierung — die eigentliche
@@ -35,15 +37,30 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
   final exportData = appState.exportAllData();
   final suggestedName = 'finanzgecko-backup-${todayISO()}.json';
 
+  // Passwortfrage vor dem Dateidialog: sie betrifft den Inhalt, nicht den Ort.
+  // Leerer String = bewusst ohne Passwort, null = abgebrochen — das dürfen wir
+  // nicht verwechseln, sonst entstünde aus einem Abbruch ein ungeschützter
+  // Export.
+  final passphrase = await promptNewBackupPassphrase(context);
+  if (passphrase == null) return;
+
   final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _backupTypeGroups);
   if (location == null) return; // Dialog abgebrochen
 
   try {
-    final jsonStr = const JsonEncoder.withIndent('  ').convert(exportData);
+    // Ohne Passwort exakt das bisherige Klartext-JSON — bestehende Abläufe und
+    // ältere App-Versionen lesen das unverändert weiter.
+    final jsonStr = passphrase.isEmpty
+        ? const JsonEncoder.withIndent('  ').convert(exportData)
+        : await encryptBackup(exportData, passphrase);
     await File(location.path).writeAsString(jsonStr);
     await appState.markExported();
     if (!context.mounted) return;
-    showSavedSnackBar(context, onNavigate, message: 'Backup exportiert.');
+    showSavedSnackBar(
+      context,
+      onNavigate,
+      message: passphrase.isEmpty ? 'Backup exportiert.' : 'Backup exportiert und mit Passwort geschützt.',
+    );
   } catch (err) {
     if (!context.mounted) return;
     showErrorSnackBar(context, 'Export fehlgeschlagen: $err');
@@ -99,10 +116,32 @@ Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate
   try {
     final raw = await file.readAsString();
     final decoded = jsonDecode(raw);
-    if (decoded is! Map<String, dynamic>) {
+
+    // Verschlüsselte Backups erkennt der Import an ihrer Struktur, nicht an
+    // Dateiendung oder Namen — ein Klartext-Backup nimmt unverändert den
+    // bisherigen Weg und fragt nach gar nichts.
+    Map<String, dynamic>? payload;
+    if (isEncryptedBackup(decoded)) {
+      var wasWrong = false;
+      while (payload == null) {
+        if (!context.mounted) return;
+        final passphrase = await promptExistingBackupPassphrase(context, wasWrong: wasWrong);
+        if (passphrase == null) return; // abgebrochen: nichts wurde verändert
+        try {
+          payload = await decryptBackup(decoded as Map, passphrase);
+        } on WrongBackupPassphraseException {
+          // Erneut fragen statt abbrechen — ein Tippfehler soll nicht den
+          // ganzen Ablauf kosten.
+          wasWrong = true;
+        }
+      }
+    } else if (decoded is Map<String, dynamic>) {
+      payload = decoded;
+    } else {
       throw const FormatException('Backup-JSON ist kein Objekt');
     }
-    await appState.importAllData(decoded);
+
+    await appState.importAllData(payload);
     if (!context.mounted) return;
     onNavigate(AppView.dashboard);
     showSavedSnackBar(context, onNavigate, message: 'Import abgeschlossen.');

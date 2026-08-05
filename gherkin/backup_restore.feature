@@ -1,9 +1,11 @@
-# Quelle: lib/ui/backup_actions.dart, lib/ui/navigation_shell.dart, lib/data/app_store.dart, lib/data/app_schema.dart
+# Quelle: lib/ui/backup_actions.dart, lib/ui/navigation_shell.dart, lib/data/app_store.dart, lib/data/app_schema.dart,
+#   lib/data/backup_crypto.dart, lib/ui/widgets/backup_passphrase_dialog.dart
 # Implementierung: lib/ui/backup_actions.dart
 @backup
 Feature: Backup exportieren und importieren
-  Als Nutzer:in kann ich meine gesamten Daten als Klartext-JSON exportieren (z. B. für einen Rechnerwechsel oder als
-  zusätzliche Sicherung) und wieder importieren.
+  Als Nutzer:in kann ich meine gesamten Daten als JSON exportieren — wahlweise im Klartext oder mit einem Passwort
+  geschützt — und wieder importieren. Der Export ist der einzige Weg, der auf einem anderen Rechner funktioniert:
+  die Datendatei selbst ist an ihr Gerät gebunden (siehe gherkin/data_security.feature).
 
   Background:
     Given die App ist gestartet und initialisiert
@@ -25,6 +27,45 @@ Feature: Backup exportieren und importieren
   Scenario: Export-Dialog abgebrochen
     Given ich breche den Speichern-Dialog ab
     Then passiert nichts — kein Fehler, kein Zeitstempel-Update
+
+  Scenario: Vor dem Speicherort wird nach einem Passwort gefragt
+    Given ich starte einen Export
+    Then erscheint zuerst die Frage, ob das Backup mit einem Passwort geschützt werden soll
+    And es gibt dafür zwei eigene Knöpfe, "Ohne Passwort" und "Mit Passwort schützen" — kein leeres Feld als
+      stille Voreinstellung, damit ein weggeklickter Dialog keinen ungeschützten Export erzeugt
+    And ein Hinweis nennt die Folge: ohne dieses Passwort lässt sich das Backup später nicht mehr öffnen, die
+      Daten in der App bleiben davon aber unberührt
+    When ich den Dialog abbreche
+    Then wird gar nichts exportiert
+
+  Scenario: Export ohne Passwort bleibt exakt wie bisher
+    Given ich wähle "Ohne Passwort"
+    Then wird dieselbe unverschlüsselte, eingerückte JSON-Datei geschrieben wie vor diesem Feature
+    And bereits vorhandene Backups bleiben dadurch gültig
+
+  Scenario: Export mit Passwort
+    Given ich vergebe ein Passwort und wiederhole es
+    Then wird eine verschlüsselte Datei geschrieben (AES-256-GCM, Schlüssel per PBKDF2-HMAC-SHA256 aus dem Passwort)
+    And die Datei enthält weder Klartextdaten noch das Passwort selbst
+    And Verfahren, Salt und Iterationszahl stehen in der Datei, damit sie später verschärft werden können, ohne
+      alte Backups unlesbar zu machen
+    And zwei Exporte desselben Standes ergeben unterschiedliche Dateien (eigenes Salt, eigene Nonce)
+    But solange die beiden Passwortfelder nicht übereinstimmen, ist "Mit Passwort schützen" nicht auswählbar
+
+  Scenario: Import erkennt das Format selbst
+    Given ich wähle eine Backup-Datei zum Import
+    Then erkennt die App an der Struktur der Datei, ob sie geschützt ist — nicht an Dateiendung oder Name
+    And ein unverschlüsseltes Backup wird ohne jede Rückfrage eingelesen wie bisher
+
+  Scenario: Import einer passwortgeschützten Datei
+    Given die gewählte Datei ist passwortgeschützt
+    Then werde ich nach dem Passwort gefragt
+    When ich ein falsches Passwort eingebe
+    Then werde ich mit dem Hinweis "Das Passwort stimmt nicht." erneut gefragt, statt den Vorgang abzubrechen
+    When ich den Dialog abbreche
+    Then bleiben meine aktuellen Daten unverändert
+    Given die Datei wurde nachträglich verändert
+    Then schlägt das Entschlüsseln ebenso fehl wie bei einem falschen Passwort (der MAC schlägt an)
 
   Scenario: Export schlägt fehl (z. B. Schreibrechte)
     Given das Schreiben der Datei am gewählten Ort schlägt fehl

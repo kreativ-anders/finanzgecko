@@ -21,6 +21,25 @@ const String _storeFilename = 'finanzgecko-data.json';
 const String _ratesFilename = 'finanzgecko-rates.json';
 const int _envelopeVersion = 1;
 
+/// Thrown when the data file was encrypted by a *different* installation —
+/// its `keyId` doesn't match this machine's key.
+///
+/// Deliberately its own type and deliberately **fatal**: every other read
+/// problem ends in "quarantine the file, start empty, write defaults", which
+/// for this case would be the worst possible outcome. Somebody who puts their
+/// data file in a synced folder and opens the app on a second computer would
+/// otherwise watch that file get replaced by an empty one. So nothing is moved
+/// and nothing is written — the startup guard in `main()` explains the
+/// situation and points at the export/import route instead.
+class ForeignKeyDataException implements Exception {
+  const ForeignKeyDataException(this.filePath);
+
+  final String filePath;
+
+  @override
+  String toString() => 'ForeignKeyDataException($filePath)';
+}
+
 /// Thrown by an update/delete lookup when the given id no longer exists in
 /// the store. Carries structural data only (no user-facing text) — composing
 /// German text from it is a UI-layer concern (see `describeError` in
@@ -153,6 +172,21 @@ class AppStore {
       decoded['cipherText'] is String &&
       decoded['mac'] is String;
 
+  /// Short, non-secret fingerprint of the encryption key: the first 8 bytes of
+  /// its SHA-256, base64. Written into the envelope in the clear so the app can
+  /// tell "this file belongs to a different installation" apart from "this file
+  /// is damaged" — without it, both look identical (decryption simply fails)
+  /// and the file would be quarantined as corrupt.
+  ///
+  /// A hash of the key reveals nothing about the key itself; 8 bytes are ample
+  /// to distinguish installations, and it is not a security boundary anyway —
+  /// AES-GCM's MAC still decides whether the data is authentic.
+  static Future<String> keyFingerprint(SecretKey key) async {
+    final bytes = await key.extractBytes();
+    final digest = await Sha256().hash(bytes);
+    return base64Encode(digest.bytes.take(8).toList());
+  }
+
   Future<String> _decryptEnvelope(Map decoded) async {
     final box = SecretBox(
       base64Decode(decoded['cipherText'] as String),
@@ -166,7 +200,13 @@ class AppStore {
   Future<String> _encryptToEnvelope(String plaintext) async {
     final box = await _cipher.encrypt(utf8.encode(plaintext), secretKey: _requireKey);
     return jsonEncode({
+      // `v` bleibt bewusst bei 1: `keyId` ist ein *additives* Feld, und
+      // _isEnvelope prüft nur die vier bekannten Schlüssel. Eine ältere
+      // App-Version liest eine neu geschriebene Datei damit weiterhin
+      // anstandslos — ein Versionsbump hätte genau das gebrochen. Gleiches
+      // Muster wie die additiven `meta`-Felder in AppSchema.
       'v': _envelopeVersion,
+      'keyId': await keyFingerprint(_requireKey),
       'nonce': base64Encode(box.nonce),
       'cipherText': base64Encode(box.cipherText),
       'mac': base64Encode(box.mac.bytes),
@@ -175,6 +215,17 @@ class AppStore {
 
   static String _home() => Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '.';
 
+  /// Der vom Betriebssystem vorgesehene Ort — und bewusst der **einzige**.
+  ///
+  /// Ein frei wählbarer Ordner wurde erwogen und wieder verworfen: der einzige
+  /// Grund, ihn zu wollen, ist "dann liegt meine Datei in einem Ordner, der in
+  /// die Cloud gesichert wird" — und genau das leistet er nicht. Die Datei ist
+  /// mit einem Schlüssel verschlüsselt, der auf diesem Gerät liegt; geht das
+  /// Gerät kaputt, ist auch die schönste Cloud-Kopie nicht mehr zu öffnen. Ein
+  /// Ordnerdialog würde also eine Sicherheit versprechen, die nicht existiert.
+  /// Wer ein wiederherstellbares Backup will, nimmt den Export (auf Wunsch mit
+  /// Passwort, siehe `data/backup_crypto.dart`) — der ist gerätunabhängig.
+  /// Siehe AI_MASTER §4.1.
   static Directory resolveDataDirectory() {
     if (Platform.isLinux) {
       final xdg = Platform.environment['XDG_DATA_HOME'];
@@ -275,7 +326,17 @@ class AppStore {
         _data = AppSchema.defaults();
         await _persist();
       } else {
-        final parsed = jsonDecode(await _decryptEnvelope(decoded as Map));
+        // Vor dem Entschlüsselungsversuch: gehört die Datei überhaupt zu
+        // diesem Rechner? Ohne diese Prüfung wäre ein fremder Schlüssel von
+        // einer beschädigten Datei nicht zu unterscheiden (beides scheitert
+        // beim Entschlüsseln) und liefe unten in Quarantäne + Leerstart.
+        // Dateien ohne `keyId` stammen aus der Zeit vor diesem Feld und
+        // nehmen weiterhin den bisherigen Weg.
+        final storedKeyId = (decoded as Map)['keyId'];
+        if (storedKeyId is String && storedKeyId != await keyFingerprint(_requireKey)) {
+          throw ForeignKeyDataException(_filePath!);
+        }
+        final parsed = jsonDecode(await _decryptEnvelope(decoded));
         final onDiskVersion = (parsed is Map && parsed['schemaVersion'] is num) ? parsed['schemaVersion'] as num : null;
         final validated = AppSchema.fromDynamic(parsed);
         if (validated == null) {
@@ -311,6 +372,11 @@ class AppStore {
           if (needsMigration) await _persist();
         }
       }
+    } on ForeignKeyDataException {
+      // Muss am Auffangnetz unten vorbei: die Datei ist heil, sie gehört nur
+      // zu einem anderen Rechner. Nicht verschieben, nicht überschreiben —
+      // main() zeigt eine Erklärung, der Nutzer entscheidet.
+      rethrow;
     } catch (_) {
       // File missing (first run) -> start fresh, nothing to lose. File
       // present but unreadable (corrupt JSON, wrong shape, tampered/failed

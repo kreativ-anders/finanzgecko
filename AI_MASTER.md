@@ -89,7 +89,9 @@ finanzgecko/
 │   ├── data/
 │   │   ├── app_store.dart        # Persistenzschicht: Verschlüsselung, atomare Writes, Write-Queue, Export/Import
 │   │   ├── app_schema.dart       # In-Memory-Schema der JSON-Datei (Klasse AppSchema: schemaVersion, Listen, meta, window)
-│   │   └── secure_key_store.dart # AES-Schlüssel im OS-Keychain (flutter_secure_storage)
+│   │   ├── secure_key_store.dart # AES-Schlüssel im OS-Keychain (flutter_secure_storage)
+│   │   └── backup_crypto.dart    # Passwortgeschützte Backups (PBKDF2 → AES-GCM) — eigenes Format, gerätunabhängig,
+│   │                             #   Passwort optional; ohne Passwort bleibt es beim bisherigen Klartext-JSON
 │   ├── models/                   # Datenklassen mit fromJson/toJson: Account, Balance, Asset, Subscription
 │   ├── services/
 │   │   ├── currency_service.dart # Frankfurter.app-Anbindung inkl. Cache-Fallback
@@ -210,8 +212,33 @@ automatisch über `Provider`.
   - Linux: `~/.local/share/de.finanzgecko.app/` (oder `$XDG_DATA_HOME`)
   - macOS: `~/Library/Application Support/de.finanzgecko.app/`
   - Windows: `%APPDATA%\de.finanzgecko.app\`
-- **Verschlüsselung:** AES-256-GCM-"Envelope" (`{v, nonce, cipherText, mac}`, `_envelopeVersion = 1`). Schlüssel kommt
-  aus `SecureKeyStore` (OS-Keychain), wird beim ersten Start pro Installation erzeugt.
+- **Der Speicherort ist bewusst NICHT wählbar.** Ein Ordnerdialog wurde entworfen, gebaut und wieder entfernt: der
+  einzige Grund, ihn zu wollen, ist "dann liegt meine Datei in einem Ordner, den die Cloud sichert" — und genau das
+  leistet er nicht. Der Schlüssel liegt gerätegebunden im OS-Keychain; nach einem Plattenschaden oder auf einem
+  neuen Rechner ist auch die schönste Cloud-Kopie nicht mehr zu öffnen (Ausnahme: vollständige Systemwiederher-
+  stellung, die den Keychain mitbringt). Ein solcher Dialog würde also eine Sicherheit versprechen, die es nicht
+  gibt. Wiederherstellbare Sicherungen laufen ausschließlich über den **Export** (s. u.). Die Begründung steht
+  zusätzlich als Doc-Kommentar an `resolveDataDirectory()` und in Alltagssprache in Einstellungen → Sicherheit.
+- **Verschlüsselung:** AES-256-GCM-"Envelope" (`{v, keyId, nonce, cipherText, mac}`, `_envelopeVersion = 1`).
+  Schlüssel kommt aus `SecureKeyStore` (OS-Keychain), wird beim ersten Start pro Installation erzeugt.
+- **`keyId` erkennt fremde Dateien** (8 Byte SHA-256 des Schlüssels, Klartext, `AppStore.keyFingerprint`). Ohne
+  dieses Feld ist "Datei gehört zu einem anderen Rechner" nicht von "Datei ist kaputt" zu unterscheiden — beides
+  scheitert beim Entschlüsseln — und die intakte fremde Datei liefe in Quarantäne + Leerstart. Passt `keyId` nicht,
+  wirft der Store `ForeignKeyDataException`; die **muss** am `catch (_)` in `ensureInitialized()` vorbei
+  (`on ForeignKeyDataException { rethrow; }`), sonst greift genau das Auffangnetz, das hier fatal wäre. `main()`
+  zeigt dann `_ForeignDataApp` — es wird nichts verschoben und **nichts geschrieben**.
+  **`v` bleibt bei 1**: `keyId` ist additiv, `_isEnvelope` prüft nur die vier bekannten Felder, ältere App-Versionen
+  lesen neue Dateien also weiter. Ein Versionsbump hätte das gebrochen. Dateien ohne `keyId` (vor dem Feature
+  geschrieben) nehmen unverändert den bisherigen Weg.
+- **Der Export ist der einzige gerätunabhängige Weg** und bewusst vom Envelope der Datendatei getrennt
+  (`lib/data/backup_crypto.dart`): sein Schlüssel wird per PBKDF2-HMAC-SHA256 aus einem **Passwort** abgeleitet,
+  nicht aus dem OS-Keychain — deshalb lässt er sich auf jedem Rechner wieder einlesen. Das Passwort ist
+  **optional**: ohne Passwort schreibt der Export weiterhin exakt das bisherige Klartext-JSON, damit bereits
+  vorhandene Backups gültig bleiben. Der Import unterscheidet beide Formen an der Struktur (`isEncryptedBackup`),
+  nicht an Endung oder Dateiname, und fragt nur bei geschützten Dateien nach. Die KDF-Parameter (Verfahren, Salt,
+  Iterationen) stehen **in der Datei**, damit sie sich später anheben lassen, ohne alte Backups zu brechen.
+  Im Export-Dialog ist "ohne Passwort" ein eigener Knopf statt "Feld leer lassen" — ein weggeklickter Dialog darf
+  keinen ungeschützten Export erzeugen (`null` = abgebrochen vs. `''` = bewusst ohne).
 - **Wechselkurs-Cache liegt bewusst NICHT in der verschlüsselten Datei**, sondern in einer eigenen Klartextdatei
   `finanzgecko-rates.json` daneben — öffentliche EZB-Referenzkurse sind kein Geheimnis, und so löst ein neu gecachter
   Kurs kein volles Re-Encrypt der ganzen DB aus. Migration: alte Stores mit `ratesCache` in der DB werden beim ersten
@@ -456,6 +483,13 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   wird kein Bundle gebaut/released. Es gibt bewusst keinen separaten Push/PR-CI-Workflow — `flutter analyze`,
   `flutter test` und `dart format` laufen lokal vor jedem Commit (siehe CLAUDE.md "Always verify"), release.yml ist
   der einzige GitHub-Workflow im Repo.
+- **Splash-Logo je Theme** (`assets/logo/`): zwei Dateien mit identischem Zuschnitt (je 512×333, aus
+  `kreativ-anders/static-assets` übernommen). **Die Namen bezeichnen die Bildfarbe, nicht das Theme** —
+  `kreativ-anders-light-512.png` ist das *helle* Logo (weiße Schrift) und gehört auf den **dunklen** Grund,
+  `kreativ-anders-dark-512.png` das *dunkle* (schwarze Schrift) auf den **hellen**. `splash_screen.dart` wählt über
+  `kIsDarkTheme` (`theme.dart`). Vorher lief das helle Logo in beiden Themes und erreichte auf Hell nur 1,3:1 —
+  praktisch unsichtbar; jetzt 13,7:1 bzw. 6,4:1. Die Zuordnung sieht auf den ersten Blick vertauscht aus, ist es
+  aber nicht: nicht "geradeziehen".
 - Icon-Pipeline: ein einziger 1024×1024-Master (`assets/icon/icon.png`) speist alle Plattform-Formate über
   `dart run tool/generate_icons.dart` — `flutter_launcher_icons` nur noch für macOS (`pubspec.yaml`,
   `windows.generate: false`); Windows-`.ico` und Linux-Hicolor-Icons baut `tool/generate_icons.dart` selbst
@@ -569,7 +603,7 @@ Alle Verhaltensspezifikationen auf einen Blick — Einstieg für eine KI, um vom
 | `gherkin/notifications.feature` | OS-Benachrichtigungen für Backup-/Asset-Reminder, episodenbasiert, Ein-/Ausschalten | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/backup_restore.feature` | Export/Import (JSON), Schemaprüfung, Bank→Farbe-Import, Fehlertoleranz | Unit (`app_store_ops_test`, `backup_hardening_test`) |
 | `gherkin/data_security.feature` | AES-256-GCM, OS-Keychain, Quarantäne, Schema-Parsing | Unit (`app_schema_test`, `app_store_encryption_test`) |
-| `gherkin/currency_exchange.feature` | Opt-in zum Kursabruf (`RateFetchConsent`), Wechselkurse (frankfurter.dev), Cache, Offline-Fallback, manueller Kurs | nur UI/Integration (kein Unit-Test) |
+| `gherkin/currency_exchange.feature` | Opt-in zum Kursabruf (`RateFetchConsent`), Wechselkurse (frankfurter.dev), Cache, Offline-Fallback, manueller Kurs | `test/rate_consent_test.dart` (nur das Gate + Cache-Pfad, ohne Netz); der HTTP-Aufruf selbst bleibt UI/Integration |
 | `gherkin/window.feature` | Fenstergröße/Maximiert-Status, Standard-/Mindestgröße, Splash | nur UI/Integration (kein Unit-Test) |
 | `gherkin/navigation.feature` | Top-Navigation (6 Ansichten), Banner-Sprünge, In-App-Datei-Menü, Tastenkürzel, Textauswahl | nur UI/Integration (kein Unit-Test) |
 | `gherkin/executable/account_color.feature` | resolveAccountColor-Regeln | **ausführbar** (`test/bdd/account_color_bdd_test.dart`) |
@@ -634,8 +668,8 @@ Tests auseinanderlaufen:
 1. Jede `gherkin/*.feature` braucht einen `# Quelle:`-Header, dessen Quellcode-Pfade alle existieren.
 2. Ein Test verlinkt das/die Feature(s), das/die er abdeckt, mit einer Kopfzeile `// Gherkin: gherkin/<x>.feature`
    (mehrere kommagetrennt). Jeder Marker muss auf eine existierende Feature-Datei zeigen.
-3. Genau die im Test hinterlegte Allow-List (`featuresWithoutUnitTest`, aktuell `currency_exchange`, `window` +
-   `navigation`) darf ohne Unit-Test sein — jede Abweichung (neues ungetestetes Feature, oder ein jetzt
+3. Genau die im Test hinterlegte Allow-List (`featuresWithoutUnitTest`, aktuell `window` + `navigation`)
+   darf ohne Unit-Test sein — jede Abweichung (neues ungetestetes Feature, oder ein jetzt
    getestetes Feature) bricht den Testlauf ab und erzwingt entweder einen Test-Marker oder eine bewusste Anpassung
    der Allow-List. So bleibt `gherkin/` kein isoliertes Doku-Silo, sondern hängt am Testlauf.
 4. Jede Feature-Datei ist in AI_MASTER.md indexiert (Feature-Übersicht).
@@ -744,6 +778,9 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    - App-Sandbox deaktiviert auf macOS — Abschnitt 4.1.
    - Fensterposition wird bewusst nicht gespeichert — Abschnitt 4.3.
    - Splash-Dauer 1100ms + 400ms Überblendung — Abschnitt 5.
+   - **Kein wählbarer Speicherort für die Datendatei** — Abschnitt 4.1. Wurde einmal gebaut und bewusst wieder
+     entfernt; wer ihn erneut vorschlägt, sollte zuerst dort nachlesen, warum er den Anwendungsfall nicht löst.
+   - Export-Passwort ist optional, ohne Passwort bleibt es beim bisherigen Klartext-JSON — Abschnitt 4.1.
    - Keine DB-Engine, eine einzige JSON-Datei — Abschnitt 2.
    - Schema-Versionsschutz auf dem Start-Ladepfad (Downgrade-Guard + `pre-migrate-backup` + Golden-File-Fixture) —
      Abschnitt 4.1/4.2. Die Datendatei ist die einzige Quelle der Wahrheit; kein neuer Build darf bestehende Daten

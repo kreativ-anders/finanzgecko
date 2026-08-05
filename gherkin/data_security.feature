@@ -41,6 +41,31 @@ Feature: Datenspeicherung, Verschlüsselung und Integrität
     Given am erwarteten Pfad existiert noch keine Datei
     Then startet die App mit Standardwerten, ohne eine Quarantäne-Kopie anzulegen (nichts zu verlieren)
 
+  Scenario: Der Speicherort ist bewusst nicht wählbar
+    Given ich öffne Einstellungen → Sicherheit
+    Then sehe ich den Speicherort, aber keine Möglichkeit, ihn zu ändern
+    And ein Hinweis erklärt in Alltagssprache, dass die Datei zu diesem Computer gehört, dass eine Kopie in einem
+      Cloud-Ordner bei einem Plattenschaden hilft, aber nicht bei einem neuen Computer oder nach einer
+      Neuinstallation, und dass ein wiederherstellbares Backup nur der Export liefert
+    And der Hinweis steht dauerhaft dort, nicht als einmalig wegklickbarer Dialog
+
+  Scenario: Datei von einem anderen Rechner wird erkannt, nicht in Quarantäne geschoben
+    Given die Datei enthält eine Schlüsselkennung (keyId), die nicht zum Schlüssel dieses Rechners passt
+    When die App startet
+    Then bricht der Start mit einer Erklärung ab ("Diese Datei gehört zu einem anderen Computer")
+    And die Datei bleibt byte-identisch liegen — keine Quarantäne-Kopie, kein Schreibvorgang
+    And die Erklärung verweist auf den Weg über "Backup exportieren" und "Backup importieren"
+    Given derselbe Rechner erhält seinen ursprünglichen Schlüssel zurück
+    Then öffnet die Datei wieder normal
+
+  Scenario: Schlüsselkennung ist additiv und bricht ältere App-Versionen nicht
+    Given eine neu geschriebene Datendatei
+    Then enthält der Envelope zusätzlich das Klartextfeld "keyId" (8 Byte SHA-256 des Schlüssels)
+    And die Envelope-Version bleibt bei 1, weil die Prüfung nur die vier bekannten Felder betrachtet
+    And eine ältere App-Version liest diese Datei unverändert weiter
+    Given eine Datei aus der Zeit vor diesem Feld (ohne "keyId")
+    Then wird sie wie bisher geladen, ohne Prüfung der Kennung
+
   Scenario: Datendatei aus einer neueren Schema-Version wird bewahrt, nicht überschrieben
     Given die Datendatei trägt eine "schemaVersion" größer als die von diesem Build unterstützte Version
       (z. B. weil eine neuere App-Version lief und die App danach herabgestuft wurde)

@@ -23,6 +23,9 @@ wiederkehrende Ein-/Ausgaben ("Fixposten"). Es gibt keine mobile oder Web-Versio
 - Plattformen: Linux, macOS, Windows. Keine mobile App, keine Web-Version.
 - Datenhaltung: 100 % lokal, keine Cloud-Synchronisierung, kein Nutzerkonto.
 - Verschlüsselung: AES-256-GCM, Schlüssel im OS-Keychain (kein Passwort, das Nutzer:innen selbst verwalten müssen).
+  Der Schlüssel ist gerätegebunden: die Datendatei lässt sich nur auf dem Computer öffnen, auf dem sie angelegt
+  wurde, auch als Kopie. Der Speicherort ist deshalb bewusst nicht wählbar. Wiederherstellbare Sicherungen laufen
+  über "Backup exportieren" — gerätunabhängig und auf Wunsch mit einem selbst vergebenen Passwort verschlüsselt.
 - Netzwerkverbindungen: keine von sich aus. Nur zwei Fälle überhaupt, beide erst nach ausdrücklicher Entscheidung
   und ohne Übermittlung persönlicher oder finanzieller Daten — öffentliche EZB-Referenzkurse (Wechselkurse, erst
   nach einmaliger Zustimmung beim ersten Fremdwährungsbetrag, jederzeit widerrufbar) und die manuell ausgelöste

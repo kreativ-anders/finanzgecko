@@ -44,6 +44,11 @@ Color get kTextPrimary => _activeBrightness == Brightness.dark ? _kTextPrimaryDa
 /// `_kSurfaceDark`/`_kSurfaceLight` above.
 String get kSurfaceHex => _activeBrightness == Brightness.dark ? kSurfaceDarkHex : kSurfaceLightHex;
 
+/// The active brightness itself — for the rare case where not a color but a
+/// whole *asset* has to switch (the splash logo, see `splash_screen.dart`).
+/// Prefer the token getters above wherever a color is enough.
+bool get kIsDarkTheme => _activeBrightness == Brightness.dark;
+
 // Keep in sync with kPrimaryHex/kDangerHex in constants.dart (those are the
 // string form used for on-disk account colors; these are the const Color
 // form needed for widget themes/const constructors).
@@ -102,6 +107,22 @@ class ThemeScope extends StatelessWidget {
     };
     return child;
   }
+}
+
+/// Resolves [mode] against the OS setting **before** the first widget build,
+/// for `main()`: the native window is created and shown before `runApp`, so
+/// its `backgroundColor` is picked while [ThemeScope] has never run and
+/// [_activeBrightness] still holds its dark default. Without this, a user on
+/// the light theme saw a dark window flash before the splash faded in.
+void primeThemeBrightness(AppThemeMode mode) {
+  _activeBrightness = switch (mode) {
+    // Über die Binding-Instanz statt PlatformDispatcher.instance, damit hier
+    // kein zusätzlicher dart:ui-Import nötig ist; main() hat das Binding zu
+    // diesem Zeitpunkt bereits initialisiert.
+    AppThemeMode.system => WidgetsBinding.instance.platformDispatcher.platformBrightness,
+    AppThemeMode.light => Brightness.light,
+    AppThemeMode.dark => Brightness.dark,
+  };
 }
 
 /// Builds [ThemeData] for whichever brightness [ThemeScope] most recently

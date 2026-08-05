@@ -205,6 +205,12 @@ class SettingsView extends StatelessWidget {
                   value: dataDirectoryPath,
                   onOpen: () => _openInFileManager(context, dataDirectoryPath),
                 ),
+                const SizedBox(height: 12),
+                // Dauerhaft sichtbar, nicht als einmaliger Dialog: die
+                // Konsequenz der gerätegebundenen Verschlüsselung muss auch
+                // Jahre später noch nachlesbar sein, wenn jemand die Datei in
+                // einem Cloud-Ordner sieht und sie für ein Backup hält.
+                _DeviceBoundHint(onExport: onExport),
               ],
             ),
           ),
@@ -572,6 +578,64 @@ Future<void> _copyDebugInfo(BuildContext context, String displayLabel, Size wind
 /// an attacker could use (algorithm name and storage path are public
 /// implementation facts, not secrets). When [onOpen] is set, an "open in
 /// file manager" button is shown after the value.
+/// Erklärt in Alltagssprache, dass die Datendatei an genau diesen Computer
+/// gebunden ist — und was stattdessen ein Backup ist.
+///
+/// Bewusst dauerhaft an der Speicherort-Zeile statt als einmaliger Dialog beim
+/// Ordnerwechsel: eine weggeklickte Warnung erinnert niemand zwei Jahre später,
+/// wenn die Festplatte kaputt ist. Kein "Schlüssel", kein "Schlüsselbund",
+/// keine "Verschlüsselung" — die Konsequenz zählt, nicht der Mechanismus.
+class _DeviceBoundHint extends StatelessWidget {
+  const _DeviceBoundHint({required this.onExport});
+
+  final Future<void> Function() onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: kSurface,
+        border: Border.all(color: kBorder),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Diese Datei gehört zu diesem Computer. Nur er kann sie lesen — auch dann, wenn du sie kopierst.',
+            style: TextStyle(color: kTextPrimary, fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Eine Kopie in einem Cloud-Ordner oder auf einer externen Platte hilft dir also, wenn diese '
+            'Festplatte kaputtgeht. Sie hilft dir nicht bei einem neuen Computer und nicht nach einer '
+            'Neuinstallation — dort lässt sich die Datei nicht mehr öffnen.',
+            style: TextStyle(color: kMuted, fontSize: 12, height: 1.4),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Ein Backup, das du überall wieder einlesen kannst, bekommst du nur über den Export — auf Wunsch '
+            'mit einem Passwort geschützt.',
+            style: TextStyle(color: kMuted, fontSize: 12, height: 1.4),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Deshalb lässt sich dieser Ordner auch nicht ändern: ihn in eine Cloud zu legen würde eine '
+            'Sicherheit vortäuschen, die es nicht gibt.',
+            style: TextStyle(color: kMuted, fontSize: 12, height: 1.4),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: onExport,
+            child: noSelect(Text('Backup exportieren', style: TextStyle(color: kPrimaryText, fontSize: 13))),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// "Wechselkurs-API"-Zeile im Hilfe-Bereich.
 ///
 /// Pingt bewusst **nicht** beim Aufbau der Ansicht: das wäre ein Netzabruf,
