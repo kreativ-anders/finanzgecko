@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="stylesheet" href="assets/style.css" />
   <meta name="theme-color" content="#0a0f0c" />
-  <script defer src="https://api.pirsch.io/pa.js" id="pianjs" data-code="DKo22RMuBesw3XMADDNrwe0fQ7544AG1"></script>
+  <script defer src="https://api.pirsch.io/pa.js" id="pianjs" data-code="yAO4klcHowxwGN6JLgthKJZXkf3Rc5Gf"></script>
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
@@ -438,12 +438,8 @@
             <h3>Zahl, was es dir wert ist</h3>
             <p>FinanzGecko ist und bleibt kostenlos. Wer möchte, unterstützt die Weiterentwicklung freiwillig — mit einem Betrag deiner Wahl, ganz ohne Abo oder Verpflichtung.</p>
             <!--
-              TODO: sobald im Payment Link (Anbieter-Dashboard → Payment Links → diesen Link → Edit → "After
-              payment") eine eigene Bestätigungsseite hinterlegt werden kann, dort
-              https://finanzgecko.app/danke.html eintragen (bereits vorbereitet). Bis dahin
-              zeigt der Zahlungsanbieter seine eigene Standard-Bestätigungsseite — funktional keine Einschränkung.
-              Kein target="_blank": der Checkout soll den Tab ersetzen, damit ein späterer Redirect im selben Tab
-              auf danke.html landet statt in einem verwaisten Zusatztab.
+              Kein target="_blank": der Checkout ersetzt den Tab, damit der Stripe-Redirect nach Zahlung im
+              selben Tab auf danke.html landet statt in einem verwaisten Zusatztab.
             -->
             <a class="btn btn-secondary" href="https://buy.stripe.com/4gM8wP8ld0bEbMBg18es000">Freiwillig unterstützen →</a>
           </div>
