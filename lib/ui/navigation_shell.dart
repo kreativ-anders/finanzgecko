@@ -29,7 +29,25 @@ class NavigationShell extends StatefulWidget {
 class _NavigationShellState extends State<NavigationShell> {
   AppView _view = AppView.dashboard;
 
-  void _navigate(AppView view) => setState(() => _view = view);
+  /// Set only by [_openAccountEntry]: the account whose input field
+  /// [EntriesView] should scroll to and focus on its next build. Deliberately
+  /// *not* threaded through [_navigate] — that stays a plain
+  /// `ValueChanged<AppView>`, which every view and `backup_actions.dart`
+  /// already depends on; widening it would touch six views for one caller.
+  int? _focusAccountId;
+
+  /// Any ordinary navigation clears the pending focus, so returning to
+  /// "Einträge" via the top bar later doesn't re-focus a stale account.
+  void _navigate(AppView view) => setState(() {
+    _view = view;
+    _focusAccountId = null;
+  });
+
+  /// Dashboard account card → "Einträge", positioned on that account.
+  void _openAccountEntry(int accountId) => setState(() {
+    _view = AppView.entries;
+    _focusAccountId = accountId;
+  });
 
   Future<void> _handleQuit() async {
     await windowManager.close();
@@ -68,9 +86,9 @@ class _NavigationShellState extends State<NavigationShell> {
   Widget _content() {
     switch (_view) {
       case AppView.dashboard:
-        return DashboardView(onNavigate: _navigate);
+        return DashboardView(onNavigate: _navigate, onOpenAccountEntry: _openAccountEntry);
       case AppView.entries:
-        return EntriesView(onNavigate: _navigate);
+        return EntriesView(onNavigate: _navigate, focusAccountId: _focusAccountId);
       case AppView.accounts:
         return AccountsView(onNavigate: _navigate);
       case AppView.assets:
@@ -139,7 +157,13 @@ class _NavButton extends StatelessWidget {
       child: TextButton(
         onPressed: onTap,
         style: TextButton.styleFrom(foregroundColor: active ? kPrimaryText : kMuted),
-        child: Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
+        // noSelect: without it the app-wide SelectionArea (main.dart) claims
+        // the hover with a text cursor, which sits deeper than the button's
+        // own clickable cursor and therefore wins — the pointer would never
+        // turn into a hand over the main navigation. See AI_MASTER §5.
+        child: noSelect(
+          Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
+        ),
       ),
     );
   }

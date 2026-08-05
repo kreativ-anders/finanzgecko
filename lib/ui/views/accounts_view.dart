@@ -93,7 +93,10 @@ class _BankFieldState extends State<_BankField> {
                           height: 12,
                           decoration: BoxDecoration(color: colorFromHex(hex), shape: BoxShape.circle),
                         ),
-                        title: Text(name),
+                        // noSelect: siehe AI_MASTER §5 — sonst überstimmt der
+                        // Text-Cursor der SelectionArea den Klick-Cursor des
+                        // ListTile.
+                        title: noSelect(Text(name)),
                         onTap: () => onSelected(name),
                       );
                     },

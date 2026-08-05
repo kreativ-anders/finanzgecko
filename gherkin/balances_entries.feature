@@ -46,6 +46,17 @@ Feature: Monatliche Kontostände erfassen
     When ich Enter drücke
     Then löst das denselben Effekt wie "Alle speichern" aus
 
+  Scenario: Aus dem Dashboard auf ein bestimmtes Konto gesprungen
+    Given ich habe auf dem Dashboard eine Konto-Karte angeklickt
+    When die Ansicht "Einträge" öffnet
+    Then hat das Betragsfeld genau dieses Kontos den Fokus statt des ersten Kontos in der Liste
+    And die Zeile wird in den sichtbaren Bereich gescrollt, falls sie unterhalb liegt
+    And der Monat ist der übliche Standard (aktueller Monat), die Liste bleibt vollständig — es wird nicht gefiltert
+    Given das angeklickte Konto ist in der Liste gar nicht enthalten (z. B. archiviert)
+    Then verhält sich die Ansicht wie bei einem normalen Aufruf: der Fokus liegt auf dem ersten Konto
+    Given ich verlasse "Einträge" und kehre später über die Navigationsleiste zurück
+    Then wirkt der frühere Kartenklick nicht nach — der Fokus liegt wieder auf dem ersten Konto
+
   Scenario: Nur fehlende Konten anzeigen
     Given im gewählten Monat ist für einen Teil der Konten bereits ein Wert erfasst
     When ich den Schalter "Nur fehlende anzeigen" aktiviere

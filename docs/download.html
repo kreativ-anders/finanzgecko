@@ -56,32 +56,45 @@
          bisher. Das Skript am Seitenende ist reines Progressive Enhancement — es
          ersetzt den Link durch die konkrete Asset-URL und hebt die erkannte
          Plattform hervor. Schlägt es fehl, bleibt dieser Stand stehen. -->
-    <section class="download-grid wrap" id="download-grid">
-      <div class="download-card" data-os="windows" data-asset-suffix="-Setup.exe">
-        <h2>Windows</h2>
-        <p class="download-req">Installer (.exe) · Windows 10/11 · 64-Bit</p>
-        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
-          Für Windows herunterladen →</a>
-        <p class="download-meta" hidden></p>
-        <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; SmartScreen-Warnung →</a></p>
-      </div>
+    <!-- Aufbau bewusst wie in jeder anderen Sektion der Seite: „section“ trägt
+         den vertikalen Abstand, das innere .wrap die seitlichen 24px, und erst
+         darin liegt das Raster. Vorher standen .download-grid und .wrap auf
+         *einem* Element — beide setzen `padding`, und da .download-grid in
+         style.css später kommt, überschrieb dessen Kurzschreibweise die
+         seitlichen 24px von .wrap: auf schmalen Fenstern klebten die Karten am
+         Bildschirmrand, obwohl Hero und Fußzeile darüber/darunter korrekt
+         eingerückt waren. Die id bleibt am Raster selbst, das Skript unten
+         erwartet dort die .download-card-Kinder. -->
+    <section class="download-grid-section">
+      <div class="wrap">
+        <div class="download-grid" id="download-grid">
+          <div class="download-card" data-os="windows" data-asset-suffix="-Setup.exe">
+            <h2>Windows</h2>
+            <p class="download-req">Installer (.exe) · Windows 10/11 · 64-Bit</p>
+            <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
+              Für Windows herunterladen →</a>
+            <p class="download-meta" hidden></p>
+            <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; SmartScreen-Warnung →</a></p>
+          </div>
 
-      <div class="download-card" data-os="macos" data-asset-suffix="-mac.app.zip">
-        <h2>macOS</h2>
-        <p class="download-req">Gezipptes App-Bundle (.app.zip) · Apple Silicon &amp; Intel</p>
-        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
-          Für macOS herunterladen →</a>
-        <p class="download-meta" hidden></p>
-        <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; in Datenschutz &amp; Sicherheit freigeben →</a></p>
-      </div>
+          <div class="download-card" data-os="macos" data-asset-suffix="-mac.app.zip">
+            <h2>macOS</h2>
+            <p class="download-req">Gezipptes App-Bundle (.app.zip) · Apple Silicon &amp; Intel</p>
+            <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
+              Für macOS herunterladen →</a>
+            <p class="download-meta" hidden></p>
+            <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; in Datenschutz &amp; Sicherheit freigeben →</a></p>
+          </div>
 
-      <div class="download-card" data-os="linux" data-asset-suffix="-x86_64.AppImage">
-        <h2>Linux</h2>
-        <p class="download-req">AppImage · x86_64 · jede gängige Distribution</p>
-        <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
-          Für Linux herunterladen →</a>
-        <p class="download-meta" hidden></p>
-        <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; ausführbar machen →</a></p>
+          <div class="download-card" data-os="linux" data-asset-suffix="-x86_64.AppImage">
+            <h2>Linux</h2>
+            <p class="download-req">AppImage · x86_64 · jede gängige Distribution</p>
+            <a class="btn" href="https://github.com/kreativ-anders/finanzgecko/releases/latest" target="_blank" rel="noopener">
+              Für Linux herunterladen →</a>
+            <p class="download-meta" hidden></p>
+            <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; ausführbar machen →</a></p>
+          </div>
+        </div>
       </div>
     </section>
 

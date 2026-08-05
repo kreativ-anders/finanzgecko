@@ -41,6 +41,11 @@ here has to be checked by hand or by a throwaway script. The traps, in the order
   download cards link to it cross-page; a small script on `index.html` force-opens a `<details>` addressed by
   fragment, because browsers don't do that reliably and the link would otherwise land on a collapsed line.
   Don't re-add per-card prose — it drifted out of sync with macOS's actual behaviour once already.
+- **Every section follows the same two-level pattern:** `<section class="…">` carries the vertical padding, an
+  inner `<div class="wrap">` the horizontal 24px and the 860px max-width. Never put `.wrap` and a section class on
+  the *same* element — both set `padding`, the later rule in `style.css` wins, and the horizontal padding silently
+  disappears. That bit `download.html` once: the card grid ran edge-to-edge on narrow windows while the hero above
+  it was correctly inset. Nothing in CI catches this; check any new section at ~380px width by hand.
 - **Every new third-party call or embed must be added to `docs/datenschutz.html`** (currently: Pirsch, GitHub
   Pages, the GitHub API on index + download, Stripe). The page is linked from all footers; a German site that
   loads something undisclosed is the one failure mode here with legal weight.

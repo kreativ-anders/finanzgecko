@@ -216,6 +216,18 @@ Feature: Dashboard — Vermögensübersicht
       Given ein Konto hat noch keinen erfassten Kontostand
       Then zeigt seine Karte "—" statt eines Betrags und keinen Verlauf
 
+    Scenario: Klick auf eine Konto-Karte führt direkt zur Erfassung
+      Given der Mauszeiger steht über einer Konto-Karte
+      Then ist die gesamte Karte als Klickziel erkennbar (Hover-Effekt) und ein Tooltip nennt
+        'Kontostand für "<Kontoname>" erfassen'
+      And der Mauszeiger wird zur Hand — der Karteninhalt ist dafür von der App-weiten Textauswahl ausgenommen,
+        sonst gewänne deren Text-Cursor gegen den Klick-Cursor
+      When ich die Karte anklicke
+      Then wechselt die App in die Ansicht "Einträge"
+      And dort ist die Zeile genau dieses Kontos sichtbar gescrollt und ihr Betragsfeld hat den Fokus
+      And nicht nur das Mini-Diagramm, sondern die ganze Karte reagiert — bei schmalen Karten wäre die 70px hohe
+        Diagrammfläche allein ein zu kleines und schwer auffindbares Klickziel
+
     Scenario: Konto-Karten sind sortierbar
       Given der Nutzer öffnet die Sortierauswahl über den Konto-Karten
       Then stehen die Optionen "Standard", "Name (A–Z)", "Betrag (hoch → niedrig)",

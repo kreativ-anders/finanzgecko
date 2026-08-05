@@ -641,8 +641,15 @@ footer.site .wrap {
   margin: 0 auto;
 }
 
-.download-grid {
+/* Der vertikale Abstand sitzt auf der Sektion, nicht auf dem Raster — sonst
+   überschreibt die `padding`-Kurzschreibweise die seitlichen 24px des .wrap,
+   sobald beide Klassen auf demselben Element landen (siehe Kommentar in
+   download.html). */
+.download-grid-section {
   padding: 40px 0 64px;
+}
+
+.download-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 20px;

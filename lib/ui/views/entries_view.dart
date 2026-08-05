@@ -17,9 +17,15 @@ import '../widgets/section_card.dart';
 /// existing ones — scoped to one month/year at a time (default: current
 /// month) so the list stays manageable as entries pile up over time.
 class EntriesView extends StatefulWidget {
-  const EntriesView({super.key, required this.onNavigate});
+  const EntriesView({super.key, required this.onNavigate, this.focusAccountId});
 
   final ValueChanged<AppView> onNavigate;
+
+  /// Set when arriving from a dashboard account card: that account's row gets
+  /// the initial focus instead of the first one, and is scrolled into view.
+  /// Ignored if the account isn't in the current list (archived, or filtered
+  /// out by "Nur fehlende anzeigen").
+  final int? focusAccountId;
 
   @override
   State<EntriesView> createState() => _EntriesViewState();
@@ -31,6 +37,29 @@ class _EntriesViewState extends State<EntriesView> {
   String _notice = '';
   final Map<int, TextEditingController> _controllers = {};
   final Map<int, FocusNode> _focusNodes = {};
+
+  /// Marks the row addressed by [EntriesView.focusAccountId] so it can be
+  /// scrolled to. `autofocus` alone only moves the focus — with a long account
+  /// list the focused field can sit far below the fold.
+  final GlobalKey _focusedRowKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focusAccountId == null) return;
+    // After the first layout: the row's context (and the scroll extent) don't
+    // exist yet while initState runs.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _focusedRowKey.currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.15,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -229,6 +258,11 @@ class _EntriesViewState extends State<EntriesView> {
         .where((acc) => !(_onlyMissing && balanceByAccount.containsKey(acc.id)))
         .toList();
     final totals = _computeLiveTotals(app);
+    // Which row starts focused: the account we were sent to, else the first.
+    final requestedIndex = widget.focusAccountId == null
+        ? -1
+        : visibleAccounts.indexWhere((acc) => acc.id == widget.focusAccountId);
+    final focusIndex = requestedIndex >= 0 ? requestedIndex : 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,13 +337,17 @@ class _EntriesViewState extends State<EntriesView> {
                       else
                         for (var i = 0; i < visibleAccounts.length; i++)
                           _EntryRow(
+                            // Only attached when a row was actually requested —
+                            // otherwise the GlobalKey would ride along on
+                            // whatever row happens to be first.
+                            key: requestedIndex >= 0 && i == focusIndex ? _focusedRowKey : null,
                             account: visibleAccounts[i],
                             controller: _controllerFor(visibleAccounts[i].id, balanceByAccount[visibleAccounts[i].id]),
                             focusNode: _focusNodeFor(visibleAccounts[i].id),
                             nextFocusNode: i < visibleAccounts.length - 1
                                 ? _focusNodeFor(visibleAccounts[i + 1].id)
                                 : null,
-                            autofocus: i == 0,
+                            autofocus: i == focusIndex,
                             app: app,
                             period: _period,
                             existing: balanceByAccount[visibleAccounts[i].id],
@@ -419,6 +457,7 @@ class _SaveFooter extends StatelessWidget {
 
 class _EntryRow extends StatelessWidget {
   const _EntryRow({
+    super.key,
     required this.account,
     required this.controller,
     required this.focusNode,

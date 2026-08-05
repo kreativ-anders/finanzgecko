@@ -39,6 +39,11 @@ Color get kMuted => _activeBrightness == Brightness.dark ? _kMutedDark : _kMuted
 /// hardcode `Colors.white` because the app was always dark.
 Color get kTextPrimary => _activeBrightness == Brightness.dark ? _kTextPrimaryDark : _kTextPrimaryLight;
 
+/// [kSurface] as a hex string, for the pure color helpers in `constants.dart`
+/// (`readableOn`) that stay free of Flutter types. Must match
+/// `_kSurfaceDark`/`_kSurfaceLight` above.
+String get kSurfaceHex => _activeBrightness == Brightness.dark ? kSurfaceDarkHex : kSurfaceLightHex;
+
 // Keep in sync with kPrimaryHex/kDangerHex in constants.dart (those are the
 // string form used for on-disk account colors; these are the const Color
 // form needed for widget themes/const constructors).

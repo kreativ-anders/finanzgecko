@@ -15,9 +15,14 @@ import '../widgets/section_card.dart';
 import '../widgets/stacked_area_chart.dart';
 
 class DashboardView extends StatelessWidget {
-  const DashboardView({super.key, required this.onNavigate});
+  const DashboardView({super.key, required this.onNavigate, required this.onOpenAccountEntry});
 
   final ValueChanged<AppView> onNavigate;
+
+  /// Opens "Einträge" positioned on one specific account (see
+  /// `NavigationShell._openAccountEntry`) — separate from [onNavigate], which
+  /// carries no payload.
+  final ValueChanged<int> onOpenAccountEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +117,7 @@ class DashboardView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            _AccountCards(app: app, sortOrder: app.accountSortOrder),
+            _AccountCards(app: app, sortOrder: app.accountSortOrder, onOpenAccountEntry: onOpenAccountEntry),
           ],
         ],
       ),
@@ -932,10 +937,11 @@ class _SummaryRow extends StatelessWidget {
 }
 
 class _AccountCards extends StatelessWidget {
-  const _AccountCards({required this.app, required this.sortOrder});
+  const _AccountCards({required this.app, required this.sortOrder, required this.onOpenAccountEntry});
 
   final AppState app;
   final AccountSortOrder sortOrder;
+  final ValueChanged<int> onOpenAccountEntry;
 
   static const double _spacing = 16;
   static const double _minCardWidth = 220;
@@ -967,7 +973,7 @@ class _AccountCards extends StatelessWidget {
             for (final acc in accounts)
               SizedBox(
                 width: cardWidth,
-                child: _AccountCard(acc: acc, app: app),
+                child: _AccountCard(acc: acc, app: app, onOpenAccountEntry: onOpenAccountEntry),
               ),
           ],
         );
@@ -977,10 +983,11 @@ class _AccountCards extends StatelessWidget {
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.acc, required this.app});
+  const _AccountCard({required this.acc, required this.app, required this.onOpenAccountEntry});
 
   final Account acc;
   final AppState app;
+  final ValueChanged<int> onOpenAccountEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -989,66 +996,88 @@ class _AccountCard extends StatelessWidget {
     final points = [for (final b in accBalances) ChartPoint(periodLabel(b.period), b.amountBase)];
     final latest = app.latestBalanceForAccount(acc.id);
 
+    // Whole card is the click target, not just the chart: on a Wrap of narrow
+    // cards the 70px chart alone is a small and hard-to-discover hit area.
+    // The Card's own radius (12, see theme.dart cardTheme) is repeated on the
+    // InkWell so the hover/splash doesn't bleed over the rounded corners.
+    //
+    // `noSelect` is what makes the hand cursor appear: InkWell already asks for
+    // a clickable cursor, but the app-wide SelectionArea (main.dart) puts a
+    // text cursor on every selectable Text — and those sit *deeper* in the tree
+    // than the InkWell, so they win. Dropping selection here costs nothing:
+    // it's a tap target, and dragging across it to select an amount was never
+    // usable anyway. Same rule for any clickable surface with text, see
+    // AI_MASTER §5.
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(color: colorFromHex(acc.color), shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    acc.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => onOpenAccountEntry(acc.id),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+        child: Tooltip(
+          message: 'Kontostand für "${acc.name}" erfassen',
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: noSelect(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(color: colorFromHex(acc.color), shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          acc.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      _TagChip(tag: acc.tag, accountColorHex: acc.color),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    acc.bank,
+                    style: TextStyle(color: kMuted, fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(width: 6),
-                _TagChip(tag: acc.tag),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              acc.bank,
-              style: TextStyle(color: kMuted, fontSize: 12),
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              latest != null ? fmtMoney(latest.amountBase, app.baseCurrency) : '—',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            // Month-over-month change for this account, so each card shows
-            // direction at a glance, not just the current figure.
-            if (latest != null)
-              Builder(
-                builder: (context) {
-                  final prev = app.previousBalance(acc.id, latest.period);
-                  if (prev == null) return const SizedBox.shrink();
-                  final delta = latest.amountBase - prev.amountBase;
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      '${fmtSignedMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
-                      style: TextStyle(
-                        color: delta >= 0 ? kPrimaryText : kDangerText,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  const SizedBox(height: 8),
+                  Text(
+                    latest != null ? fmtMoney(latest.amountBase, app.baseCurrency) : '—',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  // Month-over-month change for this account, so each card shows
+                  // direction at a glance, not just the current figure.
+                  if (latest != null)
+                    Builder(
+                      builder: (context) {
+                        final prev = app.previousBalance(acc.id, latest.period);
+                        if (prev == null) return const SizedBox.shrink();
+                        final delta = latest.amountBase - prev.amountBase;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '${fmtSignedMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
+                            style: TextStyle(
+                              color: delta >= 0 ? kPrimaryText : kDangerText,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
+                  const SizedBox(height: 8),
+                  AppLineChart(points: points, color: colorFromHex(acc.color), height: 70),
+                ],
               ),
-            const SizedBox(height: 8),
-            AppLineChart(points: points, color: colorFromHex(acc.color), height: 70),
-          ],
+            ),
+          ),
         ),
       ),
     );
@@ -1059,19 +1088,30 @@ class _AccountCard extends StatelessWidget {
 /// as the card subtitle) is the primary identity now, since the type mostly
 /// only matters once, at account creation.
 class _TagChip extends StatelessWidget {
-  const _TagChip({required this.tag});
+  const _TagChip({required this.tag, required this.accountColorHex});
 
   final String tag;
 
+  /// The account's own accent color (`account.color`, i.e. its bank's brand
+  /// color) rather than the Kontotyp color, so the chip matches the colored
+  /// dot and the mini chart on the same card.
+  final String accountColorHex;
+
   @override
   Widget build(BuildContext context) {
-    final color = colorFromHex(tagColorHex(tag));
+    // Bank brand colors are logo colors and routinely fail as 11px bold text
+    // on our surfaces (#000000 on the dark card, #ffe600 on the light one),
+    // so the *label* uses the contrast-corrected variant. The 15% fill keeps
+    // the untouched brand color: as a background it has no contrast
+    // requirement, and it is what makes the chip still read as "that bank".
+    final fill = colorFromHex(accountColorHex);
+    final label = colorFromHex(readableOn(accountColorHex, kSurfaceHex));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(color: fill.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
       child: Text(
         tag,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style: TextStyle(color: label, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

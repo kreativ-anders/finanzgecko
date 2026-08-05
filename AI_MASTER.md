@@ -165,6 +165,15 @@ Navigation ist **kein Router**, sondern ein einfacher `enum`-Switch in `navigati
 `ValueChanged<AppView> onNavigate`, das jede View nach oben durchreicht (z. B. für "Jetzt erfassen"-Buttons in
 Bannern, die zu einer anderen View springen).
 
+`onNavigate` trägt bewusst **keine Nutzlast**. Für den einen Sprung, der ein Ziel *innerhalb* der Zielansicht
+braucht — Klick auf eine Dashboard-Konto-Karte → "Einträge", positioniert auf genau diesem Konto — gibt es deshalb
+einen zweiten, schmalen Callback `onOpenAccountEntry` (`ValueChanged<int>`, nur `DashboardView`), der in der Shell
+`_focusAccountId` setzt; `EntriesView` nimmt das als optionales `focusAccountId` entgegen (Autofokus auf dieser Zeile
+statt auf der ersten, plus `Scrollable.ensureVisible`). Jede gewöhnliche Navigation über `_navigate` löscht
+`_focusAccountId` wieder, damit eine spätere Rückkehr über die Navigationsleiste nicht erneut fokussiert. Diese
+Aufteilung ist Absicht: `ValueChanged<AppView>` um einen optionalen Parameter zu erweitern, würde alle sechs Views
+und `backup_actions.dart` anfassen, für genau einen Aufrufer.
+
 ## 4. Architektur & Datenfluss
 
 ```
@@ -369,13 +378,30 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   App spiegelt: dort trat der Fehler bereits einmal auf — die per JS hervorgehobene Download-Karte
   (`.download-card-primary`) bekam `border-color: var(--primary)` und war auf dem hellen Theme mit 2,2:1 gegen
   `--surface` unsichtbar, während das Badge darüber (`--primary-text`, 4,9:1) korrekt erschien.
+- **Bankfarben sind Logofarben, keine Textfarben.** `kBanks` enthält u. a. `#000000` (Trade Republic, C24,
+  Mercedes-Benz Bank) und `#ffe600` (comdirect) — als Fläche oder 10px-Punkt unproblematisch, als Beschriftung auf
+  `kSurface` unlesbar (bis herunter zu 1,06:1). Wo eine Kontofarbe **Text** einfärbt (aktuell der Kontotyp-Chip auf
+  den Dashboard-Konto-Karten), läuft sie deshalb durch `readableOn(hex, kSurfaceHex)` aus `constants.dart`: eine
+  reine Hex-zu-Hex-Funktion, die in 2%-Schritten Richtung Weiß bzw. Schwarz mischt, bis 4,5:1 erreicht sind, und
+  sonst unverändert durchreicht. Die Chip-**Fläche** behält bewusst die ungefilterte Markenfarbe (15% Deckkraft) —
+  Hintergründe haben keine Kontrastvorgabe, und sie ist es, die den Chip nach der Bank aussehen lässt. 51 der 96
+  Kombinationen (48 Farben × 2 Themes) brauchen die Korrektur; dass **alle** konvergieren, sichert ein Szenario in
+  `gherkin/executable/account_color.feature` ab.
 - **Kein natives Menü** unter Linux/Windows (Flutters `PlatformMenuBar` nur macOS) → In-App-"Datei"-Bereich im
   Fensterkopf, plattformübergreifend identisch, plus globale Tastenkürzel (`Strg`/`⌘`+E/I/Q) via `CallbackShortcuts`.
 - **Geld-/Zahlenformat:** immer über `fmtMoney`/`fmtPercent`/`fmtInputNumber`/`parseInputNumber` aus `formatting.dart`
   — deutsches Format (`de_DE`, Komma als Dezimaltrennzeichen), akzeptiert beim Parsen aber auch die alte
   Punkt-Notation rückwärtskompatibel.
 - **`noSelect()`-Helper** (`theme.dart`) schließt Button-Labels/Nav-Chrome von der App-weiten `SelectionArea` aus
-  (in `main.dart`) — nur Inhaltstext soll markierbar/kopierbar sein.
+  (in `main.dart`) — nur Inhaltstext soll markierbar/kopierbar sein. **Das ist zugleich Voraussetzung für den
+  richtigen Mauszeiger:** die `SelectionArea` legt über jeden selektierbaren `Text` einen Text-Cursor, und der sitzt
+  *tiefer* im Baum als der Klick-Cursor des umschließenden `InkWell`/`TextButton` — bei Gleichstand gewinnt der
+  tiefere, der Zeiger wird also nie zur Hand. Regel: **jedes anklickbare Element, dessen Label ein `Text` ist, wickelt
+  dieses Label in `noSelect(...)`** (Buttons, Nav-Einträge, klickbare Karten, `ListTile`-Vorschläge). Ein explizites
+  `mouseCursor` ist dann nicht nötig — Material-Buttons und `InkWell` fordern den Klick-Cursor bereits selbst an.
+  Elemente ohne Textkind (`IconButton`, `Switch`) sind davon nie betroffen; Eingabefelder behalten korrekt den
+  Text-Cursor, und die Hover-Charts (`line_chart.dart`, `stacked_area_chart.dart`) bleiben bewusst beim
+  Standard-Zeiger, da sie nichts auslösen, sondern nur einen Tooltip zeigen.
 - **Bestätigungsdialoge:** einfache Ja/Nein (`AlertDialog`) für reversible-ish Aktionen (Archivieren, Löschen); für
   die **einzige echte "Point of no return"-Aktion** (App zurücksetzen) eine **getippte Bestätigungsphrase**
   (`ZURÜCKSETZEN`, `reset_confirm_dialog.dart`) statt eines simplen Klicks.

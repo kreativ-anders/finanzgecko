@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 
 const List<String> kTags = ['Girokonto', 'Tagesgeld', 'Depot', 'Bargeld', 'Krypto'];
@@ -155,6 +157,84 @@ String? bankColorHex(String? bankName) {
 /// Accounts must reference a known bank so the dashboard can rely on a
 /// resolved brand color/name instead of arbitrary free text.
 bool isKnownBank(String? bankName) => bankColorHex(bankName) != null;
+
+/// Surfaces a brand color is rendered against — the card background per theme
+/// (`_kSurfaceDark`/`_kSurfaceLight` in `ui/theme.dart`, mirrored here so this
+/// file stays free of Flutter imports and unit-testable on its own).
+const String kSurfaceDarkHex = '#101713';
+const String kSurfaceLightHex = '#ffffff';
+
+/// WCAG AA for normal-size text. The Kontotyp chip renders at 11px bold, so
+/// the 3:1 large-text exception does not apply.
+const double _kMinTextContrast = 4.5;
+
+/// Relative luminance per WCAG 2.1, from a `#rrggbb` string.
+double relativeLuminance(String hex) {
+  final rgb = _rgb(hex);
+  double channel(int v) {
+    final c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+  }
+
+  return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+}
+
+/// WCAG contrast ratio between two `#rrggbb` colors — 1.0 (identical) to 21.0
+/// (black on white).
+double contrastRatio(String aHex, String bHex) {
+  final la = relativeLuminance(aHex);
+  final lb = relativeLuminance(bHex);
+  final hi = la > lb ? la : lb;
+  final lo = la > lb ? lb : la;
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/// A brand color made legible as *text* on [backgroundHex].
+///
+/// Bank brand colors in [kBanks] are picked for logos, not for type on our
+/// surfaces: `#000000` (Trade Republic, C24, Mercedes-Benz Bank) disappears on
+/// the dark card, `#ffe600` (comdirect) on the light one. This mixes the color
+/// toward white or black — whichever direction the background allows — in 2%
+/// steps until it clears [_kMinTextContrast], and returns it unchanged when it
+/// already does. Mixing (rather than an HSL lightness bump) keeps the result
+/// predictable for the achromatic extremes, at the cost of some saturation.
+///
+/// Pure and hex-in/hex-out on purpose, so it is unit-testable without a Flutter
+/// binding — see `gherkin/executable/account_color.feature`.
+String readableOn(String colorHex, String backgroundHex) {
+  if (contrastRatio(colorHex, backgroundHex) >= _kMinTextContrast) return _normalizeHex(colorHex);
+
+  // Lighten on dark backgrounds, darken on light ones. Picking the direction
+  // from the background (not from the color) avoids pushing a mid-grey the
+  // wrong way, where it would never reach the target.
+  final towardWhite = relativeLuminance(backgroundHex) < 0.5;
+  final target = towardWhite ? [255, 255, 255] : [0, 0, 0];
+  final rgb = _rgb(colorHex);
+
+  for (var step = 1; step <= 50; step++) {
+    final t = step * 0.02;
+    final mixed = _hex([
+      (rgb[0] + (target[0] - rgb[0]) * t).round(),
+      (rgb[1] + (target[1] - rgb[1]) * t).round(),
+      (rgb[2] + (target[2] - rgb[2]) * t).round(),
+    ]);
+    if (contrastRatio(mixed, backgroundHex) >= _kMinTextContrast) return mixed;
+  }
+  // Unreachable for our surfaces (pure white/black always clears 4.5:1 against
+  // both), but returning the extreme beats returning something illegible.
+  return _hex(target);
+}
+
+List<int> _rgb(String hex) {
+  final h = hex.replaceFirst('#', '');
+  final v = int.parse(h.length == 3 ? h.split('').map((c) => '$c$c').join() : h, radix: 16);
+  return [(v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff];
+}
+
+String _hex(List<int> rgb) =>
+    '#${rgb.map((c) => c.clamp(0, 255).toRadixString(16).padLeft(2, '0')).join()}';
+
+String _normalizeHex(String hex) => _hex(_rgb(hex));
 
 /// The stored accent color for an account, derived from its [bank]:
 /// - a **known** bank → that bank's brand color (single source of truth),
