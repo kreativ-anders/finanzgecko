@@ -78,6 +78,21 @@ summary:focus-visible,
   border-radius: 2px;
 }
 
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 16px;
+  background: var(--surface);
+  color: var(--primary-text);
+  border-radius: 0 0 8px 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -723,6 +738,26 @@ footer.site .wrap {
   margin: 10px 0 0;
 }
 
+.download-info {
+  padding: 8px 0 56px;
+}
+
+.download-info h2 {
+  font-size: 20px;
+  margin: 32px 0 10px;
+}
+
+.download-info h2:first-child {
+  margin-top: 0;
+}
+
+.download-info p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 0;
+}
+
 .download-all {
   text-align: center;
   padding-bottom: 64px;
@@ -953,6 +988,15 @@ ul.feature-list li {
 
   .download-grid-section {
     padding: 28px 0 44px;
+  }
+
+  .download-info {
+    padding: 4px 0 40px;
+  }
+
+  .download-info h2 {
+    font-size: 18px;
+    margin-top: 26px;
   }
 
   .download-all {

@@ -31,9 +31,10 @@
   <meta name="twitter:image" content="https://finanzgecko.app/assets/og-image.png" />
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
   <header class="site">
     <div class="wrap">
-      <img class="logo" src="assets/icon-192.png" width="32" height="32" alt="" />
+      <img class="logo" src="assets/icon-192.png" width="32" height="32" alt="FinanzGecko Logo" />
       <a class="brand" href="index.html">FinanzGecko</a>
       <nav>
         <a href="index.html">Start</a>
@@ -43,11 +44,12 @@
     </div>
   </header>
 
-  <main>
+  <main id="main-content">
     <section class="download-hero">
       <div class="wrap">
-        <h1>FinanzGecko herunterladen</h1>
-        <p>Kostenlos, quelloffen, ohne Account. Jeder Button lädt direkt die neueste Version von GitHub Releases.</p>
+        <h1>FinanzGecko für Linux, macOS &amp; Windows herunterladen</h1>
+        <p>Kostenlos, quelloffen, ohne Account. Jeder Download lädt direkt die neueste Version von
+          GitHub Releases — für Windows als Installer, für macOS als App-Bundle und für Linux als AppImage.</p>
       </div>
     </section>
 
@@ -95,6 +97,50 @@
             <p class="install-hint"><a href="index.html#faq-install">Installieren &amp; ausführbar machen →</a></p>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Erklärender Textteil unterhalb der Karten. Aufbau wie überall: die
+         `section` trägt den vertikalen Abstand, das innere `.wrap` die
+         seitlichen 24px und die Maximalbreite. Der zugehörige Eintrag im
+         einzigen Breakpoint (`@media (max-width: 700px)`) steht am Ende von
+         style.css. Installationsanweisungen stehen bewusst NICHT hier, sondern
+         weiterhin ausschließlich im FAQ-Eintrag `#faq-install` auf index.html —
+         siehe CLAUDE.md. -->
+    <section class="download-info">
+      <div class="wrap">
+        <h2>Welche Version passt zu meinem System?</h2>
+        <p>FinanzGecko ist eine native Desktop-Anwendung und wird für jede Plattform getrennt gebaut.
+          Unter <strong>Windows</strong> lädst du einen gewöhnlichen Installer (.exe) für 64-Bit-Systeme
+          ab Windows 10. Unter <strong>macOS</strong> bekommst du ein gezipptes App-Bundle, das sowohl
+          auf Apple Silicon als auch auf Intel-Macs läuft und einfach in den Programme-Ordner gezogen
+          wird. Unter <strong>Linux</strong> erhältst du ein AppImage für x86_64, das ohne Paketmanager
+          und ohne Root-Rechte auf praktisch jeder gängigen Distribution startet. Erkennt dein Browser
+          JavaScript, hebt diese Seite die zu deinem System passende Karte automatisch hervor.</p>
+
+        <h2>Was du nach dem Download bekommst</h2>
+        <p>Nach dem ersten Start legst du deine Konten an und trägst monatlich die Kontostände ein.
+          Aus diesen Werten berechnet FinanzGecko dein Gesamtvermögen, den Verlauf über die Zeit und
+          eine Prognose. Fixposten bilden wiederkehrende Einnahmen und Ausgaben ab, Vermögenswerte
+          erfassen Sachwerte wie Fahrzeuge oder Technik. Alle Auswertungen entstehen lokal auf deinem
+          Rechner — es gibt weder ein Nutzerkonto noch eine Synchronisierung in eine Cloud. Eine
+          ausführliche Beschreibung aller Ansichten findest du in der
+          <a href="documentation.html">Dokumentation</a>.</p>
+
+        <h2>Deine Daten bleiben auf deinem Gerät</h2>
+        <p>FinanzGecko speichert alles in einer einzigen, AES-256-GCM-verschlüsselten Datei; der
+          Schlüssel liegt im Schlüsselbund deines Betriebssystems. Die App sendet keine Telemetrie und
+          keine Absturzberichte. Sie stellt genau zwei Netzwerkanfragen: aktuelle Wechselkurse für
+          Fremdwährungskonten und – nur wenn du sie manuell auslöst – eine Prüfung auf neue Versionen.
+          Details dazu stehen in der <a href="datenschutz.html">Datenschutzerklärung</a>. Da es keinen
+          Server gibt, liegt die Sicherung bei dir: Exportiere regelmäßig ein Backup, dann lässt sich
+          dein Stand jederzeit auf einem anderen Rechner wiederherstellen.</p>
+
+        <h2>Updates und Versionshinweise</h2>
+        <p>Neue Versionen erscheinen als GitHub-Release mit Änderungsliste. Ein Update installierst du,
+          indem du die neue Datei herunterlädst und die alte ersetzt — deine bestehenden Daten bleiben
+          dabei erhalten. Da FinanzGecko quelloffen ist, kannst du jederzeit im Quellcode nachlesen,
+          was die Anwendung tut, oder sie selbst aus den Quellen bauen.</p>
       </div>
     </section>
 

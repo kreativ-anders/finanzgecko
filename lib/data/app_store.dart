@@ -992,8 +992,19 @@ class AppStore {
   double? getCachedRate(String key) => _ratesCache[key];
 
   Future<void> setCachedRate(String key, double rate) async {
+    final hadPrevious = _ratesCache.containsKey(key);
+    final previous = _ratesCache[key];
     _ratesCache[key] = rate;
-    await _persistRates();
+    try {
+      await _persistRates();
+    } catch (_) {
+      if (hadPrevious) {
+        _ratesCache[key] = previous!;
+      } else {
+        _ratesCache.remove(key);
+      }
+      rethrow;
+    }
   }
 
   // ---------- Export / Import ----------

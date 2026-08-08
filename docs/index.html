@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FinanzGecko — Lokaler Vermögenstracker für Linux, macOS &amp; Windows</title>
-  <meta name="description" content="FinanzGecko ist ein kostenloser, nativer Desktop-Vermögenstracker für Linux, macOS und Windows. Kein Server, keine Cloud, kein Account." />
+  <title>FinanzGecko — Vermögenstracker für Linux, macOS &amp; Windows</title>
+  <meta name="description" content="FinanzGecko ist ein kostenloser Desktop-Vermögenstracker für Linux, macOS und Windows. Kein Server, keine Cloud, kein Account, AES-256-verschlüsselt." />
   <link rel="canonical" href="https://finanzgecko.app/" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
@@ -93,10 +93,10 @@
       },
       {
         "@type": "Question",
-        "name": "Wie installiere ich FinanzGecko für mein Betriebssystem?",
+        "name": "Wie installiere ich FinanzGecko — und warum warnt mein System?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Windows: Installer starten und den Anweisungen folgen. macOS: FinanzGecko.app öffnen oder in den Programme-Ordner ziehen. Linux: AppImage ausführbar machen und z. B. in einen Anwendungsordner legen."
+          "text": "FinanzGecko ist nicht signiert, da die Zertifikate von Apple und Microsoft jährlich Geld kosten, das ein kostenloses Projekt nicht aufbringt. Windows und macOS zeigen deshalb beim ersten Start eine Warnung, die nur bedeutet, dass die Herkunft nicht bestätigt ist — nicht, dass etwas Schädliches gefunden wurde. Windows: Bei der SmartScreen-Meldung auf 'Weitere Informationen' und dann 'Trotzdem ausführen' klicken. macOS: Nach der Blockierung unter Systemeinstellungen → Datenschutz & Sicherheit auf 'Trotzdem öffnen' klicken (nur beim ersten Start nötig). Linux: Dem AppImage das Ausführungsrecht geben (per Dateimanager oder chmod +x) und starten — es wird nichts installiert."
         }
       },
       {
@@ -144,9 +144,10 @@
   </script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
   <header class="site">
     <div class="wrap">
-      <img class="logo" src="assets/icon-192.png" width="32" height="32" alt="" />
+      <img class="logo" src="assets/icon-192.png" width="32" height="32" alt="FinanzGecko Logo" />
       <a class="brand" href="index.html">FinanzGecko</a>
       <nav>
         <a href="#features">Funktionen</a>
@@ -159,14 +160,15 @@
     </div>
   </header>
 
-  <main>
+  <main id="main-content">
     <section class="hero">
       <div class="wrap">
         <img class="logo" src="assets/icon-192.png" width="88" height="88" alt="FinanzGecko Logo" />
-        <h1>FinanzGecko</h1>
+        <h1>FinanzGecko — Vermögenstracker für Linux, macOS &amp; Windows</h1>
         <p class="pitch">
-          Ein nativer Desktop-Vermögenstracker. Kein Server, keine Cloud, kein Account —
-          alle Daten bleiben lokal und AES-256-verschlüsselt auf deinem Rechner.
+          Ein nativer Desktop-Vermögenstracker für Linux, macOS und Windows. Kein Server,
+          keine Cloud, kein Account — alle Daten bleiben lokal und AES-256-verschlüsselt
+          auf deinem Rechner.
         </p>
 
         <div class="cta-group">
@@ -348,7 +350,7 @@
           <article class="shot-story">
             <span class="shot-eyebrow">Dein Fundament</span>
             <h3>Deine Bank, deine Farbe</h3>
-            <p class="shot-lead">Girokonto, Tagesgeld, Depot, Krypto, Bargeld: Lege so viele Konten an, wie du brauchst, in Euro oder Fremdwährung. Über 40 gängige Banken und Neobanken bekommen automatisch ihre echte Markenfarbe<span class="hint" title="Fehlt deine Bank in der Liste? Du kannst sie direkt im Konto-Formular vorschlagen.">ⓘ</span> — alles bleibt dabei auf deinem Rechner, AES-256-verschlüsselt. Kein Bank-Login, keine Cloud, kein Konto bei uns.</p>
+            <p class="shot-lead">Girokonto, Tagesgeld, Depot, Krypto, Bargeld: Lege so viele Konten an, wie du brauchst, in Euro oder Fremdwährung. Über 40 gängige Banken und Neobanken bekommen automatisch ihre echte Markenfarbe<span class="hint" tabindex="0" role="img" aria-label="Fehlt deine Bank in der Liste? Du kannst sie direkt im Konto-Formular vorschlagen." title="Fehlt deine Bank in der Liste? Du kannst sie direkt im Konto-Formular vorschlagen.">ⓘ</span> — alles bleibt dabei auf deinem Rechner, AES-256-verschlüsselt. Kein Bank-Login, keine Cloud, kein Konto bei uns.</p>
             <figure class="shot">
               <picture>
                 <!-- Helles Betriebssystem-Theme → helle Aufnahme; ohne Media-Query-Support

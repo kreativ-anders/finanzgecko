@@ -604,13 +604,13 @@ class _EntryRow extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.warning_amber_rounded, size: 13, color: kTrendDown),
+                  Icon(Icons.warning_amber_rounded, size: 13, color: kWarningText),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       anomaly,
                       textAlign: TextAlign.right,
-                      style: const TextStyle(color: kTrendDown, fontSize: 12),
+                      style: TextStyle(color: kWarningText, fontSize: 12),
                     ),
                   ),
                 ],

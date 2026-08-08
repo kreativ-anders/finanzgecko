@@ -131,7 +131,10 @@ finanzgecko/
 │   │                               #   `_downloadPageUrl` in lib/ui/views/settings_view.dart) zeigen auf diese Domain,
 │   │                               #   nicht mehr auf kreativ-anders.github.io/finanzgecko
 │   ├── index.html                 # Startseite: Hero, Testimonial, Screenshots, Features, Trust-Strip, Download/Unterstützen, FAQ
-│   ├── download.html              # Download-Seite: ein Direktlink pro OS (Windows/macOS/Linux), s. u.
+│   ├── download.html              # Download-Seite: ein Direktlink pro OS (Windows/macOS/Linux), s. u.,
+│   │                               #   darunter die Sektion `.download-info` mit erklärendem Fließtext
+│   │                               #   (Plattformwahl, Datenhaltung, Updates) — SEO-Mindestumfang, keine
+│   │                               #   Installationsanweisungen (die bleiben allein in `#faq-install`)
 │   ├── documentation.html         # Kurzanleitung für Endnutzer (kein Bezug zu AI_MASTER/gherkin)
 │   ├── datenschutz.html           # Datenschutzerklärung (Pirsch, GitHub Pages, Stripe, GitHub-API, App-Netzwerkpfade),
 │   │                               #   im Footer aller Seiten verlinkt — bei jeder neuen Drittanbieter-Einbindung nachziehen
