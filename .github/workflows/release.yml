@@ -18,9 +18,9 @@ name: Release
 # kein self-contained Single-File-Binary. Damit Endnutzer trotzdem EINE Datei
 # bekommen, wird das Bundle je Plattform verpackt: Windows -> Inno-Setup-
 # Installer (FinanzGecko-<Version>-Setup.exe), Linux -> AppImage
-# (FinanzGecko-<Version>-x86_64.AppImage), macOS -> gezipptes .app-Bundle
-# (FinanzGecko-<Version>-mac.app.zip, das der Finder ohnehin als eine Einheit
-# behandelt). Die Version wird pro Build-Job aus pubspec.yaml gelesen.
+# (FinanzGecko-<Version>-x86_64.AppImage), macOS -> Disk-Image
+# (FinanzGecko-<Version>-mac.dmg mit Applications-Symlink zum Hineinziehen).
+# Die Version wird pro Build-Job aus pubspec.yaml gelesen.
 #
 # Ablauf für ein Release — zwei gleichwertige Wege:
 #   A) Manuell: Version in pubspec.yaml (version:) hochzählen und committen,
@@ -29,7 +29,7 @@ name: Release
 #      major (oder "version" für eine exakte Zielversion) starten — siehe
 #      "Versions-Bump per Knopfdruck" unten.
 # In beiden Fällen lädt dieser Workflow alle drei Plattform-Pakete (Windows-
-# Installer, Linux-AppImage, macOS-.app-Zip) automatisch als Release-Assets
+# Installer, Linux-AppImage, macOS-DMG) automatisch als Release-Assets
 # hoch.
 #
 # Ad-hoc-Builds für alle drei Plattformen ohne Tag/Release (z. B. um einen
@@ -160,7 +160,19 @@ jobs:
 
   linux:
     needs: [gate, bump-version]
+    # `!cancelled()` ist hier NICHT kosmetisch, sondern der eigentliche Trick:
+    # `bump-version` wird bei einem Tag-Push und bei "bump: none" bewusst
+    # übersprungen, und GitHub überspringt per Default ALLES, was via `needs`
+    # an einem übersprungenen Job hängt — unabhängig davon, was hier steht.
+    # Diese Vererbung schaltet sich erst ab, sobald die Bedingung eine
+    # Status-Check-Funktion (`always()`, `!cancelled()`, …) enthält; ein
+    # bloßes `needs.bump-version.result == 'skipped'` genügt nicht, obwohl es
+    # sich richtig liest. Ohne dieses `!cancelled()` liefen weder Testbuilds
+    # noch Tag-Push-Releases, sondern nur der Weg über den Bump-Knopf.
+    # `!cancelled()` statt `always()`, damit ein abgebrochener Lauf nicht
+    # trotzdem weiterbaut.
     if: |
+      !cancelled() &&
       needs.gate.result == 'success' &&
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: ubuntu-latest
@@ -206,7 +218,9 @@ jobs:
 
   macos:
     needs: [gate, bump-version]
+    # `!cancelled()`: siehe Kommentar am `linux`-Job.
     if: |
+      !cancelled() &&
       needs.gate.result == 'success' &&
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: macos-latest
@@ -228,22 +242,40 @@ jobs:
       - run: flutter pub get
       - run: flutter build macos --release
 
-      - name: App-Bundle zippen
-        # ditto statt zip: erhält Resource-Forks/Extended-Attributes des
+      - name: DMG bauen
+        # DMG statt des früheren gezippten .app-Bundles: der auf macOS
+        # gewohnte "App ins Programme-Verzeichnis ziehen"-Ablauf (daher der
+        # Applications-Symlink im Image) statt eines Ordners im Download-
+        # Verzeichnis, aus dem die App oft direkt gestartet wurde. Vor allem
+        # aber kann ein DMG das Notarisierungs-Ticket tragen
+        # (`xcrun stapler staple`); ein ZIP kann das nicht und bräuchte beim
+        # ersten Start eine Online-Prüfung bei Apple.
+        #
+        # hdiutil statt create-dmg o. Ä.: auf jedem macOS-Runner vorhanden,
+        # keine zusätzliche Abhängigkeit. ditto statt cp beim Befüllen des
+        # Staging-Ordners: erhält Resource-Forks/Extended-Attributes des
         # .app-Bundles, die für Codesigning/Gatekeeper relevant sind. Der
         # Dateiname trägt die Version (aus pubspec.yaml), damit mehrere
         # heruntergeladene Releases nebeneinander unterscheidbar bleiben.
-        working-directory: build/macos/Build/Products/Release
-        run: ditto -c -k --sequesterRsrc --keepParent FinanzGecko.app ../../../../../FinanzGecko-${{ steps.version.outputs.version }}-mac.app.zip
+        env:
+          DMG: FinanzGecko-${{ steps.version.outputs.version }}-mac.dmg
+        run: |
+          staging="$(mktemp -d)"
+          ditto build/macos/Build/Products/Release/FinanzGecko.app "$staging/FinanzGecko.app"
+          ln -s /Applications "$staging/Applications"
+          hdiutil create -volname FinanzGecko -srcfolder "$staging" -ov -format UDZO "$DMG"
+          rm -rf "$staging"
 
       - uses: actions/upload-artifact@v7
         with:
           name: FinanzGecko-mac
-          path: FinanzGecko-${{ steps.version.outputs.version }}-mac.app.zip
+          path: FinanzGecko-${{ steps.version.outputs.version }}-mac.dmg
 
   windows:
     needs: [gate, bump-version]
+    # `!cancelled()`: siehe Kommentar am `linux`-Job.
     if: |
+      !cancelled() &&
       needs.gate.result == 'success' &&
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: windows-latest
@@ -297,7 +329,12 @@ jobs:
   # (s. o.), damit die "ein einziger Workflow"-Entscheidung bestehen bleibt.
   release:
     needs: [bump-version, linux, macos, windows]
+    # `!cancelled()`: siehe Kommentar am `linux`-Job — hier zusätzlich nötig,
+    # weil `bump-version` bei einem Tag-Push übersprungen wird. Die restliche
+    # Bedingung sorgt weiterhin dafür, dass ein reiner Testbuild
+    # ("bump: none", kein Tag) zwar baut, aber KEIN Release veröffentlicht.
     if: |
+      !cancelled() &&
       needs.linux.result == 'success' &&
       needs.macos.result == 'success' &&
       needs.windows.result == 'success' &&

@@ -499,7 +499,7 @@ Future<void> _openIssueTracker() async {
 /// The site's existing per-OS download page (docs/download.html) — one big
 /// button per platform, the same link end users already get via the website.
 /// Deliberately not GitHub's release page: that would leave picking the right
-/// asset (Setup.exe / .app.zip / .AppImage) to the user.
+/// asset (Setup.exe / .dmg / .AppImage) to the user.
 const _downloadPageUrl = 'https://finanzgecko.app/download.html';
 
 /// Manual, user-triggered update check against the GitHub Releases API (see

@@ -92,10 +92,11 @@ automatically).
 
 1. Bump the version in `pubspec.yaml`, commit.
 2. Push a tag: `git tag v1.1.0 && git push origin v1.1.0`.
-3. CI builds all three packages and uploads them both versioned (`FinanzGecko-<version>-…`) and as an unversioned
-   alias copy (`FinanzGecko-Setup.exe`, `FinanzGecko-mac.app.zip`, `FinanzGecko-x86_64.AppImage`) — `docs/download.html`
-   links directly to `.../releases/latest/download/<alias>`, so the download page always points at the latest
-   version without an API call.
+3. CI builds all three packages and attaches exactly one versioned file per platform to the release:
+   `FinanzGecko-<version>-Setup.exe`, `FinanzGecko-<version>-mac.dmg`, `FinanzGecko-<version>-x86_64.AppImage`.
+   There are deliberately no unversioned alias copies; `docs/download.html` resolves the concrete asset at runtime
+   via the GitHub releases API, matching each card by its `data-asset-suffix`. **Renaming an artifact here means
+   changing that attribute in the same commit** — otherwise the page silently falls back to the release page.
 4. `CHANGELOG.md` is maintained automatically by the `release` job from commit messages since the last tag — don't
    edit it by hand.
 

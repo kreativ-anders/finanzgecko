@@ -70,6 +70,8 @@ zeigt den gespeicherten Zustand und prüft erst auf Klick auf "Jetzt prüfen". E
 finanzgecko/
 ├── AI_MASTER.md                  # ← dieses Dokument
 ├── CHANGELOG.md                  # generiert vom release-Job in release.yml (Commits seit letztem Tag, oben angehängt) — nicht von Hand pflegen
+├── ROADMAP.md                    # Kurze, öffentliche Checkbox-Liste (Englisch): was als Nächstes kommt. Bewusst ohne Details —
+│                                 #   Begründungen/Entscheidungen gehören hierher (AI_MASTER), Verhalten nach gherkin/
 ├── LICENSE                       # GPL-3.0 + "Commons Clause"-Zusatz (Copyleft, aber keine kommerzielle Nutzung) — siehe "Lizenz" unten
 ├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (deklarativ)
 │   └── executable/               # ← ausführbare Features (@executable), laufen via test/support/gherkin_runner.dart
@@ -490,6 +492,13 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   wird kein Bundle gebaut/released. Es gibt bewusst keinen separaten Push/PR-CI-Workflow — `flutter analyze`,
   `flutter test` und `dart format` laufen lokal vor jedem Commit (siehe CLAUDE.md "Always verify"), release.yml ist
   der einzige GitHub-Workflow im Repo.
+  **Die `if:`-Bedingungen der Build-Jobs müssen mit `!cancelled() &&` beginnen** — nicht kosmetisch: `bump-version`
+  wird bei einem Tag-Push und bei "bump: none" bewusst übersprungen, und GitHub überspringt per Default alles, was
+  via `needs` an einem übersprungenen Job hängt. Diese Vererbung schaltet sich erst ab, sobald die Bedingung eine
+  Status-Check-Funktion enthält; das ebenfalls vorhandene `needs.bump-version.result == 'skipped'` genügt **nicht**,
+  obwohl es sich richtig liest. Ohne `!cancelled()` liefen weder Ad-hoc-Testbuilds noch Tag-Push-Releases (Weg A),
+  sondern nur der Weg über den Bump-Knopf (Weg B) — der Lauf wurde dabei komplett grün gemeldet, nur ohne einen
+  einzigen gebauten Job. Nicht "aufräumen".
 - **Splash-Logo je Theme** (`assets/logo/`): zwei Dateien mit identischem Zuschnitt (je 512×333, aus
   `kreativ-anders/static-assets` übernommen). **Die Namen bezeichnen die Bildfarbe, nicht das Theme** —
   `kreativ-anders-light-512.png` ist das *helle* Logo (weiße Schrift) und gehört auf den **dunklen** Grund,
@@ -507,11 +516,19 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 - Release-Artefakte sind **fertige Pakete statt roher Bundle-Ordner** (die Testnutzer verwirrten und beim Löschen
   einzelner Dateien den Start brachen): Windows → Inno-Setup-Installer `FinanzGecko-<Version>-Setup.exe`
   (`packaging/windows/finanzgecko.iss`, gebaut mit `iscc` im `windows`-Job), Linux → einzelnes ausführbares AppImage
-  `FinanzGecko-<Version>-x86_64.AppImage` (`packaging/linux/build_appimage.sh` via `appimagetool`), macOS → gezipptes
-  `FinanzGecko-<Version>-mac.app.zip` (behandelt der Finder ohnehin als eine Einheit). Die Version wird in jedem
+  `FinanzGecko-<Version>-x86_64.AppImage` (`packaging/linux/build_appimage.sh` via `appimagetool`), macOS → Disk-Image
+  `FinanzGecko-<Version>-mac.dmg` (`hdiutil`-Schritt im `macos`-Job, Image = `FinanzGecko.app` + Symlink auf
+  `/Applications`). Die Version wird in jedem
   Build-Job aus `pubspec.yaml` gelesen (nicht aus dem Git-Tag), damit auch ungetaggte Ad-hoc-Testbuilds
   (`workflow_dispatch`, `bump: none`) einen versionierten Dateinamen bekommen. `packaging/linux/install.sh` bleibt als
   Alternative fürs Linux-Startmenü aus einem entpackten Bundle bestehen.
+- **macOS: DMG statt gezipptem `.app`-Bundle** (seit August 2026). Zwei Gründe, der zweite ist der eigentliche:
+  Erstens ist "Image öffnen, App auf `Programme` ziehen" der auf macOS gewohnte Ablauf — beim ZIP landete das
+  Bundle im Download-Ordner und wurde oft von dort gestartet. Zweitens kann ein DMG das Notarisierungs-Ticket
+  tragen (`xcrun stapler staple`), ein ZIP nicht: dessen Ticket müsste Gatekeeper beim ersten Start online bei
+  Apple nachschlagen. Die Umstellung ist deshalb Voraussetzung für die geplante Signierung/Notarisierung (siehe
+  [ROADMAP.md](ROADMAP.md)) und wurde bewusst *vorher* gemacht, damit der Dateiname sich nicht zweimal ändert.
+  `hdiutil` statt `create-dmg`: auf jedem macOS-Runner vorhanden, keine zusätzliche Abhängigkeit.
 - **Keine unversionierten Alias-Assets:** jedes Release trägt pro Plattform genau **eine** Binärdatei (den
   versionierten Namen). Ein früherer Ansatz lud zusätzlich eine byte-identische unversionierte Kopie hoch
   (`cp`/`Copy-Item` vor dem jeweiligen `upload-artifact`-Schritt), damit `docs/download.html` fest auf
@@ -527,7 +544,7 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
      vom richtigen Download abschneiden. Deshalb bewusst *kein* einzelner großer Button. Mobile UAs (iOS/Android)
      werden absichtlich nicht erkannt: es gibt keine mobile Version, dort bleiben alle drei Karten gleichwertig.
   2. **Asset-Auflösung** über `api.github.com/repos/.../releases/latest`: pro Karte wird das Asset per
-     `data-asset-suffix` (`-Setup.exe`, `-mac.app.zip`, `-x86_64.AppImage`) gematcht, der Button auf dessen
+     `data-asset-suffix` (`-Setup.exe`, `-mac.dmg`, `-x86_64.AppImage`) gematcht, der Button auf dessen
      `browser_download_url` gesetzt und Version + Dateigröße in `.download-meta` eingeblendet. Findet sich kein
      passendes Asset (etwa weil ein Plattform-Build im Release fehlgeschlagen ist), bleibt für **diese** Karte der
      Fallback-Link stehen.
