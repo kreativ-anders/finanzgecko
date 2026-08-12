@@ -16,7 +16,9 @@ Downloads are currently unsigned, so macOS and Windows show a security warning o
       not remove the warning — it only turns the SmartScreen block into a one-click "run anyway" that fades as
       downloads accumulate. The cheap cloud option (Azure Artifact Signing, ~$10/month) is not open to individual
       developers outside the US and Canada
-- [ ] Linux — checksums for the AppImage, maybe Flathub. No security warning on Linux, so this is polish rather than a fix
+- [x] Checksums — every release ships a `SHA256SUMS` file and lists the hashes in the release notes
+- [ ] Linux — nothing urgent: there is no security warning on Linux. Flathub is postponed, since it no longer
+      accepts applications containing AI-assisted code, and FinanzGecko is developed with AI assistance
 - [ ] Update the website once a signed release is out — the install FAQ and the download page still say the app is unsigned, which stays true until then (and stays true for Windows longer)
 
 ## Next
