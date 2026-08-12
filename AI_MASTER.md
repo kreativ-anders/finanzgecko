@@ -452,7 +452,12 @@ Splash).
   gefunden im Qualitäts-Audit (§9): `.card.warn` färbte seinen linken Rahmenindikator mit `--danger` (2,6:1 gegen
   `--bg` hell). Deshalb gibt es in `style.css` jetzt — analog zur App — auch ein `--danger-text` (`#FF6B6B` dunkel /
   `#BA4E4E` hell, spiegelt `kDangerText`); `--danger` bleibt als Markenfarbe stehen, ist aktuell aber nirgends mehr
-  referenziert.
+  referenziert. **Dritter Fall, gleiche Ursache, August 2026:** die neue `.download-note` (Backup-Empfehlung auf
+  `download.html`) bekam ihren linken Rahmenindikator zunächst mit `--primary` — 2,2:1 gegen `--surface` hell,
+  während `.card.note` direkt darunter in derselben Datei längst `--primary-text` verwendet. Dass die Regel hier
+  dreimal gleich verletzt wurde, obwohl sie dokumentiert ist, ist der eigentliche Befund: **beim Anlegen eines
+  neuen Rahmen-/Fokusindikators zuerst nach einem bestehenden `border-left: 3px solid var(--*-text)` greifen**
+  statt zur Markenfarbe. Flächen und Fills bleiben unverändert bei `--primary`/`--danger`.
 - **Bankfarben sind Logofarben, keine Textfarben.** `kBanks` enthält u. a. `#000000` (Trade Republic, C24,
   Mercedes-Benz Bank) und `#ffe600` (comdirect) — als Fläche oder 10px-Punkt unproblematisch, als Beschriftung auf
   `kSurface` unlesbar (bis herunter zu 1,06:1). Wo eine Kontofarbe **Text** einfärbt (aktuell der Kontotyp-Chip auf

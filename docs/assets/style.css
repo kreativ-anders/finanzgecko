@@ -741,8 +741,10 @@ footer.site .wrap {
 /* Hinweis-Box (Backup-Empfehlung) auf download.html. Bewusst in
    --surface/--border statt in --danger: es ist eine Vorsichtsmaßnahme, keine
    Fehlermeldung — ein roter Kasten direkt unter den Download-Buttons würde
-   suggerieren, mit der App stimme etwas nicht. Der schmale linke Akzent in
-   --primary hebt sie trotzdem aus dem Fließtext heraus. */
+   suggerieren, mit der App stimme etwas nicht. Der schmale linke Akzent hebt
+   sie trotzdem aus dem Fließtext heraus.
+   Akzent wie bei .card.note: Rahmenindikator, also --primary-text statt
+   --primary (das käme hell nur auf 2,2:1). Siehe AI_MASTER §5. */
 .download-note {
   padding: 0 0 24px;
 }
@@ -750,7 +752,7 @@ footer.site .wrap {
 .download-note .note {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--primary);
+  border-left: 3px solid var(--primary-text);
   border-radius: 10px;
   padding: 18px 20px;
   margin: 0;
