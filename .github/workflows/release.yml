@@ -242,29 +242,17 @@ jobs:
       - run: flutter pub get
       - run: flutter build macos --release
 
-      - name: DMG bauen
-        # DMG statt des früheren gezippten .app-Bundles: der auf macOS
-        # gewohnte "App ins Programme-Verzeichnis ziehen"-Ablauf (daher der
-        # Applications-Symlink im Image) statt eines Ordners im Download-
-        # Verzeichnis, aus dem die App oft direkt gestartet wurde. Vor allem
-        # aber kann ein DMG das Notarisierungs-Ticket tragen
-        # (`xcrun stapler staple`); ein ZIP kann das nicht und bräuchte beim
-        # ersten Start eine Online-Prüfung bei Apple.
-        #
-        # hdiutil statt create-dmg o. Ä.: auf jedem macOS-Runner vorhanden,
-        # keine zusätzliche Abhängigkeit. ditto statt cp beim Befüllen des
-        # Staging-Ordners: erhält Resource-Forks/Extended-Attributes des
-        # .app-Bundles, die für Codesigning/Gatekeeper relevant sind. Der
-        # Dateiname trägt die Version (aus pubspec.yaml), damit mehrere
-        # heruntergeladene Releases nebeneinander unterscheidbar bleiben.
+      - name: DMG bauen (signiert + notarisiert, sofern Secrets vorhanden)
+        # Dasselbe Skript, das lokal von Hand läuft — damit der getestete
+        # Build und der CI-Build nicht auseinanderlaufen können. Es signiert
+        # und notarisiert nur, wenn Identität bzw. Zugangsdaten da sind, und
+        # baut sonst ein unsigniertes DMG: ein Fork ohne Secrets darf die
+        # atomare Release-Kette nicht blockieren.
         env:
-          DMG: FinanzGecko-${{ steps.version.outputs.version }}-mac.dmg
+          OUT_FILE: ${{ github.workspace }}/FinanzGecko-${{ steps.version.outputs.version }}-mac.dmg
         run: |
-          staging="$(mktemp -d)"
-          ditto build/macos/Build/Products/Release/FinanzGecko.app "$staging/FinanzGecko.app"
-          ln -s /Applications "$staging/Applications"
-          hdiutil create -volname FinanzGecko -srcfolder "$staging" -ov -format UDZO "$DMG"
-          rm -rf "$staging"
+          chmod +x packaging/macos/build_dmg.sh
+          ./packaging/macos/build_dmg.sh
 
       - uses: actions/upload-artifact@v7
         with:
