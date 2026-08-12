@@ -100,5 +100,32 @@ automatically).
 4. `CHANGELOG.md` is maintained automatically by the `release` job from commit messages since the last tag — don't
    edit it by hand.
 
+### macOS signing and notarization
+
+`packaging/macos/build_dmg.sh` signs the app (Developer ID, Hardened Runtime), notarizes it, staples the ticket and
+builds the DMG. It runs both locally and in the `macos` CI job, so a build you test by hand is the same one CI
+produces. Without a signing identity or notarization credentials it produces an **unsigned** DMG and says so,
+rather than failing — a fork has no secrets and must not break the release chain.
+
+Locally, once `xcrun notarytool store-credentials "finanzgecko" …` has been run:
+
+```bash
+flutter build macos --release
+NOTARY_PROFILE=finanzgecko ./packaging/macos/build_dmg.sh
+```
+
+CI reads five repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | What |
+| --- | --- |
+| `MACOS_CERT_P12_BASE64` | Developer ID Application certificate **incl. private key**, `.p12`, base64-encoded |
+| `MACOS_CERT_PASSWORD` | the password set when exporting that `.p12` |
+| `APPLE_API_KEY_P8_BASE64` | App Store Connect API key (`.p8`), base64-encoded |
+| `APPLE_API_KEY_ID` | Key ID of that key |
+| `APPLE_API_ISSUER_ID` | Issuer ID (UUID, shared by all keys of the team) |
+
+The workflow imports the certificate into a temporary keychain that is deleted again at the end of the job
+(`if: always()`), so nothing is left behind on the runner.
+
 **Ad-hoc test build without a release:** *Actions → Release → Run workflow* (any branch, no tag needed) — builds
 the same three packages as workflow artifacts, without a GitHub release or CHANGELOG update.

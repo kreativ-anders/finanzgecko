@@ -54,11 +54,37 @@ else
   echo "         das DMG bleibt UNSIGNIERT (Gatekeeper warnt beim Start)." >&2
 fi
 
+# Wiederholt einen Befehl mit wachsender Pause.
+#
+# Grund (nicht wegoptimieren): `--timestamp` ist pro Signatur ein Netzaufruf
+# an Apples Zeitstempel-Dienst, und der antwortet gelegentlich nicht. codesign
+# meldet das als nichtssagendes "errSecInternalComponent" und bricht ab —
+# derselbe Aufruf läuft Sekunden später unverändert durch. Weil hier mehrere
+# Signaturen direkt hintereinander angefordert werden, trifft es typischerweise
+# die erste. Ohne diesen Retry wäre das in der CI ein fehlgeschlagenes Release
+# mit einer Fehlermeldung, die auf nichts hindeutet.
+retry() {
+  local attempt=1
+  local max=5
+  while true; do
+    if "$@"; then
+      return 0
+    fi
+    if [ "$attempt" -ge "$max" ]; then
+      echo "Fehler: '$1' nach $max Versuchen fehlgeschlagen." >&2
+      return 1
+    fi
+    echo "Versuch $attempt fehlgeschlagen, neuer Versuch in $((attempt * 5))s ..." >&2
+    sleep $((attempt * 5))
+    attempt=$((attempt + 1))
+  done
+}
+
 sign_one() {
   # --options runtime = Hardened Runtime, Pflicht für die Notarisierung.
   # --timestamp = signierter Zeitstempel von Apple, damit die Signatur das
   # Ablaufdatum des Zertifikats überlebt.
-  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$@"
+  retry codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$@"
 }
 
 if [ "$CAN_SIGN" = 1 ]; then
@@ -139,7 +165,9 @@ rm -f "$OUT_FILE"
 hdiutil create -volname FinanzGecko -srcfolder "$STAGING" -ov -format UDZO "$OUT_FILE"
 
 if [ "$CAN_SIGN" = 1 ]; then
-  codesign --force --timestamp --sign "$SIGN_IDENTITY" "$OUT_FILE"
+  # Ohne --options runtime: Hardened Runtime ist eine Eigenschaft des
+  # laufenden Programms, das DMG ist nur der Container.
+  retry codesign --force --timestamp --sign "$SIGN_IDENTITY" "$OUT_FILE"
 fi
 
 if [ "$CAN_NOTARIZE" = 1 ]; then

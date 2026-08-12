@@ -55,6 +55,7 @@ app.*.map.json
 # Release-Pakete (von release.yml bzw. packaging/-Skripten gebaut — Artefakte,
 # nicht committen).
 /FinanzGecko-x86_64.AppImage
+/FinanzGecko-mac.dmg
 /packaging/windows/FinanzGecko-Setup.exe
 
 # Generiert von tool/generate_corporate_design_pdf.sh aus CORPORATE_DESIGN.md —
