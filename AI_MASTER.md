@@ -69,10 +69,11 @@ zeigt den gespeicherten Zustand und prüft erst auf Klick auf "Jetzt prüfen". E
 ```
 finanzgecko/
 ├── AI_MASTER.md                  # ← dieses Dokument
-├── CORPORATE_DESIGN.md           # Farbpalette, Markenfarben-Regeln, Typografie, App-Icon — ausgelagert aus §5,
-│                                 #   damit dieses Dokument nicht weiter wächst; §5 selbst bleibt bei Interaktions-
-│                                 #   mustern/Verhalten. Bei jeder Änderung an lib/ui/theme.dart/constants.dart-
-│                                 #   Designtokens diese Datei mitziehen (siehe "Regeln für KI-Agenten" #1/#4)
+├── CORPORATE_DESIGN.md           # Farbpalette, Markenfarben-Regeln, Typografie, App-Icon — bewusst kompakt und
+│                                 #   ohne Code-Bezug für Design/Marketing/externe Gestaltung; die technische
+│                                 #   Umsetzung (Getter, Kontrast-Fallbacks) steht stattdessen in §5 "Farbtoken —
+│                                 #   technische Umsetzung". Bei jeder Änderung an lib/ui/theme.dart/constants.dart-
+│                                 #   Designtokens beide Stellen mitziehen (siehe "Regeln für KI-Agenten" #1/#4)
 ├── CHANGELOG.md                  # generiert vom release-Job in release.yml (Commits seit letztem Tag, oben angehängt) — nicht von Hand pflegen
 ├── ROADMAP.md                    # Kurze, öffentliche Checkbox-Liste (Englisch): was als Nächstes kommt. Bewusst ohne Details —
 │                                 #   Begründungen/Entscheidungen gehören hierher (AI_MASTER), Verhalten nach gherkin/
@@ -402,9 +403,57 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 
 ## 5. UI-Konventionen
 
-**Farbpalette, Markenfarben-Regeln, Typografie, App-Icon:** siehe [`CORPORATE_DESIGN.md`](CORPORATE_DESIGN.md) —
-ausgelagert, damit dieses Dokument nicht weiter wächst. Dieser Abschnitt hier deckt Interaktionsmuster und Verhalten
-ab (Navigation, Dialoge, Formate, Benachrichtigungen, Charts, Splash), nicht die visuelle Identität selbst.
+**Farbpalette, Markenfarben-Regeln, Typografie, App-Icon — designer-lesbar:** siehe
+[`CORPORATE_DESIGN.md`](CORPORATE_DESIGN.md), bewusst kompakt und ohne Code-Bezug gehalten (Zielgruppe: Design,
+Marketing, externe Gestaltung). Die technische Umsetzung dieser Tokens (Getter-Mechanik, Kontrast-Fallbacks,
+Sync-Pflichten mit `theme.dart`/`constants.dart`) steht stattdessen hier im nächsten Unterabschnitt. Der Rest von
+Abschnitt 5 deckt Interaktionsmuster und Verhalten ab (Navigation, Dialoge, Formate, Benachrichtigungen, Charts,
+Splash).
+
+### Farbtoken — technische Umsetzung
+
+- **Nur vier Tokens sind pro Theme unterschiedlich:** `kBackground`, `kSurface`, `kBorder`, `kMuted` sowie
+  `kTextPrimary` (volltoniger Lesetext auf `kBackground`/`kSurface`, z. B. Splash-Screen, Chart-Tooltips,
+  Monatsauswahl — ersetzt die früheren fest verdrahteten `Colors.white`-Stellen), alle in `lib/ui/theme.dart`. Alle
+  anderen Farben — `kPrimary` (`#00C878`), `kDanger` (`#FF6B6B`), `kWarning` (`#E0A030`),
+  `kTrendUp/Down/Neutral` — sind **bewusst in beiden Themes identisch** (Markenfarben, keine Neuinterpretation).
+  Diese vier dynamischen Tokens (plus `kTextPrimary`) sind top-level **Getter** (kein `const` mehr), die den
+  zuletzt von `ThemeScope` aufgelösten `Brightness`-Wert lesen — `ThemeScope` sitzt in `main.dart` oberhalb von
+  `MaterialApp` (innerhalb eines `Consumer<AppState>`, das bei jedem `setThemeMode()` neu baut) und löst
+  `AppThemeMode.system` gegen `MediaQuery.platformBrightnessOf(context)` auf. Jede Stelle, die einen dieser Tokens
+  referenziert, darf deshalb **nicht** `const` sein (der Dart-Compiler bricht mit "Invalid constant value" ab,
+  falls doch — verlässlicher Marker beim Reviewen). Diese Hex-Werte sind mit `kPrimaryHex`/`kDangerHex` in
+  `constants.dart` synchron zu halten (String-Form fürs on-disk Kontofarben-Feld vs. `Color`-Form fürs Theme).
+  **Noch offen:** eigene Hell/Dunkel-Varianten fürs Taskleisten-/Dock-Icon (aktuell ein einziges Icon für beide
+  Themes, siehe Icon-Pipeline in §6).
+- **`kPrimaryText`/`kDangerText`/`kWarningText`** (`lib/ui/theme.dart`, gleiches Getter-Muster wie oben): WCAG-2.1-AA-
+  sichere Varianten von `kPrimary`/`kDanger`/`kWarning` für den Einsatz als **Text-/Icon-Farbe** (statt als Fläche/
+  Chart-Linie/Button-Hintergrund). `kPrimary` & Co. bleiben als Marken-/Füllfarbe bewusst themenidentisch (s. o.) —
+  als Textfarbe auf dem hellen Theme unterschreiten sie aber alle drei die 4,5:1-Mindestkontrastvorgabe (~2,0–2,8:1
+  gegen `kBackground`/`kSurface` hell). Die `*Text`-Getter geben im Dark Theme exakt die Original-Konstante zurück
+  (dort bereits ≥6,9:1) und nur im Light Theme eine dunklere, farbtongleiche Variante (`#00814D`/`#BA4E4E`/`#936920`,
+  alle ≥4,5:1 gegen `#F4F7F5`/`#FFFFFF`). Regel: **jede Stelle, an der eine der drei Markenfarben eine Textzeile,
+  ein alleinstehendes Icon-Glyph oder einen Fokus-/Rahmenindikator (`InputDecorationTheme.focusedBorder`) färbt,
+  nutzt die `*Text`-Variante** — Flächen/Fills (Button-/Chip-Hintergrund, `AppLineChart`-Linienfarbe, farbige
+  Badges mit dunklem Text obendrauf) bleiben bei der Original-Konstante. Ausnahme: der Marken-Schriftzug
+  "🦎 FinanzGecko" im Kopfbereich (`navigation_shell.dart`) bleibt `kPrimary`, da Logos/Markennamen laut WCAG 1.4.3
+  von der Kontrastvorgabe ausgenommen sind. **Dieselbe Regel gilt für `docs/assets/style.css`**, das die Tokens der
+  App spiegelt: dort trat der Fehler bereits einmal auf — die per JS hervorgehobene Download-Karte
+  (`.download-card-primary`) bekam `border-color: var(--primary)` und war auf dem hellen Theme mit 2,2:1 gegen
+  `--surface` unsichtbar, während das Badge darüber (`--primary-text`, 4,9:1) korrekt erschien. Zweiter Fall,
+  gefunden im Qualitäts-Audit (§9): `.card.warn` färbte seinen linken Rahmenindikator mit `--danger` (2,6:1 gegen
+  `--bg` hell). Deshalb gibt es in `style.css` jetzt — analog zur App — auch ein `--danger-text` (`#FF6B6B` dunkel /
+  `#BA4E4E` hell, spiegelt `kDangerText`); `--danger` bleibt als Markenfarbe stehen, ist aktuell aber nirgends mehr
+  referenziert.
+- **Bankfarben sind Logofarben, keine Textfarben.** `kBanks` enthält u. a. `#000000` (Trade Republic, C24,
+  Mercedes-Benz Bank) und `#ffe600` (comdirect) — als Fläche oder 10px-Punkt unproblematisch, als Beschriftung auf
+  `kSurface` unlesbar (bis herunter zu 1,06:1). Wo eine Kontofarbe **Text** einfärbt (aktuell der Kontotyp-Chip auf
+  den Dashboard-Konto-Karten), läuft sie deshalb durch `readableOn(hex, kSurfaceHex)` aus `constants.dart`: eine
+  reine Hex-zu-Hex-Funktion, die in 2%-Schritten Richtung Weiß bzw. Schwarz mischt, bis 4,5:1 erreicht sind, und
+  sonst unverändert durchreicht. Die Chip-**Fläche** behält bewusst die ungefilterte Markenfarbe (15% Deckkraft) —
+  Hintergründe haben keine Kontrastvorgabe, und sie ist es, die den Chip nach der Bank aussehen lässt. 51 der 96
+  Kombinationen (48 Farben × 2 Themes) brauchen die Korrektur; dass **alle** konvergieren, sichert ein Szenario in
+  `gherkin/executable/account_color.feature` ab.
 
 - **Kein natives Menü** unter Linux/Windows (Flutters `PlatformMenuBar` nur macOS) → In-App-"Datei"-Bereich im
   Fensterkopf, plattformübergreifend identisch, plus globale Tastenkürzel (`Strg`/`⌘`+E/I/Q) via `CallbackShortcuts`.
@@ -509,6 +558,10 @@ ab (Navigation, Dialoge, Formate, Benachrichtigungen, Charts, Splash), nicht die
   Forks und Ad-hoc-Testbuilds haben keine Secrets, und ein harter Fehler würde dort die atomare Release-Kette
   blockieren. `SIGN_IDENTITY` ist absichtlich nur der Teilstring `Developer ID Application` (codesign löst das auf,
   solange genau eine Identität passt) — kein Name und keine Team-ID im Repo.
+  Jeder `codesign`-Aufruf läuft über eine `retry`-Funktion (5 Versuche, wachsende Pause). Das ist **kein**
+  vorsorglicher Zierrat: `--timestamp` ist pro Signatur ein Netzaufruf an Apples Zeitstempel-Dienst, der
+  gelegentlich nicht antwortet; codesign meldet das als `errSecInternalComponent` und bricht ab, derselbe Aufruf
+  läuft Sekunden später unverändert durch (genau so beim ersten lokalen Signaturlauf passiert). Nicht entfernen.
 - **Keine unversionierten Alias-Assets:** jedes Release trägt pro Plattform genau **eine** Binärdatei (den
   versionierten Namen). Ein früherer Ansatz lud zusätzlich eine byte-identische unversionierte Kopie hoch
   (`cp`/`Copy-Item` vor dem jeweiligen `upload-artifact`-Schritt), damit `docs/download.html` fest auf
@@ -713,7 +766,7 @@ Drei Teilbereiche, jeweils mit klarem Scope:
 1. **Usability & Accessibility der UI** — sowohl der Flutter-Desktop-App (`lib/ui/views/`, `lib/ui/widgets/`,
    `lib/ui/theme.dart`) als auch der Landingpage (`docs/index.html`, `docs/download.html`,
    `docs/documentation.html`, `docs/danke.html`, `docs/assets/style.css`). Prüfpunkte u. a.: Kontraste (siehe
-   `kPrimaryText`/`kDangerText`/`kWarningText`-Regel in `CORPORATE_DESIGN.md` — WCAG 2.1 AA, 4,5:1), Tastaturbedienbarkeit,
+   `kPrimaryText`/`kDangerText`/`kWarningText`-Regel in §5 "Farbtoken — technische Umsetzung" — WCAG 2.1 AA, 4,5:1), Tastaturbedienbarkeit,
    Fokus-Reihenfolge/-sichtbarkeit, Screenreader-Semantik (`Semantics`-Widgets, `alt`-Texte, Landmark-Tags/`aria-*`
    auf der statischen Seite), Lesbarkeit (Zeilenbreite, Schriftgrößen), Konsistenz der Interaktionsmuster
    (Bestätigungsdialoge, Inline-Edit-Debounce, Hover/Tooltip-Verhalten, siehe Abschnitt 5).

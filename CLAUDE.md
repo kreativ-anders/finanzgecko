@@ -1,14 +1,15 @@
 # FinanzGecko — Repo Instructions
 
 [AI_MASTER.md](AI_MASTER.md) is the source of truth for architecture, tech stack, data flow, UI conventions, and
-domain language. [CORPORATE_DESIGN.md](CORPORATE_DESIGN.md) holds the visual identity — color palette, brand-color
-rules, typography, app icon — extracted out of AI_MASTER.md §5 to keep it from growing further.
-[gherkin/](gherkin/) holds the behavioral spec as Gherkin features. Read all three before making any non-trivial
-change, and follow the "Regeln für KI-Agenten" section at the bottom of AI_MASTER.md — in particular: keep
-AI_MASTER.md, CORPORATE_DESIGN.md, and the relevant `gherkin/*.feature` in sync with any change to folder
-structure, architecture, data models, view behavior, or design tokens; never translate the German domain terms
-(Konto, Fixposten, Vermögenswerte, …); don't revert a documented architecture decision (e.g. macOS keychain/sandbox
-settings, unencrypted rates cache) without discussing it first.
+domain language — including the technical implementation of the color tokens (§5 "Farbtoken — technische
+Umsetzung"). [CORPORATE_DESIGN.md](CORPORATE_DESIGN.md) holds the same visual identity — color palette, brand-color
+rules, typography, app icon — but rewritten compact and code-free for a design/marketing audience; keep both in
+sync, not just one. [gherkin/](gherkin/) holds the behavioral spec as Gherkin features. Read all three before
+making any non-trivial change, and follow the "Regeln für KI-Agenten" section at the bottom of AI_MASTER.md — in
+particular: keep AI_MASTER.md, CORPORATE_DESIGN.md, and the relevant `gherkin/*.feature` in sync with any change to
+folder structure, architecture, data models, view behavior, or design tokens; never translate the German domain
+terms (Konto, Fixposten, Vermögenswerte, …); don't revert a documented architecture decision (e.g. macOS
+keychain/sandbox settings, unencrypted rates cache) without discussing it first.
 
 ## Working efficiently in this repo (for AI agents)
 

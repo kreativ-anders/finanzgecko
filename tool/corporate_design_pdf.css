@@ -9,6 +9,8 @@
 html {
   color: #1a1a1a;
   background-color: #fdfdfd;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 body {
   margin: 0 auto;
