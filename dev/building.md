@@ -99,6 +99,9 @@ automatically).
    changing that attribute in the same commit** — otherwise the page silently falls back to the release page.
 4. `CHANGELOG.md` is maintained automatically by the `release` job from commit messages since the last tag — don't
    edit it by hand.
+5. The same job publishes a `SHA256SUMS` asset covering the three platform packages, and repeats those hashes in
+   the release description. Verify a download with `shasum -a 256 <file>` (macOS/Linux) or
+   `certutil -hashfile <file> SHA256` (Windows).
 
 ### macOS signing and notarization
 

@@ -562,6 +562,13 @@ Splash).
   vorsorglicher Zierrat: `--timestamp` ist pro Signatur ein Netzaufruf an Apples Zeitstempel-Dienst, der
   gelegentlich nicht antwortet; codesign meldet das als `errSecInternalComponent` und bricht ab, derselbe Aufruf
   läuft Sekunden später unverändert durch (genau so beim ersten lokalen Signaturlauf passiert). Nicht entfernen.
+- **Prüfsummen:** der `release`-Job legt zusätzlich ein `SHA256SUMS` über die drei Plattform-Pakete als
+  Release-Asset ab und schreibt dieselben Hashes in den Release-Text (`body_path`). Das ist die eine erlaubte
+  Ausnahme zur Regel unten — kein Binär-Duplikat, sondern eine Textdatei im Standardformat von `sha256sum -c`.
+  `sha256sum FinanzGecko-*` statt `sha256sum *`: die Shell legt die Zieldatei durch die Umleitung an, *bevor* der
+  Befehl läuft, ein `*` würde also die noch leere `SHA256SUMS` mit sich selbst hashen. Für
+  `docs/download.html` ist die Datei unkritisch: die Asset-Auflösung matcht per `data-asset-suffix`, und
+  `SHA256SUMS` trägt keines davon.
 - **Keine unversionierten Alias-Assets:** jedes Release trägt pro Plattform genau **eine** Binärdatei (den
   versionierten Namen). Ein früherer Ansatz lud zusätzlich eine byte-identische unversionierte Kopie hoch
   (`cp`/`Copy-Item` vor dem jeweiligen `upload-artifact`-Schritt), damit `docs/download.html` fest auf
