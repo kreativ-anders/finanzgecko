@@ -1,4 +1,4 @@
-# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart, lib/services/update_service.dart
+# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart, lib/services/update_service.dart, lib/utils/update_assets.dart
 # Implementierung: lib/ui/views/settings_view.dart
 @settings
 Feature: Einstellungen
@@ -93,14 +93,35 @@ Feature: Einstellungen
     Then fragt die App den neuesten Release-Tag der öffentlichen GitHub-Releases-API des Projekts
       (kreativ-anders/finanzgecko) ab und vergleicht ihn mit der installierten Version
     And diese Abfrage findet ausschließlich bei diesem Klick statt — kein automatischer Hintergrund-Check
-      beim App-Start oder periodisch währenddessen (kein In-App-Auto-Updater, siehe AI_MASTER.md Abschnitt 6:
-      es gibt kein Code-Signing-Zertifikat, das einen vertrauenswürdigen automatischen Binary-Austausch
-      erlauben würde)
+      beim App-Start oder periodisch währenddessen (siehe AI_MASTER.md Abschnitt 6)
     Given eine neuere Version ist verfügbar
     Then öffnet sich ein Dialog "Update verfügbar" mit der neuen Versionsnummer und der aktuell installierten
-      Version, sowie den Buttons "Später" (schließt den Dialog ohne Aktion) und "Herunterladen" (öffnet die
-      Download-Seite der Website, docs/download.html, im Standardbrowser — bewusst nicht die rohe
-      GitHub-Release-Seite, die die Wahl der richtigen Plattform-Datei dem Menschen überließe)
+      Version, sowie den Buttons "Später" (schließt den Dialog ohne Aktion) und "Herunterladen"
+
+  Scenario: Update herunterladen und gegen die Prüfsumme halten
+    Given im Dialog "Update verfügbar" habe ich "Herunterladen" gewählt
+    Then fragt die App über einen Datei-Dialog, wo die Datei gespeichert werden soll (kein stilles Ablegen im
+      Download-Ordner: das löste unter macOS eine eigene Systemabfrage "Zugriff auf den Ordner Downloads" aus)
+    And vorgeschlagen wird der Name des Release-Assets, das zum laufenden Betriebssystem gehört
+      (-mac.dmg, -Setup.exe bzw. -x86_64.AppImage — dieselben Endungen wie in release.yml und
+      docs/download.html, siehe gherkin/executable/update_assets.feature)
+    When ich einen Speicherort bestätige
+    Then lädt die App die Datei mit Fortschrittsanzeige und vergleicht sie mit der Datei SHA256SUMS aus
+      demselben Release
+    And erst wenn die Prüfsumme übereinstimmt, wird die Datei überhaupt geschrieben — eine ungeprüfte Datei
+      landet nie im gewählten Ordner
+    Then zeigt ein Dialog "Update geladen und geprüft" den plattformabhängigen nächsten Schritt sowie einen
+      Button "Im Ordner zeigen"
+    And dieser Dialog fordert zuerst dazu auf, FinanzGecko zu beenden, bevor die neue Version installiert wird
+      (eine laufende Anwendung zu ersetzen führt zu Fehlern) — bewusst einmal für alle Plattformen formuliert,
+      nicht je Plattform, damit der Hinweis bei keiner fehlen kann
+    And die App führt die Datei NICHT aus und ersetzt sich nicht selbst — unter Windows hieße "Installer
+      starten" eine frisch heruntergeladene ausführbare Datei zu starten
+    Given die Prüfsumme weicht ab
+    Then erscheint ein Dialog "Prüfsumme stimmt nicht" (bewusst kein Snackbar) und die Datei wurde nicht
+      gespeichert
+    Given das Release enthält keine Datei für dieses Betriebssystem oder keine SHA256SUMS (ältere Releases)
+    Then wird nichts geraten, sondern die Download-Seite der Website geöffnet
     And dieser Fall nutzt bewusst einen Dialog statt einer Snackbar (wie bei den beiden Fällen unten): eine
       tatsächlich handlungsrelevante Meldung soll nicht wie eine bloße Bestätigung von selbst wieder verschwinden
     Given die installierte Version ist bereits die neueste

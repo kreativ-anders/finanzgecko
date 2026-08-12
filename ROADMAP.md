@@ -23,7 +23,9 @@ Downloads are currently unsigned, so macOS and Windows show a security warning o
 
 ## Next
 
-- [ ] Automatic updates (needs signing first)
+- [ ] Assisted update — "Nach Updates suchen" downloads the right file for your system, checks it against the
+      published checksum and hands it over ready to install. Still only when you ask for it; the app never checks
+      in the background
 - [ ] Optional: run the app sandboxed on macOS — extra protection, but it moves where the data file lives, so it needs its own migration step
 - [ ] Drawdown from peak — how far below the all-time high
 - [ ] Currency exposure — EUR vs. foreign share

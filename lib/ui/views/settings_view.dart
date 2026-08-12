@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -11,6 +13,7 @@ import '../../constants.dart';
 import '../../services/update_service.dart';
 import '../../state/app_state.dart';
 import '../../utils/formatting.dart';
+import '../../utils/update_assets.dart';
 import '../app_view.dart';
 import '../theme.dart';
 import '../widgets/reset_confirm_dialog.dart';
@@ -503,8 +506,12 @@ Future<void> _openIssueTracker() async {
 const _downloadPageUrl = 'https://finanzgecko.app/download.html';
 
 /// Manual, user-triggered update check against the GitHub Releases API (see
-/// [UpdateService]) — never automatic, never downloads/executes anything
-/// itself, just compares version numbers and points at the download page.
+/// [UpdateService]) — never automatic, never on launch, never periodic.
+///
+/// After the user confirms, the matching file for this platform is downloaded
+/// and checked against the release's `SHA256SUMS`. The app still never
+/// *executes* anything: it saves the verified file where the user chose and
+/// offers to show it in the file manager.
 Future<void> _checkForUpdates(BuildContext context) async {
   final appState = context.read<AppState>();
   final info = await PackageInfo.fromPlatform();
@@ -517,7 +524,13 @@ Future<void> _checkForUpdates(BuildContext context) async {
         context,
       ).showSnackBar(SnackBar(content: Text('Du verwendest bereits die neueste Version (${info.version}).')));
     case UpdateCheckStatus.updateAvailable:
-      await _showUpdateAvailableDialog(context, currentVersion: info.version, latestVersion: result.latestVersion!);
+      final confirmed = await _showUpdateAvailableDialog(
+        context,
+        currentVersion: info.version,
+        latestVersion: result.latestVersion!,
+      );
+      if (confirmed != true || !context.mounted) return;
+      await _downloadUpdate(context, assets: result.assets);
     case UpdateCheckStatus.failed:
       showErrorSnackBar(context, 'Update-Prüfung fehlgeschlagen — bitte später erneut versuchen.');
   }
@@ -526,24 +539,165 @@ Future<void> _checkForUpdates(BuildContext context) async {
 /// Shown instead of a snackbar for the "update available" result — unlike
 /// up-to-date/failed, this one is actionable and shouldn't be easy to miss
 /// or dismiss by accident via a passing snackbar.
-Future<void> _showUpdateAvailableDialog(
+Future<bool?> _showUpdateAvailableDialog(
   BuildContext context, {
   required String currentVersion,
   required String latestVersion,
 }) {
-  return showDialog<void>(
+  return showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Update verfügbar'),
       content: Text('Eine neue Version ($latestVersion) ist verfügbar. Du verwendest aktuell $currentVersion.'),
       actions: [
-        TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: noSelect(const Text('Später'))),
+        TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: noSelect(const Text('Später'))),
+        ElevatedButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: noSelect(const Text('Herunterladen')),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Downloads the release file for this platform, verifies it and saves it
+/// where the user chose.
+///
+/// The save dialog is deliberate, rather than dropping the file into
+/// ~/Downloads: writing there unprompted makes macOS raise its own "would like
+/// to access files in your Downloads folder" permission dialog — an alarming
+/// thing for an app whose whole point is that it touches nothing. Picking a
+/// location grants access to exactly that one file, and it is the same dialog
+/// users already know from "Backup exportieren…".
+Future<void> _downloadUpdate(BuildContext context, {required Map<String, String> assets}) async {
+  final assetName = selectAssetName(assets.keys, Platform.operatingSystem);
+  // No file for this platform in this release (a platform build failed, or the
+  // release predates the checksums): send the user to the download page rather
+  // than guess at the wrong file.
+  if (assetName == null) {
+    await launchUrl(Uri.parse(_downloadPageUrl));
+    return;
+  }
+
+  final location = await getSaveLocation(suggestedName: assetName);
+  if (location == null || !context.mounted) return; // Dialog abgebrochen
+
+  final progress = ValueNotifier<double?>(null);
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: const Text('Update wird geladen'),
+          content: ValueListenableBuilder<double?>(
+            valueListenable: progress,
+            builder: (context, value, child) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LinearProgressIndicator(value: value),
+                const SizedBox(height: 12),
+                Text(value == null ? assetName : '${(value * 100).round()} %'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  final result = await context.read<AppState>().updateService.downloadAndVerify(
+    assets: assets,
+    assetName: assetName,
+    targetPath: location.path,
+    onProgress: (received, total) {
+      // Ohne Content-Length bleibt der Balken unbestimmt, statt einen
+      // erfundenen Fortschritt anzuzeigen.
+      progress.value = (total == null || total <= 0) ? null : received / total;
+    },
+  );
+
+  if (!context.mounted) return;
+  Navigator.of(context, rootNavigator: true).pop(); // Fortschritts-Dialog
+
+  // Bewusst kein progress.dispose(): der Dialog wird erst nach seiner
+  // Schließ-Animation abgebaut und meldet seinen Listener DANN ab — ein
+  // sofortiges dispose() ließe genau das mit "used after being disposed"
+  // krachen. Ohne Listener wird der ValueNotifier ohnehin eingesammelt.
+
+  switch (result.status) {
+    case UpdateDownloadStatus.verified:
+      await _showDownloadDoneDialog(context, filePath: result.filePath!);
+    case UpdateDownloadStatus.checksumMismatch:
+      // Bewusst ein Dialog, kein Snackbar: die Datei kam beschädigt oder
+      // verändert an. Das darf nicht wegwischen, bevor es gelesen wurde.
+      await _showChecksumMismatchDialog(context);
+    case UpdateDownloadStatus.unavailable:
+      showErrorSnackBar(context, 'Für dieses Release gibt es keine geprüfte Datei für dein System.');
+      await launchUrl(Uri.parse(_downloadPageUrl));
+    case UpdateDownloadStatus.failed:
+      showErrorSnackBar(context, 'Download fehlgeschlagen — bitte später erneut versuchen.');
+  }
+}
+
+/// What to do with the verified file. The app deliberately does not run it:
+/// on Windows that would mean launching a freshly downloaded executable, and
+/// the promise "FinanzGecko installs nothing by itself" is worth more than the
+/// saved click.
+Future<void> _showDownloadDoneDialog(BuildContext context, {required String filePath}) {
+  // Der Hinweis zum Beenden steht bewusst EINMAL für alle Plattformen davor,
+  // statt in jedem der drei Sätze unten: so kann er beim Ergänzen einer
+  // Plattform nicht versehentlich fehlen (genau das war er unter Linux schon).
+  final hint = switch (Platform.operatingSystem) {
+    'macos' => 'Öffne dann die Datei und ziehe FinanzGecko in den Programme-Ordner, über die vorhandene Version.',
+    'windows' => 'Führe dann den Installer aus — er ersetzt die vorhandene Version.',
+    'linux' => 'Mach dann die Datei ausführbar und starte sie anstelle der bisherigen.',
+    _ => '',
+  };
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Update geladen und geprüft'),
+      content: Text(
+        'Die Datei stimmt mit der im Release veröffentlichten Prüfsumme überein.\n\n'
+        'Beende FinanzGecko, bevor du die neue Version installierst — eine laufende App zu ersetzen kann zu '
+        'Fehlern führen.\n\n$hint\n\n'
+        'Deine Daten bleiben dabei erhalten.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: noSelect(const Text('Schließen'))),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(dialogContext).pop();
+            _openInFileManager(context, File(filePath).parent.path);
+          },
+          child: noSelect(const Text('Im Ordner zeigen')),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _showChecksumMismatchDialog(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Prüfsumme stimmt nicht'),
+      content: const Text(
+        'Die heruntergeladene Datei entspricht nicht der im Release veröffentlichten Prüfsumme und wurde '
+        'deshalb nicht gespeichert. Meistens liegt das an einer abgebrochenen Übertragung — versuche es '
+        'später noch einmal oder lade die Datei direkt von der Website.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: noSelect(const Text('Schließen'))),
         ElevatedButton(
           onPressed: () {
             Navigator.of(dialogContext).pop();
             launchUrl(Uri.parse(_downloadPageUrl));
           },
-          child: noSelect(const Text('Herunterladen')),
+          child: noSelect(const Text('Zur Website')),
         ),
       ],
     ),

@@ -29,8 +29,10 @@ wiederkehrende Ein-/Ausgaben ("Fixposten"). Es gibt keine mobile oder Web-Versio
 - Netzwerkverbindungen: keine von sich aus. Nur zwei Fälle überhaupt, beide erst nach ausdrücklicher Entscheidung
   und ohne Übermittlung persönlicher oder finanzieller Daten — öffentliche EZB-Referenzkurse (Wechselkurse, erst
   nach einmaliger Zustimmung beim ersten Fremdwährungsbetrag, jederzeit widerrufbar) und die manuell ausgelöste
-  Update-Prüfung über die öffentliche GitHub-Releases-API. Ohne beides bleibt die App vollständig offline nutzbar;
-  Wechselkurse lassen sich dann von Hand eintragen.
+  Update-Prüfung über die öffentliche GitHub-Releases-API. Wer im Update-Dialog zusätzlich "Herunterladen" wählt,
+  lädt die neue Version und deren Prüfsummen-Datei von den Release-Servern von GitHub; die App fragt vorher nach
+  dem Speicherort, prüft die Datei gegen die veröffentlichte Prüfsumme und führt sie nicht aus. Ohne all das
+  bleibt die App vollständig offline nutzbar; Wechselkurse lassen sich von Hand eintragen.
 - Sprache der Benutzeroberfläche: Deutsch.
 
 ## Anbieter

@@ -51,14 +51,20 @@ Weiterentwicklung stattdessen über eine freiwillige "Pay what you want"-Unterst
 | Lint | `flutter_lints` | ^6.0.0 |
 
 Es gibt **keine** Backend-Services, keine REST-API dieser App selbst, keine Datenbank-Engine, kein Auth-System.
-Die App baut **von sich aus gar keine** Netzwerkverbindung auf; es gibt genau zwei Aufrufe, und beide setzen eine
-ausdrückliche Nutzerentscheidung voraus:
+Die App baut **von sich aus gar keine** Netzwerkverbindung auf; es gibt genau zwei **Anlässe**, und beide setzen
+eine ausdrückliche Nutzerentscheidung voraus. Bewusst "Anlässe" statt "Aufrufe": hinter dem zweiten stecken seit
+dem geprüften Download mehrere HTTP-Aufrufe (Releases-API, Asset, `SHA256SUMS`) — die Zahl der Anlässe ist die
+Aussage, die stimmen muss, nicht die Zahl der Requests.
 1. `api.frankfurter.dev` für Wechselkurse — **Opt-in** (`RateFetchConsent`, Standard `unset` = nicht erlaubt).
    Gefragt wird einmalig im Moment des ersten echten Kursbedarfs, nie beim Öffnen einer Ansicht; die Sperre sitzt
    in `CurrencyService.getExchangeRate` selbst, nicht nur an den Aufrufstellen. Ohne Zustimmung bleiben der lokale
    Cache und der manuelle Kurs-Dialog, die App ist voll nutzbar. Umkehrbar unter Einstellungen → Wechselkurse.
-2. Die öffentliche GitHub-Releases-API über "Nach Updates suchen" (Einstellungen → Hilfe) auf Klick
-   (`UpdateService`, Abschnitt 6) — kein Hintergrund-Check, kein Auto-Update.
+2. GitHub über "Nach Updates suchen" (Einstellungen → Hilfe) auf Klick (`UpdateService`, Abschnitt 6) — kein
+   Hintergrund-Check, kein Start-Check. Das sind zwei Stufen: erst die Releases-API (`api.github.com`) für den
+   neuesten Tag; und **nur wenn man danach im Dialog "Herunterladen" wählt**, das Release-Asset selbst plus die
+   Datei `SHA256SUMS`. Letzteres läuft über GitHubs Download-URLs, die auf deren Asset-Server umleiten
+   (`objects.githubusercontent.com`) — beim Aufzählen der kontaktierten Hosts nicht vergessen, `api.github.com`
+   allein ist seitdem unvollständig.
 
 Auch die Erreichbarkeitsanzeige der Kurs-API in Einstellungen → Hilfe pingt nichts beim Aufbau der Ansicht: sie
 zeigt den gespeicherten Zustand und prüft erst auf Klick auf "Jetzt prüfen". Ein Zustimmungsdialog beim bloßen
@@ -109,7 +115,9 @@ finanzgecko/
 │   ├── utils/
 │   │   ├── analysis.dart         # Reine, UI-freie Berechnungen (Trend, Prognose, Anomalie-Check, Kennzahlen, Zeitraum-Filter) — unit-testbar
 │   │   ├── csv_export.dart       # Reiner CSV-Builder für den Kontostände-Export (verlustbehaftet, kein Re-Import)
-│   │   └── formatting.dart       # Geld-/Prozent-/Datumsformatierung, Zahlen-Parsing, Perioden-Helper, Hex→Color
+│   │   ├── formatting.dart       # Geld-/Prozent-/Datumsformatierung, Zahlen-Parsing, Perioden-Helper, Hex→Color
+│   │   └── update_assets.dart    # Reine Update-Logik: Release-Asset je Plattform wählen, SHA256SUMS parsen,
+│   │                             #   Digests vergleichen — netz- und dateisystemfrei, daher ausführbar spezifiziert
 │   └── ui/
 │       ├── navigation_shell.dart # Navigation-Shell: Top-Nav, In-App-"Datei"-Menü, Tastenkürzel-Wiring (→ backup_actions)
 │       ├── backup_actions.dart   # Backup-Fluss: Export-/Import-/CSV-Datei-Dialoge, Sicherheitsabfrage, Snackbars
@@ -607,20 +615,32 @@ Splash).
   selbst sendet weiterhin **keine** Telemetrie; diese Trennung in `docs/index.html`, `docs/llms.txt` und
   `docs/datenschutz.html` sauber halten. Jede weitere Drittanbieter-Einbindung muss in `docs/datenschutz.html`
   ergänzt werden.
-- **Kein automatischer/silenter In-App-Auto-Updater** — mangels Apple-Developer- bzw. Microsoft-Signaturzertifikat
-  gäbe es keine vertrauenswürdige Grundlage, um ein heruntergeladenes Binary ohne Rückfrage zu installieren; ein
-  In-Place-Austausch würde Gatekeeper/SmartScreen-Warnungen ohnehin nicht vermeiden. Stattdessen ein **manueller
-  Check**: Einstellungen → Hilfe → "Nach Updates suchen" fragt nur bei diesem Klick (kein Hintergrund-/Start-Check)
-  über `UpdateService` (`lib/services/update_service.dart`) den neuesten Release-Tag der öffentlichen
-  GitHub-Releases-API (`api.github.com/repos/kreativ-anders/finanzgecko/releases/latest`) ab und vergleicht ihn
-  gegen die laufende Version (`PackageInfo`). Drei Ergebnisse: **neue Version verfügbar** — bewusst ein `AlertDialog`
-  statt einer Snackbar (handlungsrelevant, soll nicht von selbst wieder verschwinden), mit Buttons "Später" und
-  "Herunterladen" → öffnet `docs/download.html` (die Website-Downloadseite mit einem Button je Betriebssystem,
-  **nicht** die rohe GitHub-Release-Seite, die die Plattform-Dateiwahl dem Menschen überließe); **bereits aktuell**
-  und **fehlgeschlagen** (offline, Repo (noch) privat, GitHub down, Rate-Limit) bleiben einfache Snackbars, Letztere
-  mit generischem "bitte später erneut versuchen"-Hinweis statt eines Fehlerdialogs. Die App lädt/installiert dabei
-  nie selbst etwas. Update selbst bleibt weiterhin: neues Release-Artefakt laden (Installer erneut ausführen bzw.
-  AppImage/.app ersetzen).
+- **Kein automatischer/silenter Auto-Updater — aber ein geprüfter Download auf Klick** (geändert im August 2026;
+  die frühere Fassung schloss auch den Download aus, Begründung war das fehlende Signaturzertifikat. Das gilt für
+  macOS nicht mehr, für Windows schon — siehe [ROADMAP.md](ROADMAP.md)). Unverändert bleibt das Entscheidende:
+  **jeder** Netzaufruf passiert, weil geklickt wurde. Kein Start-Check, kein periodischer Check, kein
+  Hintergrund-Download. Ablauf über `UpdateService` (`lib/services/update_service.dart`):
+  1. Einstellungen → Hilfe → "Nach Updates suchen" holt den neuesten Release-Tag
+     (`api.github.com/repos/kreativ-anders/finanzgecko/releases/latest`) und vergleicht ihn gegen `PackageInfo`.
+     **bereits aktuell** und **fehlgeschlagen** (offline, GitHub down, Rate-Limit) bleiben Snackbars, Letztere mit
+     generischem "bitte später erneut versuchen" statt eines Fehlerdialogs. **Neue Version verfügbar** ist bewusst
+     ein `AlertDialog` (handlungsrelevant, darf nicht von selbst verschwinden), mit "Später" und "Herunterladen".
+  2. Erst auf "Herunterladen": Speicherort-Dialog (`getSaveLocation`) — **kein** stilles Ablegen in `~/Downloads`,
+     das löst unter macOS eine eigene TCC-Abfrage "Zugriff auf den Ordner Downloads" aus, die bei dieser App
+     besonders unpassend wirkt. Vorgeschlagen wird das Asset zur laufenden Plattform
+     (`selectAssetName`, `lib/utils/update_assets.dart`).
+  3. Download, dann Vergleich gegen `SHA256SUMS` aus demselben Release. **Geschrieben wird erst nach bestandener
+     Prüfung** — eine ungeprüfte Datei darf nie im Zielordner liegen und installierbar aussehen.
+  4. Danach ein Dialog mit dem plattformabhängigen nächsten Schritt und "Im Ordner zeigen".
+     Die App **führt die Datei nicht aus** und ersetzt sich nicht selbst: unter Windows hieße "Installer starten",
+     eine frisch heruntergeladene ausführbare Datei zu starten. Der Hinweis, FinanzGecko vorher zu **beenden**,
+     steht einmal für alle Plattformen im Dialog (vorher je Plattform formuliert — und unter Linux prompt
+     vergessen), gespiegelt im Update-FAQ auf `docs/index.html` inklusive dessen JSON-LD-Kopie.
+  Was die Prüfsumme belegt und was nicht: `SHA256SUMS` kommt über HTTPS, ist aber **nicht signiert**. Ein Treffer
+  zeigt, dass die Datei unverändert ankam und zu diesem Release gehört — er ist **kein** Echtheitsnachweis. Der
+  kommt unter macOS aus der Notarisierung, die das Betriebssystem beim Start ohnehin prüft. UI-Texte entsprechend
+  "geprüft" formulieren, nicht "verifiziert/echt". Fehlt dem Release die Datei für diese Plattform oder die
+  `SHA256SUMS` (ältere Releases), wird **nichts geraten**, sondern `docs/download.html` geöffnet.
 - **`CHANGELOG.md`** wird ausschließlich vom `release`-Job in `release.yml` gepflegt: bei jedem tatsächlichen Release
   (Tag-Push oder Version-Bump-Dispatch, nicht bei einem reinen Testbuild mit `bump: none`) wird ein Abschnitt mit den
   Commit-Messages seit dem vorherigen Tag oben angehängt und direkt nach `main` gepusht. Bewusst **kein** eigener
@@ -672,6 +692,7 @@ Alle Verhaltensspezifikationen auf einen Blick — Einstieg für eine KI, um vom
 | `gherkin/navigation.feature` | Top-Navigation (6 Ansichten), Banner-Sprünge, In-App-Datei-Menü, Tastenkürzel, Textauswahl | nur UI/Integration (kein Unit-Test) |
 | `gherkin/executable/account_color.feature` | resolveAccountColor-Regeln | **ausführbar** (`test/bdd/account_color_bdd_test.dart`) |
 | `gherkin/executable/net_worth_projection.feature` | Trend/Prognose/Kennzahlen/Anomalie | **ausführbar** (`test/bdd/analysis_bdd_test.dart`) |
+| `gherkin/executable/update_assets.feature` | Release-Asset je Plattform, SHA256SUMS parsen, Digest-Vergleich | **ausführbar** (`test/bdd/update_assets_bdd_test.dart`) |
 
 ### Regenerierung eines Features (1 Feature → 1 Primär-Datei)
 
@@ -721,6 +742,7 @@ und in `# Quelle:` gelistet ist.
 | `test/gherkin_sync_test.dart` | **Verdrahtet Gherkin ↔ Code/Tests** (s. u.): `# Quelle:`-Pfade existieren, `// Gherkin:`-Marker zeigen auf echte Features, Coverage-Allow-List | alle `gherkin/**/*.feature` (Meta) |
 | `test/bdd/account_color_bdd_test.dart` | **Führt** `gherkin/executable/account_color.feature` aus (Runner) gegen `resolveAccountColor` | `gherkin/executable/account_color.feature` |
 | `test/bdd/analysis_bdd_test.dart` | **Führt** `gherkin/executable/net_worth_projection.feature` aus gegen `analysis.dart` | `gherkin/executable/net_worth_projection.feature` |
+| `test/bdd/update_assets_bdd_test.dart` | **Führt** `gherkin/executable/update_assets.feature` aus gegen `update_assets.dart` | `gherkin/executable/update_assets.feature` |
 
 **Regel:** Wird ein Gherkin-Szenario ergänzt, das ein neues Verhalten beschreibt, sollte nach Möglichkeit ein
 korrespondierender Dart-Test entstehen (oder zumindest ein TODO-Kommentar mit Verweis auf das Szenario), damit

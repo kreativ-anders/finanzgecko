@@ -81,5 +81,102 @@ void main() {
 
       expect(result.status, UpdateCheckStatus.failed);
     });
+
+    test('liefert die Release-Assets mit, damit kein zweiter Aufruf nötig ist', () async {
+      final client = MockClient(
+        (request) async => http.Response(jsonEncode({
+          'tag_name': 'v2.0.0',
+          'assets': [
+            {'name': 'FinanzGecko-2.0.0-mac.dmg', 'browser_download_url': 'https://example.test/dmg'},
+            {'name': 'SHA256SUMS', 'browser_download_url': 'https://example.test/sums'},
+            {'name': 'kaputt'},
+          ],
+        }), 200),
+      );
+
+      final result = await UpdateService(client: client).checkForUpdate(currentVersion: '1.3.3');
+
+      expect(result.assets, {
+        'FinanzGecko-2.0.0-mac.dmg': 'https://example.test/dmg',
+        'SHA256SUMS': 'https://example.test/sums',
+      });
+    });
+  });
+
+  group('UpdateService.downloadAndVerify', () {
+    const assetName = 'FinanzGecko-2.0.0-mac.dmg';
+    const assets = {assetName: 'https://example.test/dmg', 'SHA256SUMS': 'https://example.test/sums'};
+    // Bekannter Testvektor: sha256("hello"). Bewusst hartkodiert statt im Test
+    // selbst berechnet — sonst prüfte der Test die Implementierung gegen sich
+    // selbst und ein falsches Hex-Padding fiele nicht auf.
+    const payload = 'hello';
+    const payloadDigest = '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
+
+    late Directory tmp;
+    setUp(() => tmp = Directory.systemTemp.createTempSync('fg_update_test'));
+    tearDown(() => tmp.deleteSync(recursive: true));
+
+    MockClient clientWith({required String sums, String body = payload}) => MockClient((request) async {
+      if (request.url.toString() == 'https://example.test/sums') return http.Response(sums, 200);
+      return http.Response(body, 200);
+    });
+
+    test('schreibt die Datei, wenn die Prüfsumme passt', () async {
+      final target = '${tmp.path}/$assetName';
+      final service = UpdateService(client: clientWith(sums: '$payloadDigest  $assetName\n'));
+
+      final result = await service.downloadAndVerify(assets: assets, assetName: assetName, targetPath: target);
+
+      expect(result.status, UpdateDownloadStatus.verified);
+      expect(result.filePath, target);
+      expect(File(target).readAsStringSync(), payload);
+    });
+
+    test('schreibt NICHTS, wenn die Prüfsumme abweicht', () async {
+      final target = '${tmp.path}/$assetName';
+      final service = UpdateService(client: clientWith(sums: '${'0' * 64}  $assetName\n'));
+
+      final result = await service.downloadAndVerify(assets: assets, assetName: assetName, targetPath: target);
+
+      expect(result.status, UpdateDownloadStatus.checksumMismatch);
+      expect(result.filePath, isNull);
+      expect(File(target).existsSync(), isFalse, reason: 'eine ungeprüfte Datei darf nie im Zielordner landen');
+    });
+
+    test('meldet unavailable, wenn das Release keine SHA256SUMS beilegt (ältere Releases)', () async {
+      final service = UpdateService(client: clientWith(sums: ''));
+
+      final result = await service.downloadAndVerify(
+        assets: const {assetName: 'https://example.test/dmg'},
+        assetName: assetName,
+        targetPath: '${tmp.path}/$assetName',
+      );
+
+      expect(result.status, UpdateDownloadStatus.unavailable);
+    });
+
+    test('meldet unavailable, wenn die Prüfsummen-Datei diese Datei nicht kennt', () async {
+      final service = UpdateService(client: clientWith(sums: '$payloadDigest  irgendwas-anderes.dmg\n'));
+
+      final result = await service.downloadAndVerify(
+        assets: assets,
+        assetName: assetName,
+        targetPath: '${tmp.path}/$assetName',
+      );
+
+      expect(result.status, UpdateDownloadStatus.unavailable);
+    });
+
+    test('meldet failed statt zu werfen, wenn das Netz wegbricht', () async {
+      final service = UpdateService(client: MockClient((request) async => throw const SocketException('no network')));
+
+      final result = await service.downloadAndVerify(
+        assets: assets,
+        assetName: assetName,
+        targetPath: '${tmp.path}/$assetName',
+      );
+
+      expect(result.status, UpdateDownloadStatus.failed);
+    });
   });
 }
