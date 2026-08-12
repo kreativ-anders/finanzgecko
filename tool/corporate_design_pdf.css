@@ -1,0 +1,60 @@
+/* Print stylesheet for tool/generate_corporate_design_pdf.sh. Pandoc inlines this
+   into the standalone HTML (--embed-resources), then headless Chrome prints it.
+   Kept as its own file instead of a heredoc so it's readable/diffable on its own. */
+
+@page {
+  size: A4;
+  margin: 2cm;
+}
+html {
+  color: #1a1a1a;
+  background-color: #fdfdfd;
+}
+body {
+  margin: 0 auto;
+  max-width: 52em;
+  padding: 50px;
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.85em;
+  break-inside: avoid;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background-color: #eee;
+}
+code {
+  background-color: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+pre code {
+  display: block;
+  padding: 10px;
+  overflow-x: auto;
+}
+blockquote {
+  border-left: 3px solid #ccc;
+  margin-left: 0;
+  padding-left: 1em;
+  color: #555;
+}
+h1, h2, h3 {
+  break-after: avoid;
+}
+img {
+  max-width: 100%;
+}

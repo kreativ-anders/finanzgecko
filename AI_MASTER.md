@@ -69,6 +69,10 @@ zeigt den gespeicherten Zustand und prüft erst auf Klick auf "Jetzt prüfen". E
 ```
 finanzgecko/
 ├── AI_MASTER.md                  # ← dieses Dokument
+├── CORPORATE_DESIGN.md           # Farbpalette, Markenfarben-Regeln, Typografie, App-Icon — ausgelagert aus §5,
+│                                 #   damit dieses Dokument nicht weiter wächst; §5 selbst bleibt bei Interaktions-
+│                                 #   mustern/Verhalten. Bei jeder Änderung an lib/ui/theme.dart/constants.dart-
+│                                 #   Designtokens diese Datei mitziehen (siehe "Regeln für KI-Agenten" #1/#4)
 ├── CHANGELOG.md                  # generiert vom release-Job in release.yml (Commits seit letztem Tag, oben angehängt) — nicht von Hand pflegen
 ├── ROADMAP.md                    # Kurze, öffentliche Checkbox-Liste (Englisch): was als Nächstes kommt. Bewusst ohne Details —
 │                                 #   Begründungen/Entscheidungen gehören hierher (AI_MASTER), Verhalten nach gherkin/
@@ -123,9 +127,14 @@ finanzgecko/
 ├── tool/generate_demo_data.dart   # buildDemoBackup() → demo/finanzgecko-demo.json (an "heute" verankert); auch von flutter test aufgerufen
 ├── tool/capture_screenshots.sh    # macOS-Helfer: nimmt die 7 Website-Screenshots je Theme in nativer Retina-Auflösung
 │                                  #   auf (`screencapture -l <windowid>`, nur das App-Fenster) → build/screenshots/<theme>/
+├── tool/generate_corporate_design_pdf.sh # CORPORATE_DESIGN.md → CORPORATE_DESIGN.pdf (pandoc → HTML → headless Chrome
+│                                  #   Druck; nicht LaTeX, das verschluckt 🦎/→). Ausgabe ist Artefakt (.gitignore), nicht committen.
+│                                  #   Stylesheet in tool/corporate_design_pdf.css.
 ├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots (generiert, .gitignore) — via "Backup importieren…"
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü, build_appimage.sh → FinanzGecko-<Version>-x86_64.AppImage
 ├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
+├── packaging/macos/               # build_dmg.sh: signieren (Developer ID, Hardened Runtime) + notarisieren + DMG bauen
+│                                  #   → FinanzGecko-<Version>-mac.dmg; ohne Zugangsdaten unsigniert statt Abbruch
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
 ├── docs/                          # Statische Website (GitHub Pages, kein Build-Schritt, reines HTML/CSS)
 │   ├── CNAME                      # Custom Domain: finanzgecko.app — **alle** absoluten URLs (canonical, og:url,
@@ -393,51 +402,10 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
 
 ## 5. UI-Konventionen
 
-- **Dark Theme als Standard, Hell/Dunkel/System wählbar** (Einstellungen → "Erscheinungsbild", `AppThemeMode` in
-  `constants.dart`, persistiert in `AppSchema.themeMode`/`AppStore.themeMode`, Standard: `system`). Nur vier Tokens
-  in `lib/ui/theme.dart` sind pro Theme unterschiedlich: `kBackground`, `kSurface`, `kBorder`, `kMuted` sowie
-  `kTextPrimary` (volltoniger Lesetext auf `kBackground`/`kSurface`, z. B. Splash-Screen, Chart-Tooltips,
-  Monatsauswahl — ersetzt die früheren fest verdrahteten `Colors.white`-Stellen). Alle anderen Farben —
-  `kPrimary` (`#00C878`, Markenfarbe), `kDanger` (`#FF6B6B`), `kWarning` (`#E0A030`, Amber für unkritische
-  Warnungen wie den Erfassungsstand-Hinweis — abgegrenzt von `kDanger`, das einen echten Fehler/Verlust
-  signalisiert), `kTrendUp/Down/Neutral` (Prognose-Linie, bewusst blasser als Primary/Danger) — sind **bewusst in
-  beiden Themes identisch** (Markenfarben, keine Neuinterpretation). Diese vier dynamischen Tokens sind
-  top-level **Getter** (kein `const` mehr), die den zuletzt von `ThemeScope` aufgelösten `Brightness`-Wert lesen —
-  `ThemeScope` sitzt in `main.dart` oberhalb von `MaterialApp` (innerhalb eines `Consumer<AppState>`, das bei jedem
-  `setThemeMode()` neu baut) und löst `AppThemeMode.system` gegen `MediaQuery.platformBrightnessOf(context)` auf.
-  Jede Stelle, die einen dieser vier Tokens (oder `kTextPrimary`) referenziert, darf deshalb **nicht** `const` sein
-  (der Dart-Compiler bricht mit "Invalid constant value" ab, falls doch — verlässlicher Marker beim Reviewen).
-  Diese Hex-Werte sind mit `kPrimaryHex`/`kDangerHex` in `constants.dart` synchron zu halten (String-Form fürs
-  on-disk Kontofarben-Feld vs. `Color`-Form fürs Theme). **Noch offen:** eigene Hell/Dunkel-Varianten fürs
-  Taskleisten-/Dock-Icon (aktuell ein einziges Icon für beide Themes, siehe Icon-Pipeline in Abschnitt 6).
-- **`kPrimaryText`/`kDangerText`/`kWarningText`** (`lib/ui/theme.dart`, gleiches Getter-Muster wie oben): WCAG-2.1-AA-
-  sichere Varianten von `kPrimary`/`kDanger`/`kWarning` für den Einsatz als **Text-/Icon-Farbe** (statt als Fläche/
-  Chart-Linie/Button-Hintergrund). `kPrimary` & Co. bleiben als Marken-/Füllfarbe bewusst themenidentisch (s. o.) —
-  als Textfarbe auf dem hellen Theme unterschreiten sie aber alle drei die 4,5:1-Mindestkontrastvorgabe (~2,0–2,8:1
-  gegen `kBackground`/`kSurface` hell). Die `*Text`-Getter geben im Dark Theme exakt die Original-Konstante zurück
-  (dort bereits ≥6,9:1) und nur im Light Theme eine dunklere, farbtongleiche Variante (`#00814D`/`#BA4E4E`/`#936920`,
-  alle ≥4,5:1 gegen `#F4F7F5`/`#FFFFFF`). Regel: **jede Stelle, an der eine der drei Markenfarben eine Textzeile,
-  ein alleinstehendes Icon-Glyph oder einen Fokus-/Rahmenindikator (`InputDecorationTheme.focusedBorder`) färbt,
-  nutzt die `*Text`-Variante** — Flächen/Fills (Button-/Chip-Hintergrund, `AppLineChart`-Linienfarbe, farbige
-  Badges mit dunklem Text obendrauf) bleiben bei der Original-Konstante. Ausnahme: der Marken-Schriftzug
-  "🦎 FinanzGecko" im Kopfbereich (`navigation_shell.dart`) bleibt `kPrimary`, da Logos/Markennamen laut WCAG 1.4.3
-  von der Kontrastvorgabe ausgenommen sind. **Dieselbe Regel gilt für `docs/assets/style.css`**, das die Tokens der
-  App spiegelt: dort trat der Fehler bereits einmal auf — die per JS hervorgehobene Download-Karte
-  (`.download-card-primary`) bekam `border-color: var(--primary)` und war auf dem hellen Theme mit 2,2:1 gegen
-  `--surface` unsichtbar, während das Badge darüber (`--primary-text`, 4,9:1) korrekt erschien. Zweiter Fall,
-  gefunden im Qualitäts-Audit (Abschnitt 9): `.card.warn` färbte seinen linken Rahmenindikator mit `--danger`
-  (2,6:1 gegen `--bg` hell). Deshalb gibt es in `style.css` jetzt — analog zur App — auch ein `--danger-text`
-  (`#FF6B6B` dunkel / `#BA4E4E` hell, spiegelt `kDangerText`); `--danger` bleibt als Markenfarbe stehen, ist
-  aktuell aber nirgends mehr referenziert.
-- **Bankfarben sind Logofarben, keine Textfarben.** `kBanks` enthält u. a. `#000000` (Trade Republic, C24,
-  Mercedes-Benz Bank) und `#ffe600` (comdirect) — als Fläche oder 10px-Punkt unproblematisch, als Beschriftung auf
-  `kSurface` unlesbar (bis herunter zu 1,06:1). Wo eine Kontofarbe **Text** einfärbt (aktuell der Kontotyp-Chip auf
-  den Dashboard-Konto-Karten), läuft sie deshalb durch `readableOn(hex, kSurfaceHex)` aus `constants.dart`: eine
-  reine Hex-zu-Hex-Funktion, die in 2%-Schritten Richtung Weiß bzw. Schwarz mischt, bis 4,5:1 erreicht sind, und
-  sonst unverändert durchreicht. Die Chip-**Fläche** behält bewusst die ungefilterte Markenfarbe (15% Deckkraft) —
-  Hintergründe haben keine Kontrastvorgabe, und sie ist es, die den Chip nach der Bank aussehen lässt. 51 der 96
-  Kombinationen (48 Farben × 2 Themes) brauchen die Korrektur; dass **alle** konvergieren, sichert ein Szenario in
-  `gherkin/executable/account_color.feature` ab.
+**Farbpalette, Markenfarben-Regeln, Typografie, App-Icon:** siehe [`CORPORATE_DESIGN.md`](CORPORATE_DESIGN.md) —
+ausgelagert, damit dieses Dokument nicht weiter wächst. Dieser Abschnitt hier deckt Interaktionsmuster und Verhalten
+ab (Navigation, Dialoge, Formate, Benachrichtigungen, Charts, Splash), nicht die visuelle Identität selbst.
+
 - **Kein natives Menü** unter Linux/Windows (Flutters `PlatformMenuBar` nur macOS) → In-App-"Datei"-Bereich im
   Fensterkopf, plattformübergreifend identisch, plus globale Tastenkürzel (`Strg`/`⌘`+E/I/Q) via `CallbackShortcuts`.
 - **Geld-/Zahlenformat:** immer über `fmtMoney`/`fmtPercent`/`fmtInputNumber`/`parseInputNumber` aus `formatting.dart`
@@ -529,6 +497,18 @@ Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zug
   Apple nachschlagen. Die Umstellung ist deshalb Voraussetzung für die geplante Signierung/Notarisierung (siehe
   [ROADMAP.md](ROADMAP.md)) und wurde bewusst *vorher* gemacht, damit der Dateiname sich nicht zweimal ändert.
   `hdiutil` statt `create-dmg`: auf jedem macOS-Runner vorhanden, keine zusätzliche Abhängigkeit.
+- **Signieren/Notarisieren läuft über `packaging/macos/build_dmg.sh`** — ein Skript für lokal *und* CI (wie
+  `packaging/linux/build_appimage.sh`), damit der von Hand getestete Build und der CI-Build nicht auseinanderlaufen.
+  Es signiert inside-out (erst eingebettete `.dylib`s, dann jedes Framework, zuletzt das Bundle; bewusst **kein**
+  `--deep`, das ist von Apple nicht für Distribution vorgesehen), mit Hardened Runtime (`--options runtime`, Pflicht
+  für die Notarisierung) und `--timestamp`. Entitlements bekommt nur das äußere Bundle.
+  **Notarisiert wird zweimal**: einmal ein ZIP der App, um das Ticket per `stapler` *in die App* zu heften, und
+  einmal das fertige DMG. Nur das DMG zu stapeln genügt nicht — die herausgezogene App trüge dann selbst kein
+  Ticket und Gatekeeper müsste beim ersten Start online nachfragen, was der DMG-Weg ja gerade vermeiden soll.
+  Fehlen Identität oder Zugangsdaten, baut das Skript ein **unsigniertes** DMG und warnt, statt abzubrechen:
+  Forks und Ad-hoc-Testbuilds haben keine Secrets, und ein harter Fehler würde dort die atomare Release-Kette
+  blockieren. `SIGN_IDENTITY` ist absichtlich nur der Teilstring `Developer ID Application` (codesign löst das auf,
+  solange genau eine Identität passt) — kein Name und keine Team-ID im Repo.
 - **Keine unversionierten Alias-Assets:** jedes Release trägt pro Plattform genau **eine** Binärdatei (den
   versionierten Namen). Ein früherer Ansatz lud zusätzlich eine byte-identische unversionierte Kopie hoch
   (`cp`/`Copy-Item` vor dem jeweiligen `upload-artifact`-Schritt), damit `docs/download.html` fest auf
@@ -733,7 +713,7 @@ Drei Teilbereiche, jeweils mit klarem Scope:
 1. **Usability & Accessibility der UI** — sowohl der Flutter-Desktop-App (`lib/ui/views/`, `lib/ui/widgets/`,
    `lib/ui/theme.dart`) als auch der Landingpage (`docs/index.html`, `docs/download.html`,
    `docs/documentation.html`, `docs/danke.html`, `docs/assets/style.css`). Prüfpunkte u. a.: Kontraste (siehe
-   `kPrimaryText`/`kDangerText`/`kWarningText`-Regel in Abschnitt 5 — WCAG 2.1 AA, 4,5:1), Tastaturbedienbarkeit,
+   `kPrimaryText`/`kDangerText`/`kWarningText`-Regel in `CORPORATE_DESIGN.md` — WCAG 2.1 AA, 4,5:1), Tastaturbedienbarkeit,
    Fokus-Reihenfolge/-sichtbarkeit, Screenreader-Semantik (`Semantics`-Widgets, `alt`-Texte, Landmark-Tags/`aria-*`
    auf der statischen Seite), Lesbarkeit (Zeilenbreite, Schriftgrößen), Konsistenz der Interaktionsmuster
    (Bestätigungsdialoge, Inline-Edit-Debounce, Hover/Tooltip-Verhalten, siehe Abschnitt 5).
@@ -744,7 +724,7 @@ Drei Teilbereiche, jeweils mit klarem Scope:
    Call-to-Actions (Download, "Entwicklung unterstützen"), Trust-Signale, Above-the-fold-Klarheit des Pitches.
 3. **Code-Optimierung ohne Breaking Changes** — schlanke Muster, Performance, Stabilität/Robustheit in `lib/`:
    unnötige Rebuilds/`setState`, fehlende `const`-Konstruktoren (Ausnahme: die vier dynamischen Theme-Token, siehe
-   Abschnitt 5), Duplikation, ungenutzter Code, potenzielle Nullpointer-/Edge-Cases in `lib/utils/analysis.dart` und
+   `CORPORATE_DESIGN.md`), Duplikation, ungenutzter Code, potenzielle Nullpointer-/Edge-Cases in `lib/utils/analysis.dart` und
    den Persistenzpfaden (Abschnitt 4.1), fehlende Fehlerbehandlung an System-Boundaries (Datei-I/O, Netzwerk). Jeder
    vorgeschlagene Fix muss die bestehenden Tests (`flutter analyze` + `flutter test`, inkl. `gherkin_sync_test.dart`)
    weiter grün halten und darf **keine** der in Regel 5 gelisteten Architekturentscheidungen antasten.
@@ -773,11 +753,12 @@ Regel 1 unten.
 Diese Regeln gelten für **jede KI**, die an diesem Repository arbeitet — egal ob zur Weiterentwicklung der
 bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten heraus.
 
-1. **Dieses Dokument und `gherkin/` sind Pflichtteil jeder Änderung, nicht optional.**
+1. **Dieses Dokument, `CORPORATE_DESIGN.md` und `gherkin/` sind Pflichtteil jeder Änderung, nicht optional.**
    Ändert sich durch einen Task die Ordnerstruktur, die Architektur, ein Datenmodell, eine Konstante mit fachlicher
    Bedeutung (z. B. `kBackupReminderFirstDays`) oder das Verhalten einer View → **im selben Arbeitsschritt**:
    - Abschnitt 3 (Ordnerstruktur) aktualisieren, falls Dateien/Ordner hinzukamen/wegfielen.
    - Abschnitt 4/5 (Architektur/UI-Konventionen) aktualisieren, falls sich Datenfluss, Schema oder Konventionen ändern.
+   - `CORPORATE_DESIGN.md` aktualisieren, falls sich eine Farbe, ein Farb-Token oder die Typografie ändern.
    - Das passende `.feature`-File in `gherkin/` um das neue/geänderte Szenario ergänzen oder korrigieren.
    - Bei neuem deutschen Fachbegriff: Abschnitt 7 (Glossar) ergänzen.
    Eine Änderung an Produktionscode **ohne** begleitendes Doku-Update gilt als unvollständig.
@@ -792,9 +773,10 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    Zweck dieses Dokuments ist.
 
 4. **Designtokens (Farben, Abstände, Schwellwerte) exakt übernehmen**, nicht neu interpretieren — sie stehen in
-   `constants.dart`/`theme.dart` und sind hier in Abschnitt 5/7 dokumentiert. Beispiel: `kConcentrationRiskThreshold
-   = 0.65`, `kAssetReevaluationDays = 182`, `kBackupReminderFirstDays = 182`, `kBackupReminderRepeatDays = 90` sind
-   fachliche Entscheidungen, keine beliebigen Defaults.
+   `constants.dart`/`theme.dart` und sind in `CORPORATE_DESIGN.md` (Farben) bzw. hier in Abschnitt 5/7 (übrige
+   Tokens) dokumentiert. Beispiel: `kConcentrationRiskThreshold = 0.65`, `kAssetReevaluationDays = 182`,
+   `kBackupReminderFirstDays = 182`, `kBackupReminderRepeatDays = 90` sind fachliche Entscheidungen, keine
+   beliebigen Defaults.
 
 5. **Architekturentscheidungen mit dokumentierter Begründung nicht ohne Rücksprache rückgängig machen**, u. a.:
    - Wechselkurs-Cache in eigener unverschlüsselter Datei (nicht in der DB) — Abschnitt 4.1.

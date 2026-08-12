@@ -56,3 +56,7 @@ app.*.map.json
 # nicht committen).
 /FinanzGecko-x86_64.AppImage
 /packaging/windows/FinanzGecko-Setup.exe
+
+# Generiert von tool/generate_corporate_design_pdf.sh aus CORPORATE_DESIGN.md —
+# Artefakt, nicht committen.
+/CORPORATE_DESIGN.pdf
