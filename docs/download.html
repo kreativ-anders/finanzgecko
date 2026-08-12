@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Download — FinanzGecko für Linux, macOS &amp; Windows</title>
-  <meta name="description" content="FinanzGecko kostenlos herunterladen: Installer für Windows, gezipptes App-Bundle für macOS und AppImage für Linux — immer die neueste Version." />
+  <meta name="description" content="FinanzGecko kostenlos herunterladen: Installer für Windows, Disk-Image (.dmg) für macOS und AppImage für Linux — immer die neueste Version." />
   <link rel="canonical" href="https://finanzgecko.app/download.html" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
@@ -18,7 +18,7 @@
   <meta property="og:locale" content="de_DE" />
   <meta property="og:url" content="https://finanzgecko.app/download.html" />
   <meta property="og:title" content="Download — FinanzGecko für Linux, macOS & Windows" />
-  <meta property="og:description" content="FinanzGecko kostenlos herunterladen: Installer für Windows, gezipptes App-Bundle für macOS und AppImage für Linux — immer die neueste Version." />
+  <meta property="og:description" content="FinanzGecko kostenlos herunterladen: Installer für Windows, Disk-Image (.dmg) für macOS und AppImage für Linux — immer die neueste Version." />
   <meta property="og:image" content="https://finanzgecko.app/assets/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -27,7 +27,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Download — FinanzGecko für Linux, macOS & Windows" />
-  <meta name="twitter:description" content="FinanzGecko kostenlos herunterladen: Installer für Windows, gezipptes App-Bundle für macOS und AppImage für Linux — immer die neueste Version." />
+  <meta name="twitter:description" content="FinanzGecko kostenlos herunterladen: Installer für Windows, Disk-Image (.dmg) für macOS und AppImage für Linux — immer die neueste Version." />
   <meta name="twitter:image" content="https://finanzgecko.app/assets/og-image.png" />
 </head>
 <body>
@@ -100,6 +100,28 @@
       </div>
     </section>
 
+    <!-- Backup-Empfehlung vor einem Update. Bewusst KEINE Installations-
+         anweisung (die steht weiterhin ausschließlich in `#faq-install` auf
+         index.html, siehe CLAUDE.md) und bewusst unterhalb der Karten: der
+         Hinweis ist eine Vorsichtsmaßnahme, kein Warnhinweis, und darf den
+         Download nicht verdrängen. Aufbau wie überall: die `section` trägt den
+         vertikalen Abstand, das innere `.wrap` die seitlichen 24px; der
+         zugehörige Eintrag im einzigen Breakpoint (`@media (max-width: 700px)`)
+         steht am Ende von style.css. -->
+    <section class="download-note">
+      <div class="wrap">
+        <p class="note">
+          <strong>Vor einem Update kurz ein Backup exportieren.</strong>
+          Deine Daten liegen verschlüsselt auf deinem Rechner, der Schlüssel dazu im Schlüsselbund
+          deines Betriebssystems. Dieser Schlüssel ist an die installierte App gebunden — ändert
+          sich an ihr etwas Grundlegendes, etwa ihre Signatur, kann sich im Einzelfall auch der
+          Zugriff darauf ändern. Normalerweise merkst du davon nichts. Weil es aber keinen Server
+          gibt, von dem sich etwas zurückholen ließe, ist ein Export vorher schlicht fair:
+          <em>Einstellungen → Backup exportieren…</em> — ein paar Sekunden, eine Datei.
+        </p>
+      </div>
+    </section>
+
     <!-- Erklärender Textteil unterhalb der Karten. Aufbau wie überall: die
          `section` trägt den vertikalen Abstand, das innere `.wrap` die
          seitlichen 24px und die Maximalbreite. Der zugehörige Eintrag im
@@ -112,9 +134,9 @@
         <h2>Welche Version passt zu meinem System?</h2>
         <p>FinanzGecko ist eine native Desktop-Anwendung und wird für jede Plattform getrennt gebaut.
           Unter <strong>Windows</strong> lädst du einen gewöhnlichen Installer (.exe) für 64-Bit-Systeme
-          ab Windows 10. Unter <strong>macOS</strong> bekommst du ein gezipptes App-Bundle, das sowohl
-          auf Apple Silicon als auch auf Intel-Macs läuft und einfach in den Programme-Ordner gezogen
-          wird. Unter <strong>Linux</strong> erhältst du ein AppImage für x86_64, das ohne Paketmanager
+          ab Windows 10. Unter <strong>macOS</strong> bekommst du ein Disk-Image (.dmg), aus dem du die
+          App in den Programme-Ordner ziehst; sie läuft sowohl auf Apple Silicon als auch auf
+          Intel-Macs. Unter <strong>Linux</strong> erhältst du ein AppImage für x86_64, das ohne Paketmanager
           und ohne Root-Rechte auf praktisch jeder gängigen Distribution startet. Erkennt dein Browser
           JavaScript, hebt diese Seite die zu deinem System passende Karte automatisch hervor.</p>
 
