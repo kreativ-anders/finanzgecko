@@ -12,8 +12,11 @@ Downloads are currently unsigned, so macOS and Windows show a security warning o
   - [x] Enable Hardened Runtime — required for notarization. The app stays unsandboxed for now
   - [x] Check that the encryption key in the Keychain still works after signing, so existing data keeps opening
   - [x] Notarize and staple in CI
-- [ ] Linux — checksums for the AppImage, maybe Flathub
-- [ ] Windows — signed installer
+- [ ] Windows — signed installer. Postponed for now: a certificate costs money every year, and unlike macOS it does
+      not remove the warning — it only turns the SmartScreen block into a one-click "run anyway" that fades as
+      downloads accumulate. The cheap cloud option (Azure Artifact Signing, ~$10/month) is not open to individual
+      developers outside the US and Canada
+- [ ] Linux — checksums for the AppImage, maybe Flathub. No security warning on Linux, so this is polish rather than a fix
 - [ ] Update the website once a signed release is out — the install FAQ and the download page still say the app is unsigned, which stays true until then (and stays true for Windows longer)
 
 ## Next
