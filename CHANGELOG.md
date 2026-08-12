@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.7.0 - 2026-08-12
+
+- 🔖 Version 1.7.0+17 (2ff5399)
+- 🔖 Update signed-build docs and a11y contrast (56c001b)
+- 🔒️ Add in-app verified download for updates (e1753d8)
+- 🩺 Add SHA256 checksums to releases (a5855d0)
+- 🚧 Update roadmap for checksums (4a2cc2f)
+- 🚧 Clarify signed-release roadmap (4667c1a)
+- 🚧 Mark macOS signing & notarization complete (7f59509)
+- 🚸 Add backup hint on download page, fix macOS desc (ee10ab6)
+- 🔐 Wire up macOS signing in release job (8132ad4)
+- 💄 Refine corporate design docs (391c056)
+- 👷 Extract macOS DMG build script (5739da1)
+- 📝 Extract corporate design into its own spec (b4be53b)
+- 🚧 Update ROADMAP: macOS signing & notarization steps (b0298f0)
+- 👷 Switch macOS releases to DMG (dc80dc7)
+- 🔍️ Improve site SEO and harden rate cache (3602a8f)
+- ♿️ Harden rate checks and doc contrast (1c86363)
+- 🦖 Clarify backup reminder wording (ce4f601)
+- 💄 Move notifications above security (4f48a38)
+- 🔒️ Add encrypted backup and key identity (b7ddde1)
+- 🐛 Improve rate lookup error diagnostics (2fea876)
+- 💄 Add mobile breakpoint rules for all sections (b887b5c)
+- 🔒️ Gate exchange-rate lookups by consent (d6f77c7)
+- 🚸 Focus account entries from dashboard cards (01cd901)
+- 🐛 Fix WCAG contrast for website borders on light theme (bc8a401)
+- 📝 Document splash timing contract #11 (81735a9)
+- 🐛 Update Pirsch Analytics code across all pages (5072bb2)
+- 📝 Changelog für v1.6.1 (e2f738a)
+
+
 ## v1.6.1 - 2026-08-05
 
 - 🔖 Version 1.6.1+16 (a29a25c)
