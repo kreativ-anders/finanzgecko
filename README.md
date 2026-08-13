@@ -56,5 +56,6 @@ Workflow, spec-first approach, checks before committing: [CONTRIBUTING.md](CONTR
 
 ## Known limitations
 
-No in-app auto-updater; unsigned builds trigger Gatekeeper/SmartScreen warnings on first launch. Details and
-workarounds: [dev/troubleshooting.md](dev/troubleshooting.md).
+No background auto-updater — "Nach Updates suchen" only runs when you ask for it. macOS builds are signed with a
+Developer ID and notarized, so they start without a warning; Windows builds are unsigned and still trigger a
+SmartScreen prompt on first launch. Details and workarounds: [dev/troubleshooting.md](dev/troubleshooting.md).
