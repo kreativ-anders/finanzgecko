@@ -23,6 +23,10 @@
 #   APPLE_API_ISSUER_ID  Issuer ID  ┘ nicht gesetzt ist.
 #   SKIP_NOTARIZE=1      Nur signieren, nicht notarisieren (schneller Testlauf).
 #
+# Das Skript signiert eine KOPIE der App und lässt build/ unangetastet — siehe
+# den Block "Auf einer Kopie arbeiten" unten. Wer das signierte Bundle selbst
+# braucht, holt es aus dem fertigen DMG.
+#
 # **Fehlt die Signatur-Identität oder fehlen die Notarisierungs-Daten, bricht
 # das Skript NICHT ab, sondern baut ein unsigniertes DMG und sagt das laut.**
 # Das ist Absicht: Forks und Ad-hoc-Testbuilds haben keine Secrets, und ein
@@ -43,6 +47,32 @@ if [ ! -d "$APP" ]; then
   echo "einem fertigen .app-Bundle als Argument uebergeben." >&2
   exit 1
 fi
+
+# ------------------------------------------------- Auf einer Kopie arbeiten --
+#
+# NICHT wegoptimieren: das Skript signiert bewusst eine Kopie und fasst das
+# Original in build/ nicht an.
+#
+# Grund ist der App-Management-Schutz von macOS (ab Sonoma): ein *signiertes*
+# App-Bundle darf von anderen Prozessen nicht mehr verändert werden. Signierte
+# man direkt in build/macos/.../FinanzGecko.app, dann scheiterte der NÄCHSTE
+# `flutter build macos` daran, seine Plugin-Bundles in genau dieses Bundle zu
+# kopieren — mit einer Fehlerwand aus
+#   "You don't have permission to save the file ... in the folder Resources"
+# und anschließend "xattr: [Errno 1] Operation not permitted" für jede Datei.
+# Die Meldung deutet auf ein Rechteproblem am Repo hin und schickt einen in die
+# völlig falsche Richtung; die Ursache ist allein die Signatur von vorhin.
+#
+# Mit der Kopie bleibt das Build-Verzeichnis unsigniert und unverändert, der
+# nächste Build läuft ohne `rm -rf build/macos` durch, und ein versehentlich
+# zweimal ausgeführtes Skript signiert nie ein bereits signiertes Bundle.
+WORK="$(mktemp -d)"
+STAGING=""
+cleanup() { rm -rf "$WORK" ${STAGING:+"$STAGING"}; }
+trap cleanup EXIT
+
+ditto "$APP" "$WORK/FinanzGecko.app"
+APP="$WORK/FinanzGecko.app"
 
 # ---------------------------------------------------------------- Signieren --
 
@@ -155,8 +185,7 @@ fi
 
 # -------------------------------------------------------------- DMG bauen --
 
-STAGING="$(mktemp -d)"
-trap 'rm -rf "$STAGING"' EXIT
+STAGING="$(mktemp -d)"  # wird von cleanup() oben mit aufgeräumt
 
 ditto "$APP" "$STAGING/FinanzGecko.app"
 ln -s /Applications "$STAGING/Applications"

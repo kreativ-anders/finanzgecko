@@ -102,8 +102,9 @@ finanzgecko/
 │                                 #   technische Umsetzung". Bei jeder Änderung an lib/ui/theme.dart/constants.dart-
 │                                 #   Designtokens beide Stellen mitziehen (siehe "Regeln für KI-Agenten" #1/#4)
 ├── CHANGELOG.md                  # generiert vom release-Job in release.yml (Commits seit letztem Tag, oben angehängt) — nicht von Hand pflegen
-├── ROADMAP.md                    # Kurze, öffentliche Checkbox-Liste (Englisch): was als Nächstes kommt. Bewusst ohne Details —
-│                                 #   Begründungen/Entscheidungen gehören hierher (AI_MASTER), Verhalten nach gherkin/
+├── ROADMAP.md                    # Kurze, öffentliche Liste (Englisch), gegliedert in "Currently working on" / "On hold" /
+│                                 #   "Planned" (mit Quartalen) / "Done". Bewusst ohne Details — Begründungen und
+│                                 #   Entscheidungen gehören hierher (AI_MASTER), Verhalten nach gherkin/
 ├── LICENSE                       # GPL-3.0 + "Commons Clause"-Zusatz (Copyleft, aber keine kommerzielle Nutzung) — siehe "Lizenz" unten
 ├── gherkin/                      # ← fachliche Spezifikation als Gherkin-Features (deklarativ)
 │   └── executable/               # ← ausführbare Features (@executable), laufen via test/support/gherkin_runner.dart
