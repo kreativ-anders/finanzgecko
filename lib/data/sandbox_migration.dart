@@ -35,7 +35,7 @@ import 'package:path/path.dart' as p;
 /// `Release.entitlements`/`DebugProfile.entitlements` — together, in one
 /// commit — once both hold:**
 ///
-///  - at least a year has passed (so ~2027-08), and
+///  - at least a year has passed (ROADMAP schedules this for **Q3 2027**), and
 ///  - no support request has mentioned pre-sandbox data for several releases.
 ///
 /// Removing the entitlement is the actual prize: it is the only thing letting

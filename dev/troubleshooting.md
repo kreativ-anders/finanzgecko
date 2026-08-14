@@ -31,13 +31,15 @@ rate instead.
 
 ## Known limitations
 
-- **No in-app auto-updater.** Updating means loading a new release artifact (re-run the Windows installer, replace
-  the Linux AppImage, replace the macOS `.app`). The data directory depends only on the data path, not the install
-  location — existing user data stays untouched.
-- **First launch on an unfamiliar Mac/Windows machine:** without code signing, macOS Gatekeeper and Windows
-  SmartScreen show a warning. Mac: right-click → *Open*. Windows: "More info" → "Run anyway". A paid signing
-  certificate would fix this; `flutter build macos` already signs ad-hoc, which is enough only for the machine it
-  was built on.
+- **No background auto-updater.** *Einstellungen → Nach Updates suchen* downloads the artifact for this platform
+  and verifies it against the published `SHA256SUMS`, but only when you ask for it — the app never checks on its
+  own. Installing it is still a manual step (re-run the Windows installer, replace the Linux AppImage, drag the
+  macOS app out of the new DMG). The data directory depends only on the data path, not the install location —
+  existing user data stays untouched.
+- **First launch on Windows:** the installer is unsigned, so SmartScreen shows a warning — "More info" → "Run
+  anyway". A certificate costs money every year and, unlike on macOS, would not remove the warning outright (see
+  [ROADMAP.md](../ROADMAP.md)). macOS releases are signed with a Developer ID and notarized, so they start without
+  a prompt; only a locally built `.app` is ad-hoc signed and thus valid solely on the machine that built it.
 
 ## Upgrading vs. moving to a new device
 
