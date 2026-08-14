@@ -1,8 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements des ausgelieferten DMG-Builds (Developer ID, packaging/macos/build_dmg.sh).
+
+  Die App-Sandbox war hier bis v1.7 bewusst AUS, weil sie $HOME virtualisiert und
+  die Datendatei bestehender Installationen damit unerreichbar macht. Diese
+  Entscheidung wurde bewusst umgekehrt: Ziel ist ein einziger sandboxed
+  macOS-Build (siehe AI_MASTER §4.1 und ROADMAP). Möglich wird das durch die
+  einmalige Migration in lib/data/sandbox_migration.dart — die beim ersten Start
+  eines sandboxed Builds die Dateien aus dem alten Pfad in den Container KOPIERT
+  (nicht verschiebt, nicht löscht).
+
+  Deshalb hängen die Einträge hier zusammen und dürfen nicht einzeln geändert
+  werden:
+
+  - app-sandbox: der eigentliche Schalter. Ohne die temporary-exception unten
+    wäre er für Bestandsnutzer gleichbedeutend mit "App startet leer".
+  - temporary-exception.files.home-relative-path.read-write: erlaubt exakt den
+    Lesezugriff auf den Vor-Sandbox-Pfad, den die Migration braucht — bewusst
+    eng auf dieses eine Verzeichnis begrenzt. Der Eintrag ist ÜBERGANGSWEISE:
+    sobald der alte Pfad in einer späteren Version nicht mehr gelesen wird,
+    fliegt er hier raus (ROADMAP). Im App-Store-Build (AppStore.entitlements)
+    steht er bewusst NICHT — dort gibt es keine Bestandsdaten und eine
+    temporary exception wäre eine unnötige Review-Rückfrage.
+  - network.client: der Wechselkurs-Abruf und die manuelle Update-Prüfung.
+    Unter der Sandbox schlägt beides ohne diesen Eintrag still fehl.
+  - files.user-selected.read-write: Backup-Export/-Import, CSV-Export und der
+    Update-Download laufen über file_selector (NSOpenPanel/Powerbox).
+-->
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.app-sandbox</key>
-	<false/>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+	<array>
+		<string>/Library/Application Support/de.finanzgecko.app/</string>
+	</array>
 </dict>
 </plist>

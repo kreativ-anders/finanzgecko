@@ -41,6 +41,12 @@ Feature: Einstellungen
   Scenario: Speicherort im Dateimanager öffnen
     When ich auf den "Im Dateimanager öffnen"-Button neben dem Speicherort klicke
     Then öffnet sich der native Dateimanager des Betriebssystems am Datenverzeichnis
+    And unter macOS wird bewusst das ÜBERGEORDNETE Verzeichnis geöffnet: das Datenverzeichnis heißt wie die
+      Application-ID und endet damit auf ".app", was macOS für ein Programmbündel hält — es versucht dann, den
+      Ordner zu starten, und meldet "beschädigt oder unvollständig". Ein angehängter Schrägstrich hilft dabei
+      NICHT (am 2026-08-13 gemessen), das übergeordnete Verzeichnis zu öffnen schon
+    And unter Linux und Windows wird weiterhin direkt das Datenverzeichnis geöffnet — dort ist ".app" keine
+      besondere Endung
     Given das Öffnen schlägt fehl (z. B. kein Dateimanager registriert)
     Then erscheint eine Fehler-Snackbar "Ordner konnte nicht geöffnet werden."
 
@@ -130,6 +136,18 @@ Feature: Einstellungen
       nicht erreichbar, o. ä.)
     Then wird kein Fehler geworfen, sondern eine Fehler-Snackbar "Update-Prüfung fehlgeschlagen — bitte
       später erneut versuchen." angezeigt
+
+  Scenario: Im App-Store-Build entfällt die Update-Prüfung vollständig
+    Given die App wurde für den Mac App Store gebaut (kIsMacAppStore, siehe gherkin/data_security.feature)
+    Then fehlt im Abschnitt "Hilfe" der Link "Nach Updates suchen" — die übrigen Links ("E-Mail-Support",
+      "Fehler melden (GitHub)", "Debug-Informationen kopieren") bleiben unverändert
+    And der Netzwerk-Hinweis nennt nur noch die Wechselkurs-API und schließt mit "Updates erhältst du über den
+      App Store." — der Satz zur GitHub-Releases-API entfällt, weil dieser Aufruf in diesem Build nicht
+      existiert; er ist eine Datenschutz-Aussage und darf nichts behaupten, was nicht stattfindet
+    And das ist keine Geschmacksfrage: ein zweiter Selbst-Update-Weg neben dem App Store verstößt gegen
+      App-Review-Richtlinie 2.4.5
+    And weil kIsMacAppStore eine Compile-Zeit-Konstante ist, entfernt der Tree-Shaker den Download-Pfad aus
+      dem Binary, statt nur den Button zu verbergen
 
   Scenario: App zurücksetzen erfordert eine getippte Bestätigungsphrase
     When ich im rot umrandeten Bereich "Zurücksetzen" auf "App zurücksetzen…" klicke

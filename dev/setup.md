@@ -71,7 +71,14 @@ flutter doctor
 | OS | Path |
 |---|---|
 | Linux | `~/.local/share/de.finanzgecko.app/` |
-| macOS | `~/Library/Application Support/de.finanzgecko.app/` |
+| macOS | `~/Library/Containers/de.finanzgecko.app/Data/Library/Application Support/FinanzGecko/` |
 | Windows | `%APPDATA%\de.finanzgecko.app\` |
+
+The macOS path is inside the App Sandbox container — this applies to `flutter run` too, since the debug
+entitlements enable the sandbox as well, deliberately, so local runs behave like shipped ones. Installations
+predating the sandbox keep their file at `~/Library/Application Support/de.finanzgecko.app/`; it is copied into
+the container once on first launch and, on purpose, never deleted. The macOS folder is named `FinanzGecko`
+rather than the application id, because a name ending in `.app` makes Finder treat the folder as an application
+bundle. The rename happens as part of that same one-time copy.
 
 Encryption/file format details: [architecture.md](architecture.md).

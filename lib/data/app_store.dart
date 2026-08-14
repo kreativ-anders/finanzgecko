@@ -10,9 +10,30 @@ import '../models/asset.dart';
 import '../models/balance.dart';
 import '../models/subscription.dart';
 import 'app_schema.dart';
+import 'sandbox_migration.dart';
 import 'secure_key_store.dart';
 
 const String _applicationId = 'de.finanzgecko.app';
+
+/// macOS uses the display name for its data directory, not [_applicationId] —
+/// and this is a bug fix, not cosmetics.
+///
+/// `de.finanzgecko.app` ends in ".app", which Finder reads as an application
+/// bundle: the folder gets the generic app icon, Kind "Application", and
+/// double-clicking it produces "…is damaged or incomplete" / "the executable is
+/// missing". Opening it from within the app failed the same way. Measured on
+/// 2026-08-13: a trailing slash does not help, only avoiding the suffix does.
+///
+/// `~/Library/Application Support/FinanzGecko` is also the idiomatic macOS
+/// location, so this brings the app in line with the platform rather than away
+/// from it. Linux and Windows keep [_applicationId]: neither treats ".app"
+/// specially, and a reverse-DNS directory is idiomatic there.
+///
+/// Renaming was only affordable in the release that introduced the sandbox,
+/// because that release already relocates every macOS user's data — the rename
+/// rides along in the same copy instead of needing a migration of its own.
+const String _macOsDirectoryName = 'FinanzGecko';
+
 const String _storeFilename = 'finanzgecko-data.json';
 // Exchange rates are public ECB reference data and re-fetchable at any time,
 // so they live in their own small, unencrypted file rather than inside the
@@ -85,8 +106,15 @@ class AccountImportRejectedException implements Exception {
 /// conversion:
 ///
 ///  - Linux:   ~/.local/share/de.finanzgecko.app/finanzgecko-data.json
-///  - macOS:   ~/Library/Application Support/de.finanzgecko.app/finanzgecko-data.json
+///  - macOS:   ~/Library/Containers/de.finanzgecko.app/Data/Library/
+///             Application Support/FinanzGecko/finanzgecko-data.json
 ///  - Windows: %APPDATA%\de.finanzgecko.app\finanzgecko-data.json
+///
+/// The macOS path is what the code below produces unchanged once the App
+/// Sandbox virtualises $HOME onto the container — the relative part is
+/// identical, only the root differs. Installations from before the sandbox
+/// have their file one level up, at ~/Library/Application Support/…, and are
+/// copied across once by [SandboxMigration].
 ///
 /// The file content is AES-256-GCM encrypted (an "envelope" of
 /// nonce/cipherText/mac around the real JSON), with the key held in the
@@ -121,6 +149,13 @@ class AppStore {
   bool _initialized = false;
   final AesGcm _cipher = AesGcm.with256bits();
   SecretKey? _key;
+
+  /// Result of the one-time pre-sandbox migration attempted during
+  /// [ensureInitialized]. Kept so the UI can tell "you are a new user" apart
+  /// from "your data exists but I could not reach it" — see
+  /// [SandboxMigrationOutcome.failed], which is the case that must never be
+  /// presented as an empty app.
+  SandboxMigrationOutcome lastSandboxMigration = SandboxMigrationOutcome.notApplicable;
 
   /// Serializes all disk writes. Every persist appends itself to this chain
   /// so two overlapping mutations can never race on the shared `.tmp` file —
@@ -232,7 +267,7 @@ class AppStore {
       final base = (xdg != null && xdg.isNotEmpty) ? xdg : p.join(_home(), '.local', 'share');
       return Directory(p.join(base, _applicationId));
     } else if (Platform.isMacOS) {
-      return Directory(p.join(_home(), 'Library', 'Application Support', _applicationId));
+      return Directory(p.join(_home(), 'Library', 'Application Support', _macOsDirectoryName));
     } else if (Platform.isWindows) {
       final appData = Platform.environment['APPDATA'];
       if (appData != null && appData.isNotEmpty) {
@@ -253,6 +288,11 @@ class AppStore {
 
   Future<void> _chmod(String path, String mode) async {
     if (_inFlutterTest) return;
+    // Sandboxed (App Store) build: the data directory already lives inside a
+    // per-app, per-user container that no other app can reach, so the chmod
+    // bits add nothing — and spawning /bin/chmod from inside the sandbox is
+    // both restricted and a needless subprocess on every persist.
+    if (kIsMacAppStore) return;
     if (!Platform.isLinux && !Platform.isMacOS) return; // not applicable on Windows
     try {
       await Process.run('chmod', [mode, path]);
@@ -302,6 +342,25 @@ class AppStore {
     }
     await _chmod(dir.path, '700');
     await _restrictWindowsAccess(dir.path, isDirectory: true);
+
+    // Must run BEFORE the file is read below: on the first launch of a
+    // sandboxed build the container is empty and the real data still sits at
+    // the pre-sandbox path. Without this the read below would find nothing,
+    // conclude "fresh install" and write defaults — which is indistinguishable
+    // from data loss as far as the user is concerned. A no-op (and not even
+    // reached on non-macOS) in every other situation.
+    if (_dataDirectoryOverride == null && !_inFlutterTest) {
+      lastSandboxMigration = await SandboxMigration.run(
+        targetDirectory: dir,
+        home: _home(),
+        bundleId: _applicationId,
+        // The OLD directory name, deliberately not [_macOsDirectoryName]: the
+        // source is what pre-sandbox versions wrote, the target is where this
+        // version reads. They differ, and that is the point.
+        legacyDirectoryName: _applicationId,
+        filenames: const [_storeFilename, _ratesFilename],
+      );
+    }
 
     _filePath = p.join(dir.path, _storeFilename);
     _ratesFilePath = p.join(dir.path, _ratesFilename);

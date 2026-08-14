@@ -384,7 +384,27 @@ String _keyStoreLabel() {
 /// NSWorkspace on macOS, xdg-open/gio on Linux), so no extra plugin is
 /// needed beyond what the app already uses for web links.
 Future<void> _openInFileManager(BuildContext context, String path) async {
-  final uri = Uri.file(path, windows: Platform.isWindows);
+  // macOS: open the PARENT directory, not the data directory itself.
+  //
+  // The data directory is named after the application id and therefore ends in
+  // ".app" (…/Application Support/de.finanzgecko.app). LaunchServices reads
+  // that suffix as an application bundle, tries to *launch* the folder, and
+  // fails with "damaged or incomplete" / "the executable is missing" — an
+  // alarming dialog for what is purely a cosmetic action.
+  //
+  // Measured, not assumed (2026-08-13, macOS): a trailing slash does NOT help
+  // — `open ".../de.finanzgecko.app/"` fails identically. Opening the parent is
+  // what actually works. The user lands one level up and sees the data folder
+  // in the listing; slightly less direct, but it opens instead of erroring.
+  //
+  // Renaming the directory would also fix it and is NOT an option: the name is
+  // the bundle id and the sandbox container name, so changing it orphans every
+  // existing installation's data.
+  //
+  // Only macOS: Linux and Windows file managers do not treat ".app" specially,
+  // and there the deep link to the exact folder is the better behaviour.
+  final target = Platform.isMacOS ? Directory(path).parent.path : path;
+  final uri = Uri.directory(target, windows: Platform.isWindows);
   final opened = await launchUrl(uri);
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ordner konnte nicht geöffnet werden.')));
@@ -404,8 +424,16 @@ Future<void> _openInFileManager(BuildContext context, String path) async {
 /// answer: the Wechselkurs-API is the app's only *automatic* external network
 /// destination, no telemetry/analytics of any kind. "Nach Updates suchen" is
 /// a second, deliberately manual-only network call (GitHub Releases API, see
-/// [UpdateService]) — no silent/background auto-updater, since there's no
-/// code-signing certificate to make an in-place binary swap trustworthy.
+/// [UpdateService]) — never a silent background check, because an app that
+/// phones home on its own is exactly what this app promises not to be. That
+/// the builds are signed and notarized doesn't change that; it only makes the
+/// downloaded file verifiable, which is what the checksum step already covers.
+///
+/// In the App Store build ([kIsMacAppStore]) the update entry is absent
+/// altogether: the App Store does the updating, and shipping a second
+/// self-update path alongside it would violate App Review guideline 2.4.5.
+/// The network paragraph below therefore has to drop its GitHub sentence too —
+/// it is a privacy claim, and in that build the call genuinely never happens.
 class _HelpSection extends StatelessWidget {
   const _HelpSection();
 
@@ -452,10 +480,16 @@ class _HelpSection extends StatelessWidget {
           const _ApiReachabilityRow(),
           const SizedBox(height: 10),
           Text(
-            'FinanzGecko baut von sich aus keine Netzwerkverbindung auf. Die EZB-Wechselkurse '
-            '(api.frankfurter.dev) werden nur abgerufen, wenn du das oben unter "Wechselkurse" erlaubt hast, '
-            'und die öffentliche GitHub-Releases-API nur, wenn du unten explizit auf "Nach Updates suchen" '
-            'klickst. Sonst findet keine Kommunikation statt, kein Tracking, keine Analyse-Dienste.',
+            kIsMacAppStore
+                ? 'FinanzGecko baut von sich aus keine Netzwerkverbindung auf. Die EZB-Wechselkurse '
+                      '(api.frankfurter.dev) werden nur abgerufen, wenn du das oben unter "Wechselkurse" erlaubt '
+                      'hast. Sonst findet keine Kommunikation statt, kein Tracking, keine Analyse-Dienste. '
+                      'Updates erhältst du über den App Store.'
+                : 'FinanzGecko baut von sich aus keine Netzwerkverbindung auf. Die EZB-Wechselkurse '
+                      '(api.frankfurter.dev) werden nur abgerufen, wenn du das oben unter "Wechselkurse" erlaubt '
+                      'hast, und die öffentliche GitHub-Releases-API nur, wenn du unten explizit auf "Nach Updates '
+                      'suchen" klickst. Sonst findet keine Kommunikation statt, kein Tracking, keine '
+                      'Analyse-Dienste.',
             style: TextStyle(color: kMuted, fontSize: 12),
           ),
           Divider(height: 28, color: kBorder),
@@ -463,10 +497,11 @@ class _HelpSection extends StatelessWidget {
             spacing: 20,
             runSpacing: 8,
             children: [
-              InkWell(
-                onTap: () => _checkForUpdates(context),
-                child: noSelect(Text('Nach Updates suchen', style: TextStyle(color: kPrimaryText, fontSize: 13))),
-              ),
+              if (!kIsMacAppStore)
+                InkWell(
+                  onTap: () => _checkForUpdates(context),
+                  child: noSelect(Text('Nach Updates suchen', style: TextStyle(color: kPrimaryText, fontSize: 13))),
+                ),
               InkWell(
                 onTap: _openSupportMail,
                 child: noSelect(Text('E-Mail-Support', style: TextStyle(color: kPrimaryText, fontSize: 13))),

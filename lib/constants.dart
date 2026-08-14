@@ -2,6 +2,32 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 
+/// True only in the Mac-App-Store build
+/// (`flutter build macos --dart-define=FINANZGECKO_MAS=true`, see
+/// `packaging/macos/build_appstore.sh`). Default is **false**, so the
+/// Developer-ID/DMG build every existing user runs is bit-for-bit unaffected
+/// by everything this flag guards.
+///
+/// It exists because the App Store requires the App Sandbox, and the sandbox
+/// changes three things that are otherwise deliberate decisions (AI_MASTER
+/// §4.1 "macOS-Spezifika"):
+///
+///  1. `$HOME` is virtualised into `~/Library/Containers/de.finanzgecko.app/
+///     Data`, so `AppStore.resolveDataDirectory()` lands inside the container.
+///     No code change needed — but it also means a sandboxed build cannot see
+///     the data of an unsandboxed one, which is precisely why the two builds
+///     stay separate instead of one replacing the other.
+///  2. The legacy (non-data-protection) Keychain is not available to a
+///     sandboxed app, so `SecureKeyStore` must flip to the data-protection
+///     variant — see the comment there.
+///  3. The in-app update download would violate App Review guideline 2.4.5;
+///     App Store builds are updated by the App Store itself.
+///
+/// Keep this a `const` read via `bool.fromEnvironment`, not a runtime lookup:
+/// the tree-shaker then removes the update-download code path from the App
+/// Store binary entirely, rather than merely hiding its button.
+const bool kIsMacAppStore = bool.fromEnvironment('FINANZGECKO_MAS');
+
 const List<String> kTags = ['Girokonto', 'Tagesgeld', 'Depot', 'Bargeld', 'Krypto'];
 
 /// Hex strings (not Color) — these are stored verbatim in account.color, so

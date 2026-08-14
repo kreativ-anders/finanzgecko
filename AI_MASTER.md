@@ -144,6 +144,9 @@ finanzgecko/
 ├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
 ├── packaging/macos/               # build_dmg.sh: signieren (Developer ID, Hardened Runtime) + notarisieren + DMG bauen
 │                                  #   → FinanzGecko-<Version>-mac.dmg; ohne Zugangsdaten unsigniert statt Abbruch
+│                                  # build_appstore.sh: sandboxed App-Store-Build (--dart-define=FINANZGECKO_MAS=true,
+│                                  #   AppStore.entitlements, 3rd-Party-Mac-Developer-Zertifikate) → .pkg für
+│                                  #   App Store Connect; bricht bei fehlender Signatur HART ab, anders als build_dmg.sh
 ├── linux/ macos/ windows/         # Native Flutter-Desktop-Runner (Boilerplate, i.d.R. nicht manuell editieren)
 ├── docs/                          # Statische Website (GitHub Pages, kein Build-Schritt, reines HTML/CSS)
 │   ├── CNAME                      # Custom Domain: finanzgecko.app — **alle** absoluten URLs (canonical, og:url,
@@ -233,7 +236,12 @@ automatisch über `Provider`.
 
 - **Eine Datei pro Installation**, kein DB-Server: `finanzgecko-data.json` im OS-Datenverzeichnis (`AppStore.resolveDataDirectory()`).
   - Linux: `~/.local/share/de.finanzgecko.app/` (oder `$XDG_DATA_HOME`)
-  - macOS: `~/Library/Application Support/de.finanzgecko.app/`
+  - macOS: `~/Library/Containers/de.finanzgecko.app/Data/Library/Application Support/FinanzGecko/`
+    (Sandbox-Container ab v1.8; davor `~/Library/Application Support/de.finanzgecko.app/` — die Migration in
+    §4.1 kopiert einmalig herüber). **Der Ordner heißt unter macOS bewusst `FinanzGecko`, nicht wie die
+    Application-ID**: ein auf `.app` endender Ordnername gilt dem Finder als Programmbündel (generisches Icon,
+    Art "Programm", Doppelklick meldet "beschädigt oder unvollständig"). Linux und Windows behalten
+    `de.finanzgecko.app`, dort ist die Endung bedeutungslos und Reverse-DNS üblich.
   - Windows: `%APPDATA%\de.finanzgecko.app\`
 - **Der Speicherort ist bewusst NICHT wählbar.** Ein Ordnerdialog wurde entworfen, gebaut und wieder entfernt: der
   einzige Grund, ihn zu wollen, ist "dann liegt meine Datei in einem Ordner, den die Cloud sichert" — und genau das
@@ -320,12 +328,52 @@ automatisch über `Provider`.
 - **Dateirechte als Defense-in-Depth:** `chmod 700`/`600` (Linux/macOS), `icacls` current-user-only (Windows) —
   zusätzlich zur Verschlüsselung, nicht als Ersatz dafür.
 - **macOS-Spezifika (wichtig, nicht versehentlich rückgängig machen):**
-  - `SecureKeyStore` nutzt `MacOsOptions(usesDataProtectionKeychain: false)` — die Data-Protection-Keychain-Variante
-    bindet den Key an die Team-ID der Code-Signatur; bei einem unsignierten/ad-hoc-signierten Build (kein Apple
-    Developer Team) schlägt das mit `-34018` fehl.
-  - App-Sandbox ist **bewusst deaktiviert** (`com.apple.security.app-sandbox = false` in beiden `.entitlements`) —
-    sonst virtualisiert macOS `$HOME` auf einen Container-Pfad und `resolveDataDirectory()` würde am dokumentierten
-    Pfad vorbeischreiben.
+
+  Seit der App-Store-Vorbereitung gibt es **zwei macOS-Auslieferungsformen**, unterschieden durch die
+  Compile-Zeit-Konstante `kIsMacAppStore` (`lib/constants.dart`, `bool.fromEnvironment('FINANZGECKO_MAS')`,
+  **Default `false`**). Alles Folgende gilt für den Standardfall — den DMG-Build, den jeder bestehende Nutzer
+  installiert hat. Die Abweichungen des App-Store-Builds stehen jeweils darunter und sind **nur** über
+  `packaging/macos/build_appstore.sh` erreichbar.
+
+  - `SecureKeyStore` nutzt `MacOsOptions(usesDataProtectionKeychain: kIsMacAppStore)`.
+    - **DMG-Build (`false`):** die klassische Keychain. Die Data-Protection-Variante bindet den Key an eine
+      Team-ID-abgeleitete Access Group und verlangt ein `keychain-access-groups`-Entitlement; ein Build ohne
+      dieses — inklusive jedes lokal ad-hoc-signierten `.app` — scheitert mit `-34018`. Dass inzwischen eine
+      Developer ID existiert, ändert daran **nichts**: ein Umstellen würde den Key an anderer Stelle suchen und
+      die Datendatei jedes bestehenden Nutzers unlesbar machen. Nicht umstellen.
+    - **App-Store-Build (`true`):** die Data-Protection-Variante ist Pflicht, weil eine sandboxed App auf die
+      klassische Keychain keinen Zugriff hat. Funktioniert dort, weil `AppStore.entitlements` die passende
+      Access Group mitbringt; die Nutzer sind Neuinstallationen ohne Alt-Key.
+  - **App-Sandbox ist seit v1.8 in ALLEN macOS-Builds aktiv** (`com.apple.security.app-sandbox = true` in
+    `Release.entitlements`, `DebugProfile.entitlements` und `AppStore.entitlements`). Das ist eine **bewusste
+    Umkehr** der bis v1.7 dokumentierten Entscheidung; die alte Begründung ("sonst virtualisiert macOS `$HOME`
+    und `resolveDataDirectory()` schreibt am dokumentierten Pfad vorbei") war richtig, wird aber jetzt durch die
+    einmalige Migration aufgelöst statt durch Vermeiden. Ziel ist genau **ein** macOS-Verhalten statt zweier.
+    - `resolveDataDirectory()` braucht **keine** Fallunterscheidung: unter der Sandbox zeigt `$HOME` bereits auf
+      `~/Library/Containers/de.finanzgecko.app/Data`, derselbe relative Pfad entsteht dort erneut. Der
+      dokumentierte Pfad ist ab v1.8 der Container-Pfad.
+    - **`lib/data/sandbox_migration.dart` ist der Preis dieser Umkehr.** Beim ersten Start eines sandboxed Builds
+      liegt die Datendatei einer Bestandsinstallation noch unter dem echten Home. Die Migration **kopiert** sie
+      in den Container — sie verschiebt nicht und löscht nichts. Zwei Regeln, die nicht verhandelbar sind:
+      niemals überschreiben (Container gewinnt immer) und niemals das Original löschen (die einzige Rückfalloption,
+      falls die Kopie subtil falsch war). Läuft in `ensureInitialized()` **vor** dem ersten Lesen der Datei.
+    - Der Lesezugriff auf den alten Pfad kommt vom Entitlement
+      `com.apple.security.temporary-exception.files.home-relative-path.read-write`, eng auf
+      `/Library/Application Support/de.finanzgecko.app/` begrenzt. Es ist **übergangsweise**: sobald der alte Pfad
+      nicht mehr gelesen wird, fliegt es raus (ROADMAP). Im App-Store-Build steht es bewusst nicht.
+    - Die `chmod`-Härtung entfällt im App-Store-Build (`_chmod` steigt bei `kIsMacAppStore` sofort aus).
+    - **Keychain-Frage: am 2026-08-13 empirisch geklärt — ja, es funktioniert.** Ein sandboxed, mit der Developer
+      ID signierter Build liest den bestehenden Legacy-Keychain-Eintrag unverändert. Keychain-ACLs hängen an der
+      Code-Signing-Identität, und die ändert die Sandbox nicht (gleiche Developer ID, gleiche Bundle ID). Deshalb
+      migriert `SandboxMigration` bewusst **nur Dateien, keinen Schlüssel**.
+      Getestet mit einer echten Bestandsinstallation: Datei-Hash im Container identisch zum alten Pfad, App zeigte
+      alle Daten ohne Import. **Nicht in CI prüfbar** — bei einem Wechsel der Signatur-Identität (z. B. dem
+      App-Store-Build, den Apple neu signiert) gilt das Ergebnis ausdrücklich **nicht** und ist neu zu prüfen.
+  - Der In-App-Update-Weg (`UpdateService`, *Nach Updates suchen*) fehlt im App-Store-Build vollständig:
+    App-Review-Richtlinie 2.4.5 verbietet den zweiten Update-Kanal, und der App Store aktualisiert selbst. Weil
+    `kIsMacAppStore` `const` ist, entfernt der Tree-Shaker den Pfad aus dem Binary. Der Datenschutz-Absatz im
+    Hilfe-Bereich verliert dort entsprechend seinen Satz zur GitHub-Releases-API (siehe
+    `gherkin/settings.feature`).
 
 ### 4.2 Schema (`lib/data/app_schema.dart`)
 

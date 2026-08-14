@@ -1,4 +1,4 @@
-# Quelle: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_schema.dart
+# Quelle: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_schema.dart, lib/constants.dart, lib/data/sandbox_migration.dart
 # Implementierung: lib/data/app_store.dart
 @security @persistence
 Feature: Datenspeicherung, Verschlüsselung und Integrität
@@ -100,12 +100,44 @@ Feature: Datenspeicherung, Verschlüsselung und Integrität
     And ein Parse-Fehler dieser Datei wird stillschweigend ignoriert (Kurse sind jederzeit neu abrufbar, kein
       Datenverlustrisiko)
 
-  Scenario: macOS — Schlüsselbund-Zugriff funktioniert auch ohne Code-Signing-Zertifikat
-    Given die App ist ad-hoc-signiert, ohne Apple-Developer-Team
+  Scenario: macOS — die Schlüsselbund-Variante hängt an der Auslieferungsform
+    Given die App wurde als DMG ausgeliefert (Developer-ID-Build, der Standardfall)
     Then wird die klassische (nicht Data-Protection-) Keychain-Variante verwendet
     And der erste Schlüssel-Zugriff schlägt NICHT mit "A required entitlement isn't present." fehl
+    And das gilt unverändert für lokal gebaute, ad-hoc-signierte Builds ohne Apple-Developer-Team
+    Given die App wurde für den Mac App Store gebaut (kIsMacAppStore)
+    Then wird die Data-Protection-Keychain-Variante verwendet — eine sandboxed App hat auf die klassische
+      Keychain keinen Zugriff, hier ist die Variante also erzwungen und nicht bevorzugt
+    And das setzt das Entitlement "keychain-access-groups" mit Team-ID-Präfix voraus
+      (macos/Runner/AppStore.entitlements, eingesetzt von packaging/macos/build_appstore.sh)
+    And beide Varianten legen ihre Schlüssel getrennt ab: keine der beiden findet den Schlüssel der anderen
 
-  Scenario: macOS — App-Sandbox ist deaktiviert, damit der dokumentierte Datenpfad stimmt
+  Scenario: macOS — App-Sandbox ist in allen Builds aktiv
     Given die App läuft auf macOS
-    Then schreibt sie ihre Daten direkt unter "~/Library/Application Support/de.finanzgecko.app/" (echter Home-Pfad)
-    And NICHT in einen sandboxed Container-Pfad, der vom dokumentierten Pfad abweichen würde
+    Then läuft sie mit aktiver App-Sandbox, unabhängig von der Auslieferungsform
+    And "$HOME" zeigt dadurch auf "~/Library/Containers/de.finanzgecko.app/Data", worunter derselbe relative
+      Pfad erneut entsteht: resolveDataDirectory() bleibt unverändert, nur der Wurzelpfad ist ein anderer
+    And die Dateiberechtigungs-Härtung (chmod) entfällt im App-Store-Build, weil der Container bereits pro App
+      und Benutzer abgeschottet ist
+
+  Scenario: macOS — Bestandsdaten werden einmalig in den Container übernommen
+    Given eine Installation aus einer Version vor der Sandbox hat Daten unter
+      "~/Library/Application Support/de.finanzgecko.app/" liegen
+    And der Container ist leer (erster Start des sandboxed Builds)
+    When die App startet
+    Then werden Datendatei und Wechselkurs-Cache in den Container KOPIERT, bevor zum ersten Mal gelesen wird
+    And der Zielordner heißt dabei "FinanzGecko" statt wie die Application-ID: ein auf ".app" endender
+      Ordnername gilt dem Finder als Programmbündel. Die Umbenennung reist auf derselben einmaligen Kopie mit,
+      statt später eine eigene Migration zu brauchen
+    And die Originaldateien bleiben unverändert liegen und werden NICHT gelöscht — sie sind die Rückfalloption,
+      falls die Kopie fehlerhaft war
+    And im Container liegt anschließend eine Notiz "migrated-from-unsandboxed.txt", die den alten Pfad nennt
+    Given im Container liegt bereits eine Datendatei
+    Then findet keine Migration statt — der Container gewinnt immer, damit ein zweiter Start oder ein bereits
+      importiertes Backup nicht überschrieben wird
+    Given es gibt weder im Container noch am alten Pfad Daten
+    Then ist dies eine echte Neuinstallation und die App startet regulär leer
+    Given der alte Pfad existiert, ist aber nicht lesbar (fehlendes oder falsch zugeschnittenes
+      temporary-exception-Entitlement)
+    Then wird dies als Fehlschlag festgehalten und NICHT als Neuinstallation behandelt — die beiden Fälle sehen
+      für Nutzer:innen gleich aus (leere App), bedeuten aber das Gegenteil

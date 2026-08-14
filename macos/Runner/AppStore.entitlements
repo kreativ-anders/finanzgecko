@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements NUR für den Mac-App-Store-Build (packaging/macos/build_appstore.sh).
+  Der ausgelieferte DMG-Build benutzt weiterhin Release.entitlements und bleibt
+  unsandboxed — siehe AI_MASTER §4.1 "macOS-Spezifika". Diese Datei ersetzt jene
+  nicht, sie steht daneben.
+
+  Jeder Eintrag hier ist Pflicht, keiner ist "nice to have":
+
+  - app-sandbox: Voraussetzung für den App Store. Virtualisiert $HOME auf
+    ~/Library/Containers/de.finanzgecko.app/Data — deshalb kann dieser Build die
+    Daten eines DMG-Builds nicht sehen und umgekehrt.
+  - network.client: ohne das schlägt der Wechselkurs-Abruf (api.frankfurter.dev)
+    still fehl. Bewusst KEIN network.server: die App nimmt keine Verbindungen an,
+    und ein unbenutztes Entitlement ist im App Review eine Rückfrage wert.
+  - files.user-selected.read-write: Backup exportieren/importieren und CSV-Export
+    laufen über file_selector (NSOpenPanel/Powerbox). Ohne das liefert der Dialog
+    einen Pfad, auf den die App dann nicht schreiben darf.
+  - keychain-access-groups: der sandboxed Build muss die Data-Protection-Keychain
+    benutzen (SecureKeyStore, kIsMacAppStore), und die verlangt eine Access Group
+    mit Team-ID-Präfix. $(AppIdentifierPrefix) wird von Xcode ersetzt — beim
+    manuellen codesign NICHT, deshalb setzt build_appstore.sh die Team-ID vorher
+    in eine temporäre Kopie dieser Datei ein.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)de.finanzgecko.app</string>
+	</array>
+</dict>
+</plist>

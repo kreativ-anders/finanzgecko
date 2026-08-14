@@ -1,12 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Debug/Profile — spiegelt Release.entitlements bewusst inklusive Sandbox.
+
+  Ein unsandboxed Debug-Build neben einem sandboxed Release-Build wäre die
+  denkbar schlechteste Kombination: genau die Fehlerklasse, die diese Umstellung
+  einführt (fehlendes Entitlement, falscher Pfad, Keychain nicht erreichbar),
+  träte dann ausschließlich beim Nutzer auf und nie beim Entwickeln.
+
+  Nebenwirkung, die kein Fehler ist: `flutter run` benutzt ab jetzt den
+  Container unter ~/Library/Containers/de.finanzgecko.app/Data/ statt des
+  echten Home-Pfads. Beim ersten Start greift dort dieselbe Migration wie beim
+  Nutzer — was praktisch ist, weil sie sich damit überhaupt lokal testen lässt.
+
+  allow-jit und network.server sind Debug-spezifisch (Dart-VM, Hot Reload) und
+  stehen deshalb nur hier, nicht in Release.entitlements.
+-->
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.app-sandbox</key>
-	<false/>
+	<true/>
 	<key>com.apple.security.cs.allow-jit</key>
 	<true/>
 	<key>com.apple.security.network.server</key>
 	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+	<array>
+		<string>/Library/Application Support/de.finanzgecko.app/</string>
+	</array>
 </dict>
 </plist>

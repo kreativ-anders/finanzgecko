@@ -105,6 +105,10 @@ automatically).
 
 ### macOS signing and notarization
 
+> The Mac App Store is a **separate** channel with its own certificates, entitlements and packaging script
+> (`packaging/macos/build_appstore.sh`). Everything in this section is about the free DMG. For the store release
+> see [app-store.md](app-store.md).
+
 `packaging/macos/build_dmg.sh` signs the app (Developer ID, Hardened Runtime), notarizes it, staples the ticket and
 builds the DMG. It runs both locally and in the `macos` CI job, so a build you test by hand is the same one CI
 produces. Without a signing identity or notarization credentials it produces an **unsigned** DMG and says so,

@@ -26,7 +26,17 @@ macOS downloads are signed and notarized — no warning. Windows still shows one
 - [x] Assisted update — "Nach Updates suchen" downloads the right file for your system, checks it against the
       published checksum and hands it over ready to install. Still only when you ask for it; the app never checks
       in the background
-- [ ] Optional: run the app sandboxed on macOS — extra protection, but it moves where the data file lives, so it needs its own migration step
+- [ ] Mac App Store — one-time purchase, updates handled by the store. Groundwork is in place
+      (`packaging/macos/build_appstore.sh`, sandboxed `AppStore.entitlements`, `kIsMacAppStore`); still missing
+      are the App Store distribution certificate, the provisioning profile, the App Store Connect record and the
+      paid-apps agreement. The free download here stays free — the store version buys convenience, not features
+- [x] Sandbox every macOS build — extra protection, and the precondition for the App Store. Existing data is
+      copied into the container once, on first launch; the old files stay where they are as a fallback
+- [ ] Remove the migration again (earliest ~2027-08, one year after v1.8) — drop
+      `lib/data/sandbox_migration.dart`, its test and the `temporary-exception` entitlement in one commit. That
+      entitlement is the only thing letting the app read anything outside its container, so removing it strictly
+      tightens the sandbox. Deleting users' old files is a separate, later question — doing it in the release
+      that first copies them would make a bad copy unrecoverable
 - [ ] Drawdown from peak — how far below the all-time high
 - [ ] Currency exposure — EUR vs. foreign share
 - [ ] English UI
