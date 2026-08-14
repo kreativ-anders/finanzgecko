@@ -8,6 +8,13 @@ Architektur, Konventionen, Domänensprache und Verhalten der App.
 > **Pflicht für jede KI, die an diesem Repo arbeitet:** siehe Abschnitt ["Regeln für KI-Agenten"](#regeln-für-ki-agenten-pflichtlektüre)
 > ganz unten — insbesondere die Pflicht, dieses Dokument und `gherkin/` bei jeder Änderung synchron zu halten.
 
+**AI_MASTER.md ist der Koordinator für mehrere Werkzeug-spezifische Anweisungsdateien**, nicht die einzige. Jedes
+gängige KI-Coding-Tool sucht an einem eigenen, festen Pfad nach Repo-Instruktionen; damit jedes Werkzeug austauschbar
+bleibt, gibt es pro Tool eine schlanke Pointer-Datei, die nur die nicht verhandelbaren Regeln wiederholt und für
+alles andere hierher sowie auf `gherkin/` verweist — Details und die vollständige Liste in
+[Abschnitt 3](#3-ordnerstruktur). Ändert sich eine dieser Regeln, müssen **alle** Pointer-Dateien im selben Schritt
+nachgezogen werden (siehe "Regeln für KI-Agenten" #1).
+
 ---
 
 ## 1. Elevator Pitch
@@ -74,7 +81,21 @@ zeigt den gespeicherten Zustand und prüft erst auf Klick auf "Jetzt prüfen". E
 
 ```
 finanzgecko/
-├── AI_MASTER.md                  # ← dieses Dokument
+├── AI_MASTER.md                  # ← dieses Dokument; Koordinator der KI-Anweisungsdateien unten (Details: Absatz nach der Kopfzeile)
+├── CLAUDE.md                     # Ausführliche Alltags-Arbeitsanleitung (Navigation im Repo, Feature-Regenerierung,
+│                                 #   Website-Fallstricke) — trotz des Namens werkzeugneutral, importiert AI_MASTER.md
+│                                 #   am Ende (`@AI_MASTER.md`, Claude-Code-spezifische Syntax). Gelesen von Claude Code.
+├── AGENTS.md                     # Schlanke Pointer-Datei (agents.md-Konvention): wiederholt nur die nicht verhandel-
+│                                 #   baren Regeln aus CLAUDE.md und verweist für alles andere hierher + auf CLAUDE.md/
+│                                 #   gherkin/. Gelesen von OpenAI Codex CLI u. a. Tools, die diese Konvention unterstützen.
+├── GEMINI.md                     # Dieselbe Pointer-Datei für Gemini CLI (Google).
+├── .github/copilot-instructions.md # Dieselbe Pointer-Datei für GitHub Copilot (Pfad von Copilot vorgegeben, daher
+│                                 #   unter .github/ statt im Root — siehe Eintrag bei .github/workflows/ unten).
+│                                 #   **Alle vier Dateien oben halten identische "Non-negotiable rules"-Abschnitte** —
+│                                 #   ändert sich eine Kernregel (z. B. eine neue Architekturentscheidung mit
+│                                 #   Diskussionspflicht), müssen alle im selben Schritt nachgezogen werden (siehe
+│                                 #   "Regeln für KI-Agenten" #1). Neues Tool mit eigener Konvention? Gleiche
+│                                 #   Pointer-Datei ergänzen, hier eintragen, CLAUDE.md-Absatz "Other AI tools" pflegen.
 ├── CORPORATE_DESIGN.md           # Farbpalette, Markenfarben-Regeln, Typografie, App-Icon — bewusst kompakt und
 │                                 #   ohne Code-Bezug für Design/Marketing/externe Gestaltung; die technische
 │                                 #   Umsetzung (Getter, Kontrast-Fallbacks) steht stattdessen in §5 "Farbtoken —
@@ -175,8 +196,11 @@ finanzgecko/
 │       └── screenshots/           # je Ansicht vier Dateien: `{light,dark}-<name>.{png,webp}`. Die Seiten liefern
 │                                   #   beide Themes per `<picture>` + `media="(prefers-color-scheme: light)"` aus;
 │                                   #   Dunkel ist Default und `<img>`-Fallback. Neu aufnehmen: tool/capture_screenshots.sh
-└── .github/workflows/
-    └── release.yml                # einziger Workflow. Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst
+└── .github/
+    ├── copilot-instructions.md    # ← die GitHub-Copilot-Pointer-Datei aus der Liste oben, hier weil der Pfad von
+    │                               #   Copilot selbst vorgegeben ist, nicht frei wählbar
+    └── workflows/
+        └── release.yml         # einziger Workflow. Tag-Push (v*.*.*) ODER manuell (workflow_dispatch): erst
                                    #   `gate`-Job (analyze + test + Icon-Pipeline), dann 3 native Build-Jobs
                                    #   (ubuntu/macos/windows, `needs: gate`) → Release-Assets, danach `release`-Job
                                    #   (aktualisiert zusätzlich CHANGELOG.md, s. u.). Kein separater
@@ -896,6 +920,11 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
    - `CORPORATE_DESIGN.md` aktualisieren, falls sich eine Farbe, ein Farb-Token oder die Typografie ändern.
    - Das passende `.feature`-File in `gherkin/` um das neue/geänderte Szenario ergänzen oder korrigieren.
    - Bei neuem deutschen Fachbegriff: Abschnitt 7 (Glossar) ergänzen.
+   - Ändert sich eine der **nicht verhandelbaren Regeln** (aktuell: deutsche Domänensprache, Architekturentscheidungen
+     nicht ohne Rücksprache rückgängig machen, Doku-Sync-Pflicht, `flutter analyze`/`flutter test` nach jeder
+     Änderung) → denselben Abschnitt "Non-negotiable rules" in **allen** KI-Pointer-Dateien nachziehen (aktuell
+     `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md` — Liste siehe Abschnitt 3). Neues Tool mit eigener
+     Konvention dazugekommen? Gleiche Pointer-Datei ergänzen und dort in Abschnitt 3 eintragen.
    Eine Änderung an Produktionscode **ohne** begleitendes Doku-Update gilt als unvollständig.
 
 2. **Kein stillschweigendes Verwerfen von Anforderungen.** Wird eine bestehende Gherkin-Regel durch eine Änderung

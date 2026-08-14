@@ -11,6 +11,13 @@ folder structure, architecture, data models, view behavior, or design tokens; ne
 terms (Konto, Fixposten, Vermögenswerte, …); don't revert a documented architecture decision (e.g. macOS
 keychain/sandbox settings, unencrypted rates cache) without discussing it first.
 
+**Other AI tools:** this repo also ships thin pointer files for other coding agents — [AGENTS.md](AGENTS.md)
+(Codex CLI + the cross-tool `agents.md` convention), [GEMINI.md](GEMINI.md) (Gemini CLI), and
+[.github/copilot-instructions.md](.github/copilot-instructions.md) (GitHub Copilot). Each restates only the
+"Non-negotiable rules" paragraph above and points back to this file + AI_MASTER.md for everything else. If you
+change one of those non-negotiable rules here, update the matching section in every sibling file in the same step
+— see AI_MASTER §3 for the current list and "Regeln für KI-Agenten" #1.
+
 ## Working efficiently in this repo (for AI agents)
 
 **Navigate, don't scan.** To change a behavior: find it in AI_MASTER **§8 Feature-Übersicht** → open that feature's
