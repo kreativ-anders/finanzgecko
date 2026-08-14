@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.8.0 - 2026-08-14
+
+- 🔖 Version 1.8.0+18 (7665434)
+- 🚧 Update roadmap for sandboxed macOS release (d0b1408)
+- 🔖 Add docs consistency guard and App Store copy (41ac1a9)
+- 👷 Sign copied macOS app bundle for DMG build (ca933fc)
+- 📝 Clarify updater and signing limitations (7c20d29)
+- 🤖 Add AI tool repo pointers (f021497)
+- 👷 Add macOS sandbox migration and MAS build (5ab944d)
+- 📝 Clarify update behavior in README (c6d31d6)
+- 📝 Changelog für v1.7.0 (e409761)
+
+
 ## v1.7.0 - 2026-08-12
 
 - 🔖 Version 1.7.0+17 (2ff5399)
