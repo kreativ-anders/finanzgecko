@@ -4,12 +4,14 @@ What's planned for FinanzGecko. Quarters are intent, not promises.
 
 ## Currently working on
 
-- **Mac App Store** — one-time purchase, updates handled by the store. The free download here stays free; the
-  store version buys convenience, not features. Groundwork is in place (`packaging/macos/build_appstore.sh`,
-  `AppStore.entitlements`, the sandbox); still missing are the distribution certificate, the provisioning
-  profile, the App Store Connect record and the paid-apps agreement.
+- **v1.8 — the sandboxed macOS release.** Every macOS build now runs in the App Sandbox; existing data is copied
+  into the container once on first launch.
 
 ## On hold
+
+- **Mac App Store.** Paused: the added complexity does not currently justify what it buys. FinanzGecko stays a
+  free, manually downloaded app, signed and checked by Apple. The groundwork stays in the repo
+  (`packaging/macos/build_appstore.sh`, `AppStore.entitlements`) and costs nothing while unused.
 
 - **Windows — signed installer.** A certificate costs money every year and, unlike on macOS, does not remove the
   warning: it only turns the SmartScreen block into a one-click "run anyway" that fades as downloads accumulate.
