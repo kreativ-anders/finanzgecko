@@ -37,12 +37,20 @@ broke — read its message before hunting.
 **Keep docs in sync** (AI_MASTER.md + `gherkin/`) with every change, and don't revert a documented decision (see
 AI_MASTER "Regeln für KI-Agenten") without asking.
 
-## The website (`docs/`) — things no test covers
+## The website (`docs/`) — things mostly no test covers
 
-`docs/` is plain HTML/CSS with no build step and **no test suite**: `flutter test` never touches it, so every rule
-here has to be checked by hand or by a throwaway script. The traps, in the order they tend to bite:
+`docs/` is plain HTML/CSS with no build step. Most rules here must be checked by hand — but the ones that are
+mechanically decidable are now enforced by **`test/docs_consistency_test.dart`**, which runs inside
+`flutter test`: the asset-suffix coupling, the disclosed network endpoints, the documented data path, banned
+signing jargon in user-facing text, and specific claims that were once false and must not return.
 
-- **`docs/download.html` resolves release assets client-side.** The three cards ship with a static
+**When a rule below bites again, convert it into a test there instead of only fixing the prose.** That file exists
+because the README claimed "unsigned builds trigger Gatekeeper warnings" for weeks after it stopped being true:
+prose about behaviour rots like code, but nothing compiles it.
+
+The traps, in the order they tend to bite (⚙ = already enforced by the test):
+
+- ⚙ **`docs/download.html` resolves release assets client-side.** The three cards ship with a static
   `.../releases/latest` link (the no-JS fallback) and a script rewrites each `href` to the concrete asset, matched
   by the `data-asset-suffix` attribute. **Those suffixes are coupled to the artifact names in
   `.github/workflows/release.yml`** — rename an artifact there and the page silently falls back to the release
@@ -62,7 +70,7 @@ here has to be checked by hand or by a throwaway script. The traps, in the order
   padding, a heading size, or a fixed-column grid needs a matching entry there. Desktop paddings are deliberately
   *not* uniform (the hero breathes more than the trust strip); the breakpoint compresses that scale, it doesn't
   flatten it — so use explicit per-section values, not one shared token.
-- **Every new third-party call or embed must be added to `docs/datenschutz.html`** (currently: Pirsch, GitHub
+- ⚙ **Every new third-party call or embed must be added to `docs/datenschutz.html`** (currently: Pirsch, GitHub
   Pages, the GitHub API on index + download, Stripe). The page is linked from all footers; a German site that
   loads something undisclosed is the one failure mode here with legal weight.
 - **New page? Copy the whole `<head>` contract:** the Pirsch snippet (`api.pirsch.io/pa.js`, `id="pianjs"`), a
@@ -71,7 +79,7 @@ here has to be checked by hand or by a throwaway script. The traps, in the order
   depth the bad URL had, so relative paths break it. Don't "fix" them to match the other pages.
 - **`docs/CNAME` pins `finanzgecko.app`.** No absolute URL anywhere in the repo may point at
   `kreativ-anders.github.io` — that includes `README.md` and `_downloadPageUrl` in `lib/ui/views/settings_view.dart`.
-- **Claims about the app's network access appear in four places** — `docs/index.html` (feature card),
+- ⚙ **Claims about the app's network access appear in four places** — `docs/index.html` (feature card),
   `docs/llms.txt`, `docs/datenschutz.html`, and AI_MASTER. The app makes exactly two calls: exchange rates
   (`api.frankfurter.dev`) and the manual update check (`api.github.com`). Keep all four in agreement.
 - **The Stripe "after payment" redirect lives in Stripe's dashboard, not the repo**, and points at

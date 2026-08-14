@@ -104,6 +104,10 @@ and it is the single highest-value form on this page. Do it now.
 
 ## 4. The App Store Connect record
 
+> **Listing text, keywords, review notes and screenshot order are written out ready to paste in
+> [app-store-listing.md](app-store-listing.md).** Keep that file and `docs/index.html` in agreement — they make
+> the same promises to the same people.
+
 Apps → `+` → New App → macOS → name, primary language German, bundle ID `de.finanzgecko.app`, SKU (free-form,
 e.g. `finanzgecko-macos`).
 
