@@ -463,15 +463,15 @@ jobs:
           cd dist
           sha256sum FinanzGecko-* > SHA256SUMS
           {
-            echo "### Prüfsummen (SHA-256)"
+            echo "### Checksums (SHA-256)"
             echo
-            echo "Damit lässt sich nachrechnen, dass die heruntergeladene Datei unverändert die ist, die dieser Build erzeugt hat:"
+            echo "Confirm that your download is byte-for-byte the file this build produced:"
             echo
             echo '```'
             cat SHA256SUMS
             echo '```'
             echo
-            echo "Prüfen mit \`shasum -a 256 <Datei>\` (macOS/Linux) oder \`certutil -hashfile <Datei> SHA256\` (Windows)."
+            echo "Check with \`shasum -a 256 <file>\` (macOS/Linux) or \`certutil -hashfile <file> SHA256\` (Windows)."
           } > "$RUNNER_TEMP/release_body.md"
 
       - uses: softprops/action-gh-release@v3
@@ -498,7 +498,10 @@ jobs:
   # Voraussetzung: Secret WINGET_TOKEN (klassischer PAT mit `public_repo`), und
   # ein Fork von microsoft/winget-pkgs im eigenen Account. Fehlt das Secret,
   # wird der Job übersprungen statt das Release rot zu färben — dieselbe Logik
-  # wie beim unsignierten DMG in build_dmg.sh.
+  # wie beim unsignierten DMG in build_dmg.sh. `continue-on-error` auf dem
+  # Action-Schritt selbst greift dieselbe Logik nochmal auf: scheitert die
+  # Action (z. B. weil bereits ein offener PR gegen winget-pkgs existiert),
+  # soll das die restliche Release-Pipeline nicht rot färben.
   winget:
     needs: [bump-version, release]
     if: |
@@ -530,6 +533,7 @@ jobs:
 
       - name: winget-Manifest aktualisieren
         if: steps.check.outputs.have_token == 'true'
+        continue-on-error: true
         uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: KreativAnders.FinanzGecko

@@ -533,6 +533,11 @@ Fixposten, Vermögenswerte, Basiswährung, Kennzahlen, …) sowie wörtlich ziti
 
 Die Prosa in `docs/`, die Gherkin-Features und dieses Dokument bleiben deutsch.
 
+**Ebenfalls englisch: der Text der GitHub-Releases** (`release.yml`, Schritt „Prüfsummen erzeugen"). Er steht auf
+github.com unmittelbar neben README/ROADMAP/CONTRIBUTING und hat dasselbe Publikum — v1.9.0 ging noch mit einem
+deutschen Prüfsummen-Abschnitt heraus. Schrittnamen und Kommentare *innerhalb* der Workflows bleiben deutsch; die
+sieht nur, wer die Actions-Ansicht öffnet.
+
 ### `analysis_options.yaml`
 
 Die Regelliste ist bewusst länger als das Flutter-Template: jeder Eintrag ersetzt etwas, das sonst ein Mensch beim
@@ -749,7 +754,8 @@ Splash).
   `sha256sum FinanzGecko-*` statt `sha256sum *`: die Shell legt die Zieldatei durch die Umleitung an, *bevor* der
   Befehl läuft, ein `*` würde also die noch leere `SHA256SUMS` mit sich selbst hashen. Für
   `docs/download.html` ist die Datei unkritisch: die Asset-Auflösung matcht per `data-asset-suffix`, und
-  `SHA256SUMS` trägt keines davon.
+  `SHA256SUMS` trägt keines davon. Der Release-Text selbst ist **englisch** (§4.6 „Sprache") und behauptet
+  Unversehrtheit, nicht Echtheit — `SHA256SUMS` ist unsigniert.
 - **Keine unversionierten Alias-Assets:** jedes Release trägt pro Plattform genau **eine** Binärdatei (den
   versionierten Namen). Ein früherer Ansatz lud zusätzlich eine byte-identische unversionierte Kopie hoch
   (`cp`/`Copy-Item` vor dem jeweiligen `upload-artifact`-Schritt), damit `docs/download.html` fest auf
