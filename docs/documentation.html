@@ -65,7 +65,7 @@
       <section id="ablauf">
         <h2><span class="step">1</span> Genereller Ablauf</h2>
         <p>
-          Die App gliedert sich in sechs Ansichten in der linken Navigation. Für den Einstieg ist die Reihenfolge
+          Die App gliedert sich in sechs Ansichten, erreichbar über die Navigation am oberen Rand. Für den Einstieg ist die Reihenfolge
           von links nach rechts sinnvoll:
         </p>
         <div class="flow">
@@ -85,7 +85,7 @@
         </p>
         <div class="card note">
           <p>
-            Alle Daten liegen ausschließlich lokal, AES-256-verschlüsselt in einer einzigen Datei auf dem Gerät.
+            Alle Daten liegen ausschließlich auf dem eigenen Computer, verschlüsselt in einer einzigen Datei.
             Es gibt keinen Account, keine Cloud-Synchronisierung und keinen Server.
           </p>
         </div>
@@ -287,7 +287,7 @@
         <ul class="feature-list">
           <li>Die Prognose ist nur sichtbar, wenn der gewählte Zeitraum bis zum aktuellsten erfassten Monat reicht.</li>
           <li>Der Verteilungs-Donut zeigt immer den aktuellsten Monat innerhalb des gewählten Zeitraums.</li>
-          <li>Die Kennzahlen-Karte (bester/schwächster Monat, Ø-Veränderung, Höchststand) erscheint erst ab zwei Monaten Historie.</li>
+          <li>Die Kennzahlen-Karte erscheint ab zwei Monaten Historie und zeigt sechs Werte: <em>Gesamtveränderung</em>, <em>Bester Monat</em>, <em>Schwächster Monat</em>, <em>Ø Veränderung/Monat</em>, <em>Monate im Plus</em> und <em>Höchststand</em>.</li>
         </ul>
         <p>
           Zusätzlich erinnert das Dashboard bei Bedarf an offene Aufgaben: den aktuellen Monat erfassen, ein
@@ -302,9 +302,20 @@
         </p>
         <ul class="feature-list">
           <li><strong>Basiswährung:</strong> Zielwährung, in die alle Dashboard-Summen umgerechnet werden.</li>
-          <li><strong>Sicherheits-Informationen:</strong> Einsicht, wie und wo Daten verschlüsselt gespeichert werden.</li>
-          <li><strong>Speicherort:</strong> lässt sich direkt im Dateimanager öffnen.</li>
-          <li><strong>Backup:</strong> Export/Import als Klartext-JSON über native Dateidialoge; der Export-Status wird angezeigt.</li>
+          <li><strong>Erscheinungsbild:</strong> hell, dunkel oder wie das Betriebssystem (Standard).</li>
+          <li><strong>Wechselkurse:</strong> ob die App öffentliche Kurse abrufen darf. Vor dem ersten Fremdwährungsbetrag
+            wird einmal gefragt; die Antwort lässt sich hier jederzeit ändern. Ohne Zustimmung trägst du Kurse selbst ein.</li>
+          <li><strong>Benachrichtigungen:</strong> Hinweise des Betriebssystems bei fälligem Backup oder überfälliger Neubewertung.</li>
+          <li><strong>Sicherheit:</strong> zeigt, wie und wo die Daten verschlüsselt liegen — und dass die Datei an
+            diesen Computer gebunden ist. Der Speicherort lässt sich direkt im Dateimanager öffnen.</li>
+          <li><strong>Backup exportieren:</strong> über den nativen Dateidialog, wahlweise mit einem selbst vergebenen
+            Passwort geschützt. Ohne Passwort entsteht eine gewöhnliche JSON-Datei. Der Zeitpunkt des letzten Exports
+            wird angezeigt. Zusätzlich lassen sich die Kontostände als CSV für Tabellenkalkulationen exportieren.</li>
+          <li><strong>Backup importieren:</strong> ersetzt den gesamten Datenbestand. Passwortgeschützte Sicherungen
+            erkennt der Import selbst und fragt danach.</li>
+          <li><strong>Hilfe:</strong> Version und System-Infos für Fehlermeldungen, ein Test, ob die Kurs-API
+            erreichbar ist, und <em>Nach Updates suchen</em> — prüft auf Klick, ob es eine neuere Version gibt, lädt
+            sie auf Wunsch herunter und verifiziert sie gegen die veröffentlichte Prüfsumme.</li>
           <li><strong>Zurücksetzen:</strong> einzige unumkehrbare Aktion der App — erfordert eine getippte Bestätigungsphrase, kein einfacher Klick.</li>
         </ul>
         <p>Globale Tastenkürzel (unabhängig von der aktuellen Ansicht):</p>

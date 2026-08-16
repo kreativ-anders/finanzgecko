@@ -47,9 +47,9 @@
   <main id="main-content">
     <section class="download-hero">
       <div class="wrap">
-        <h1>FinanzGecko für Linux, macOS &amp; Windows herunterladen</h1>
-        <p>Kostenlos, quelloffen, ohne Account. Jeder Download lädt direkt die neueste Version von
-          GitHub Releases — für Windows als Installer, für macOS als App-Bundle und für Linux als AppImage.</p>
+        <h1>FinanzGecko herunterladen</h1>
+        <p>Kostenlos, quelloffen, ohne Anmeldung. Wähle dein System — du bekommst immer die
+          neueste Version.</p>
       </div>
     </section>
 
@@ -112,12 +112,8 @@
       <div class="wrap">
         <p class="note">
           <strong>Vor einem Update kurz ein Backup exportieren.</strong>
-          Deine Daten liegen verschlüsselt auf deinem Rechner, der Schlüssel dazu im Schlüsselbund
-          deines Betriebssystems. Dieser Schlüssel ist an die installierte App gebunden — ändert
-          sich an ihr etwas Grundlegendes, etwa bei einem größeren Update, kann sich im Einzelfall
-          auch der Zugriff darauf ändern. Normalerweise merkst du davon nichts. Weil es aber keinen Server
-          gibt, von dem sich etwas zurückholen ließe, ist ein Export vorher schlicht fair:
-          <em>Einstellungen → Backup exportieren…</em> — ein paar Sekunden, eine Datei.
+          Es gibt keinen Server, von dem sich etwas zurückholen ließe — deine Daten liegen nur bei dir.
+          <em>Einstellungen → Backup exportieren…</em>, ein paar Sekunden, eine Datei.
         </p>
       </div>
     </section>
@@ -131,39 +127,30 @@
          siehe CLAUDE.md. -->
     <section class="download-info">
       <div class="wrap">
-        <h2>Welche Version passt zu meinem System?</h2>
-        <p>FinanzGecko ist eine native Desktop-Anwendung und wird für jede Plattform getrennt gebaut.
-          Unter <strong>Windows</strong> lädst du einen gewöhnlichen Installer (.exe) für 64-Bit-Systeme
-          ab Windows 10. Unter <strong>macOS</strong> bekommst du ein Disk-Image (.dmg), aus dem du die
-          App in den Programme-Ordner ziehst; sie läuft sowohl auf Apple Silicon als auch auf
-          Intel-Macs. Unter <strong>Linux</strong> erhältst du ein AppImage für x86_64, das ohne Paketmanager
-          und ohne Root-Rechte auf praktisch jeder gängigen Distribution startet. Erkennt dein Browser
-          JavaScript, hebt diese Seite die zu deinem System passende Karte automatisch hervor.</p>
-
-        <h2>Was du nach dem Download bekommst</h2>
+        <h2>Was du bekommst</h2>
         <p>Nach dem ersten Start legst du deine Konten an und trägst monatlich die Kontostände ein.
-          Aus diesen Werten berechnet FinanzGecko dein Gesamtvermögen, den Verlauf über die Zeit und
-          eine Prognose. Fixposten bilden wiederkehrende Einnahmen und Ausgaben ab, Vermögenswerte
-          erfassen Sachwerte wie Fahrzeuge oder Technik. Alle Auswertungen entstehen lokal auf deinem
-          Rechner — es gibt weder ein Nutzerkonto noch eine Synchronisierung in eine Cloud. Eine
-          ausführliche Beschreibung aller Ansichten findest du in der
+          Daraus berechnet FinanzGecko dein Gesamtvermögen, den Verlauf über die Zeit und eine
+          Prognose. Fixposten bilden wiederkehrende Einnahmen und Ausgaben ab, Vermögenswerte
+          erfassen Sachwerte wie Fahrzeuge oder Technik. Alles entsteht auf deinem Computer — kein
+          Nutzerkonto, keine Cloud. Alle Ansichten im Detail:
           <a href="documentation.html">Dokumentation</a>.</p>
+        <p>Für <strong>Windows</strong> gibt es einen Installer (.exe, ab Windows 10, 64-Bit), für
+          <strong>macOS</strong> ein Disk-Image (.dmg, Apple Silicon und Intel), für
+          <strong>Linux</strong> ein AppImage (x86_64), das ohne Paketmanager und ohne Root-Rechte
+          startet. <a href="index.html#faq-install">So installierst du es →</a></p>
 
-        <h2>Deine Daten bleiben auf deinem Gerät</h2>
-        <p>FinanzGecko speichert alles in einer einzigen, AES-256-GCM-verschlüsselten Datei; der
-          Schlüssel liegt im Schlüsselbund deines Betriebssystems. Die App sendet keine Telemetrie und
-          keine Absturzberichte. Sie kontaktiert nur zwei Dienste: die Wechselkurse für Fremdwährungskonten und –
-          nur wenn du sie manuell auslöst – GitHub für die Prüfung auf neue Versionen und, nach einem zweiten
-          Klick, das Herunterladen der neuen Version.
-          Details dazu stehen in der <a href="datenschutz.html">Datenschutzerklärung</a>. Da es keinen
-          Server gibt, liegt die Sicherung bei dir: Exportiere regelmäßig ein Backup, dann lässt sich
-          dein Stand jederzeit auf einem anderen Rechner wiederherstellen.</p>
+        <h2>Deine Daten bleiben bei dir</h2>
+        <p>Alles liegt verschlüsselt in einer einzigen Datei auf deinem Computer, der Schlüssel im
+          Schlüsselbund deines Betriebssystems. Die App sendet keine Nutzungsdaten und keine
+          Absturzberichte. Sie geht nur in zwei Fällen ins Netz, beide erst nach deiner Entscheidung:
+          Wechselkurse für Konten in fremder Währung, und die Suche nach einer neuen Version.
+          Nachzulesen in der <a href="datenschutz.html">Datenschutzerklärung</a>.</p>
 
-        <h2>Updates und Versionshinweise</h2>
-        <p>Neue Versionen erscheinen als GitHub-Release mit Änderungsliste. Ein Update installierst du,
-          indem du die neue Datei herunterlädst und die alte ersetzt — deine bestehenden Daten bleiben
-          dabei erhalten. Da FinanzGecko quelloffen ist, kannst du jederzeit im Quellcode nachlesen,
-          was die Anwendung tut, oder sie selbst aus den Quellen bauen.</p>
+        <h2>Updates</h2>
+        <p>In der App: <em>Einstellungen → Nach Updates suchen</em>. FinanzGecko lädt auf Wunsch die
+          passende Datei, prüft sie gegen die veröffentlichte Prüfsumme und legt sie ab, wo du
+          möchtest — installiert wird nichts von selbst. Die Datei öffnest du dann wie beim ersten
+          Mal; beende FinanzGecko vorher. Deine Daten bleiben dabei erhalten.</p>
       </div>
     </section>
 

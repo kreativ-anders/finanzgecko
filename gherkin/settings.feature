@@ -128,6 +128,11 @@ Feature: Einstellungen
       gespeichert
     Given das Release enthält keine Datei für dieses Betriebssystem oder keine SHA256SUMS (ältere Releases)
     Then wird nichts geraten, sondern die Download-Seite der Website geöffnet
+    Given die GitHub-Antwort nennt für ein Asset eine Adresse, die nicht per HTTPS auf einen bekannten
+      GitHub-Release-Host zeigt
+    Then wird dieser Host nicht einmal kontaktiert und derselbe Weg wie oben eingeschlagen (Download-Seite)
+    And ebenso wird abgebrochen, wenn die Datei die zulässige Größe überschreitet — sie wird vor der
+      Prüfsummen-Kontrolle vollständig im Arbeitsspeicher gehalten
     And dieser Fall nutzt bewusst einen Dialog statt einer Snackbar (wie bei den beiden Fällen unten): eine
       tatsächlich handlungsrelevante Meldung soll nicht wie eine bloße Bestätigung von selbst wieder verschwinden
     Given die installierte Version ist bereits die neueste

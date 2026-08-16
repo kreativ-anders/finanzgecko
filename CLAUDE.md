@@ -30,6 +30,12 @@ as fixed context. See AI_MASTER "Regenerierung eines Features". Pure-logic (`@ex
 **Keep the layering.** Pure, testable logic lives in `lib/utils/analysis.dart` and `lib/constants.dart`; views stay
 thin. For new pure behavior, add a `Scenario` in `gherkin/executable/*.feature` + one `s.step(...)` in `test/bdd/`.
 
+**Comments are English and answer "why this line", not "how this app works"** — the latter belongs in AI_MASTER,
+and the comment becomes a one-line pointer to the section. German stays only for the domain terms and for quoted UI
+strings. A Dartdoc block over 8 lines needs a reason. Full rules, plus the register of claims that appear in more
+than one file: AI_MASTER **§4.6**. After touching `analysis_options.yaml`, run `dart fix --apply && dart format .`
+before analyzing — nearly every rule there is auto-fixable.
+
 **Always verify:** run `flutter analyze` and `flutter test` after every change (the release gate runs the same, plus
 the icon pipeline). The guard `test/gherkin_sync_test.dart` fails fast and points at exactly which spec/code/test link
 broke — read its message before hunting.

@@ -52,9 +52,9 @@ Future<void> main() async {
     await store.ensureInitialized();
     final windowPrefs = store.windowPrefs;
 
-    // Muss vor dem WindowOptions-Aufbau stehen: dessen backgroundColor liest
-    // kBackground, und das steht ohne diesen Aufruf noch auf dem dunklen
-    // Standard, weil ThemeScope erst nach runApp() baut.
+    // Must come before WindowOptions is built: its backgroundColor reads
+    // kBackground, which without this call still holds the dark default,
+    // because ThemeScope only builds after runApp().
     primeThemeBrightness(store.themeMode);
 
     await windowManager.ensureInitialized();
@@ -82,27 +82,35 @@ Future<void> main() async {
 
     runApp(FinanzGeckoApp(appState: appState));
   } on ForeignKeyDataException catch (err) {
-    // Kein Fehler im eigentlichen Sinn, sondern eine Situation, die erklärt
-    // werden muss: die Datei ist in Ordnung, sie gehört nur zu einem anderen
-    // Computer. Wichtig ist vor allem, was hier NICHT passiert — es wird
-    // nichts verschoben und nichts geschrieben.
-    debugPrint('FinanzGecko: Datei gehört zu einer anderen Installation: ${err.filePath}');
+    // Not an error as such: the file is fine, it just belongs to a different
+    // computer. What matters most is what does NOT happen here — nothing is
+    // moved and nothing is written.
+    //
+    // Debug-only, unlike the startup failure below: `debugPrint` survives into
+    // release builds and writes to the OS log, and this line would put the
+    // user's data-file path there on every launch.
+    if (kDebugMode) {
+      debugPrint('FinanzGecko: data file belongs to a different installation: ${err.filePath}');
+    }
     runApp(_ForeignDataApp(filePath: err.filePath));
   } catch (err, stack) {
     // A failure this early (e.g. no OS keychain/secret-service daemon
     // available for SecureKeyStore) would otherwise crash before a single
     // frame is drawn, with nothing shown to the user at all — show a
     // minimal, dependency-free error screen instead of a silent crash.
+    //
+    // Deliberately NOT debug-gated: this is the one message a user reporting
+    // "it won't start" needs, and it carries a stack trace, not their data.
     debugPrint('FinanzGecko startup failed: $err\n$stack');
     runApp(_StartupErrorApp(error: err));
   }
 }
 
-/// Erklärt in Alltagssprache, warum eine mitgebrachte Datendatei sich hier
-/// nicht öffnen lässt — ohne "Schlüssel", "Keychain" oder "Verschlüsselung"
-/// als Erklärung zu benutzen. Wer die Datei aus einem Cloud-Ordner kennt,
-/// erwartet, dass sie sich überall öffnen lässt; diese Erwartung muss der
-/// Text abräumen und gleichzeitig sagen, was stattdessen zu tun ist.
+/// Explains in everyday language why a data file brought from elsewhere
+/// cannot be opened here — without using "key", "keychain" or "encryption" as
+/// the explanation. Someone who knows the file from a cloud folder expects it
+/// to open anywhere; the text has to clear that expectation away and at the
+/// same time say what to do instead.
 class _ForeignDataApp extends StatelessWidget {
   const _ForeignDataApp({required this.filePath});
 
@@ -215,13 +223,10 @@ class FinanzGeckoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: appState,
-      // Consumer rebuilds this subtree whenever AppState changes (including
-      // setThemeMode), and ThemeScope resolves the active brightness before
-      // its child is built. The inner Builder matters: buildAppTheme() must
-      // run *during* a build that's a descendant of ThemeScope, not while
-      // MaterialApp is merely being constructed as ThemeScope's child
-      // argument (which would happen too early, against the previous
-      // brightness).
+      // The inner Builder matters: buildAppTheme() must run *during* a build
+      // descending from ThemeScope, not while MaterialApp is merely being
+      // constructed as ThemeScope's child argument — that would run too early,
+      // against the previous brightness.
       child: Consumer<AppState>(
         builder: (context, app, _) => ThemeScope(
           mode: app.themeMode,

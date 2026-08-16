@@ -16,30 +16,19 @@ const String _keyName = 'finanzgecko_dek';
 class SecureKeyStore {
   const SecureKeyStore();
 
-  // Which macOS keychain the key lives in — and this is NOT a free choice:
-  // the two variants store the item in different places, so a build that
-  // switches sides can no longer read a key the other one wrote. Changing
-  // this for the DMG build would make every existing user's data file
-  // undecryptable. See AI_MASTER §4.1 "macOS-Spezifika".
-  //
-  // DMG/Developer-ID build (kIsMacAppStore == false) → legacy keychain.
-  // The data-protection variant ties the item to the app's Team-ID-derived
-  // access group, which needs a `keychain-access-groups` entitlement; a build
-  // without one — including every locally built, ad-hoc-signed `.app` — fails
-  // with errSecMissingEntitlement (-34018). The legacy keychain has no such
-  // requirement, which is why the shipped build has always used it and keeps
-  // using it now that a Developer ID exists: switching would strand the
-  // installed base for no user-visible gain.
-  //
-  // App Store build (kIsMacAppStore == true) → data-protection keychain.
-  // A sandboxed app has no access to the legacy keychain at all, so this one
-  // is mandatory rather than preferable. It works because that build is
-  // signed with the matching `keychain-access-groups` entitlement
-  // (macos/Runner/AppStore.entitlements). Its users are fresh installs with
-  // no pre-existing key, so there is nothing to strand.
+  // NOT a free choice: the two macOS keychains store the item in different
+  // places, so a build that switches sides can no longer read a key the other
+  // one wrote. Flipping this for the DMG build would make every existing
+  // user's data file undecryptable. Which build gets which, and why:
+  // AI_MASTER §4.1 "macOS-Spezifika".
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     mOptions: MacOsOptions(usesDataProtectionKeychain: kIsMacAppStore),
   );
+
+  /// One CSPRNG for all 32 bytes. `Random.secure()` inside the generator
+  /// callback constructed a fresh instance per byte — same security, 32x the
+  /// setup.
+  static final Random _secureRandom = Random.secure();
 
   /// Unlike the store's other OS calls (chmod, icacls, ...), a failure here
   /// is deliberately NOT swallowed: without a key the app cannot read or
@@ -52,7 +41,7 @@ class SecureKeyStore {
       return SecretKey(base64Decode(existing));
     }
 
-    final bytes = Uint8List.fromList(List<int>.generate(32, (_) => Random.secure().nextInt(256)));
+    final bytes = Uint8List.fromList(List<int>.generate(32, (_) => _secureRandom.nextInt(256)));
     await _storage.write(key: _keyName, value: base64Encode(bytes));
     return SecretKey(bytes);
   }

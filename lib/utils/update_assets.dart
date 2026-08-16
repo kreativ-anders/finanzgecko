@@ -1,20 +1,20 @@
 import 'dart:io';
 
-/// Reine, UI- und netzfreie Logik rund um die Update-Dateien eines Releases:
-/// welches Release-Asset gehört zu dieser Plattform, und passt eine
-/// heruntergeladene Datei zur veröffentlichten Prüfsumme.
+/// Pure, UI- and network-free logic around a release's update files: which
+/// release asset belongs to this platform, and does a downloaded file match
+/// the published checksum.
 ///
-/// Bewusst ohne Netz- und Dateizugriff, damit beides ohne laufendes
-/// Betriebssystem prüfbar bleibt — die Szenarien dazu stehen in
+/// Deliberately without network and file access so that both stay testable
+/// without a running OS — the scenarios live in
 /// `gherkin/executable/update_assets.feature`.
 
-/// Dateinamens-Endung des Release-Assets je Plattform.
+/// File-name suffix of the release asset per platform.
 ///
-/// **Dreifach gekoppelt** — dieselben Endungen stehen in den Artefaktnamen in
-/// `.github/workflows/release.yml` und als `data-asset-suffix` in
-/// `docs/download.html`. Wird dort ein Dateiname geändert, müssen alle drei
-/// Stellen mitgezogen werden; sonst findet der Update-Fluss das Asset nicht
-/// mehr und fällt still auf die Download-Seite zurück.
+/// **Coupled in three places** — the same suffixes appear in the artifact
+/// names in `.github/workflows/release.yml` and as `data-asset-suffix` in
+/// `docs/download.html`. If a file name changes there, all three have to be
+/// updated together; otherwise the update flow no longer finds the asset and
+/// silently falls back to the download page.
 String? updateAssetSuffixFor(String operatingSystem) => switch (operatingSystem) {
   'macos' => '-mac.dmg',
   'windows' => '-Setup.exe',
@@ -22,15 +22,15 @@ String? updateAssetSuffixFor(String operatingSystem) => switch (operatingSystem)
   _ => null,
 };
 
-/// Endung für die gerade laufende Plattform (null auf allem, wofür es kein
-/// Release-Artefakt gibt).
+/// Suffix for the currently running platform (null wherever no release
+/// artifact exists).
 String? get currentUpdateAssetSuffix => updateAssetSuffixFor(Platform.operatingSystem);
 
-/// Wählt aus den Asset-Namen eines Releases den zur Plattform passenden aus.
+/// Picks the asset matching this platform from a release's asset names.
 ///
-/// Null, wenn keiner passt — etwa weil ein Plattform-Build fehlgeschlagen ist
-/// oder die Plattform unbekannt ist. Der Aufrufer öffnet dann die
-/// Download-Seite, statt eine falsche Datei zu raten.
+/// Null if none matches — e.g. because a platform build failed or the platform
+/// is unknown. The caller then opens the download page instead of guessing a
+/// wrong file.
 String? selectAssetName(Iterable<String> assetNames, String operatingSystem) {
   final suffix = updateAssetSuffixFor(operatingSystem);
   if (suffix == null) return null;
@@ -40,17 +40,17 @@ String? selectAssetName(Iterable<String> assetNames, String operatingSystem) {
   return null;
 }
 
-/// Parst eine `SHA256SUMS`-Datei im Standardformat von `sha256sum`
-/// (`<64 Hex-Zeichen><Leerraum>[*]<Dateiname>`, eine Zeile je Datei) zu
-/// Dateiname → Hash in Kleinschreibung.
+/// Parses a `SHA256SUMS` file in `sha256sum`'s standard format
+/// (`<64 hex chars><whitespace>[*]<file name>`, one line per file) into
+/// file name → lower-case hash.
 ///
-/// Nicht passende Zeilen werden übersprungen statt zu werfen: die Datei kommt
-/// aus einem Release, nicht aus einer Nutzereingabe, und ein einzelner
-/// Fremdeintrag darf die Prüfung der übrigen Dateien nicht verhindern.
+/// Non-matching lines are skipped rather than thrown on: the file comes from a
+/// release, not from user input, and a single foreign entry must not prevent
+/// the remaining files from being verified.
 Map<String, String> parseChecksums(String content) {
   final result = <String, String>{};
-  // split('\n') statt LineSplitter: ein verbleibendes \r fällt beim trim() der
-  // Zeile ohnehin weg, das spart den dart:convert-Import.
+  // split('\n') instead of LineSplitter: a leftover \r is dropped by the
+  // line's trim() anyway, which saves the dart:convert import.
   for (final line in content.split('\n')) {
     final match = _checksumLine.firstMatch(line.trim());
     if (match == null) continue;
@@ -59,24 +59,24 @@ Map<String, String> parseChecksums(String content) {
   return result;
 }
 
-/// `*` vor dem Dateinamen markiert bei `sha256sum` den Binärmodus und gehört
-/// nicht zum Namen.
+/// A `*` before the file name marks binary mode in `sha256sum` and is not part
+/// of the name.
 final RegExp _checksumLine = RegExp(r'^([0-9a-fA-F]{64})\s+\*?(.+)$');
 
-/// Name der Prüfsummen-Datei, die der `release`-Job jedem Release beilegt.
+/// Name of the checksum file the `release` job attaches to every release.
 const String checksumsAssetName = 'SHA256SUMS';
 
-/// Wandelt einen Hash in seine Hex-Darstellung.
+/// Converts a hash into its hex representation.
 ///
-/// `padLeft(2, '0')` ist hier das Entscheidende: ohne das würde jedes Byte
-/// unter 0x10 einstellig ausgegeben, der Digest wäre zu kurz und JEDER
-/// Vergleich schlüge fehl — ein Fehler, der nur bei bestimmten Dateien
-/// aufträte und darum leicht durchrutscht. Deshalb unten eigens spezifiziert.
+/// `padLeft(2, '0')` is the crucial part here: without it every byte below
+/// 0x10 would be emitted as a single digit, the digest would be too short and
+/// EVERY comparison would fail — a bug that would only surface for certain
+/// files and therefore slips through easily. Hence specified separately below.
 String hexEncode(List<int> bytes) => bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-/// Vergleicht zwei Hex-Digests unabhängig von Groß-/Kleinschreibung.
+/// Compares two hex digests case-insensitively.
 ///
-/// Bewusst KEIN konstantzeitiger Vergleich: hier wird eine öffentliche
-/// Prüfsumme gegen eine gerade selbst berechnete gehalten: es gibt kein
-/// Geheimnis, dessen Laufzeit etwas verraten könnte.
+/// Deliberately NOT a constant-time comparison: a public checksum is held
+/// against one just computed locally: there is no secret whose timing could
+/// leak anything.
 bool digestMatches(String expected, String actual) => expected.trim().toLowerCase() == actual.trim().toLowerCase();

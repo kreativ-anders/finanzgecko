@@ -1,8 +1,6 @@
 /// Pure, UI-free analysis helpers for the dashboard and capture screens.
-///
-/// Everything here is deterministic and side-effect free so it can be unit
-/// tested without a Flutter binding (see test/analysis_test.dart). The widgets
-/// delegate their math here rather than computing inline.
+/// Deterministic and side-effect free, so it is unit testable without a
+/// Flutter binding (see test/analysis_test.dart).
 library;
 
 /// Whole calendar months from period [a] to [b], both "YYYY-MM".
@@ -29,11 +27,10 @@ String addMonthsToPeriod(String period, int months) {
   return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
 }
 
-/// Ordinary least-squares fit of [ys] against [xs] (same length, x need not be
-/// contiguous — a gap in the series is just a larger step between two x
-/// values). Null with fewer than two points or a degenerate fit. The general
-/// form behind [trendSlopePerMonth]; also used directly wherever the caller's
-/// x-axis isn't a plain 0..n-1 index (e.g. a chart with gaps).
+/// Ordinary least-squares fit of [ys] against [xs] (same length; x need not be
+/// contiguous — a gap is just a larger step). Null with fewer than two points
+/// or a degenerate fit. The general form behind [trendSlopePerMonth], used
+/// directly where the x-axis isn't a plain 0..n-1 index.
 ({double slope, double intercept})? olsTrend(List<double> xs, List<double> ys) {
   final n = xs.length;
   if (n < 2) return null;
@@ -64,11 +61,10 @@ double? trendSlopePerMonth(List<double> values) =>
     olsTrend([for (var i = 0; i < values.length; i++) i.toDouble()], values)?.slope;
 
 /// Blends a statistical [trendRate] with a [planRate] prior (the Fixposten
-/// net). The trend is primary; the plan only stabilizes small samples and its
-/// weight decays as [trendPoints] grows past [priorStrength]. The plan is NOT
-/// added to the trend (that would double-count the recurring part the trend
-/// already contains) — both are estimates of the same monthly rate. Returns
-/// null when neither basis is available.
+/// net). The trend is primary; the plan only stabilizes small samples, its
+/// weight decaying as [trendPoints] grows past [priorStrength]. The plan is
+/// NOT added to the trend — both estimate the same monthly rate, so adding
+/// would double-count the recurring part. Null when neither basis exists.
 double? projectionRate({double? planRate, double? trendRate, required int trendPoints, double priorStrength = 3}) {
   if (trendRate != null && planRate != null) {
     final wTrend = trendPoints / (trendPoints + priorStrength);
@@ -107,25 +103,25 @@ class MonthChange {
 
 /// Summary statistics over a net-worth time series.
 class NetWorthStats {
-  /// Largest month-over-month gain (or least-negative change).
+  /// Largest gain, or least-negative change.
   final MonthChange best;
 
-  /// Largest month-over-month loss (or least-positive change).
+  /// Largest loss, or least-positive change.
   final MonthChange worst;
 
-  /// Mean of all month-over-month changes.
+  /// Mean change.
   final double averageChange;
 
-  /// Number of months whose change was strictly positive.
+  /// Months whose change was strictly positive.
   final int monthsUp;
 
-  /// Total number of month-over-month changes considered.
+  /// Changes considered.
   final int changeCount;
 
-  /// Change from the first recorded total to the last (net growth so far).
+  /// Net growth from the first recorded total to the last.
   final double totalGrowth;
 
-  /// The first recorded period, i.e. what [totalGrowth] is measured from.
+  /// What [totalGrowth] is measured from.
   final String startPeriod;
 
   /// Highest total ever recorded, and the period it occurred in.
@@ -210,9 +206,8 @@ List<String> periodsForRange(List<String> all, HistoryRange range, {DateTime? no
   }
 }
 
-/// Ranges worth offering: each narrower preset appears only when it yields a
-/// distinct, non-empty window (deduped against "Alle" and each other). "Alle"
-/// is always present and last.
+/// Ranges worth offering: a narrower preset appears only when it yields a
+/// distinct, non-empty window. "Alle" is always present and last.
 List<HistoryRange> availableRanges(List<String> all, {DateTime? now}) {
   if (all.isEmpty) return const [HistoryRange.all];
   String sig(List<String> r) => r.isEmpty ? '' : '${r.first}|${r.last}|${r.length}';
@@ -234,16 +229,14 @@ HistoryRange defaultRange(List<HistoryRange> available) =>
     available.contains(HistoryRange.ytd) ? HistoryRange.ytd : HistoryRange.all;
 
 /// Sort order for the dashboard's Konto-Karten grid. German labels/icons live
-/// in the UI; `standard` keeps whatever order the caller's list is already
-/// in (account creation order) and is a no-op for [sortAccounts].
+/// in the UI; `standard` keeps the caller's existing order (account creation
+/// order).
 enum AccountSortOrder { standard, nameAsc, amountDesc, amountAsc, changeDesc, changeAsc }
 
-/// Sorts [items] per [order]. Kept generic (rather than importing the
-/// `Account` model) so it stays dependency-free like the rest of this file;
-/// [nameFor]/[amountFor]/[changeFor] resolve the sort keys from each item —
-/// the latter two return null when an item has no balance/previous balance
-/// yet, in which case that item sorts last. Ties (including all of
-/// [AccountSortOrder.standard]) preserve the original relative order.
+/// Sorts [items] per [order]. Generic rather than importing the `Account`
+/// model, so this file stays dependency-free; [amountFor]/[changeFor] return
+/// null when an item has no balance yet, which sorts it last. Ties (including
+/// all of [AccountSortOrder.standard]) preserve the original order.
 List<T> sortAccounts<T>(
   List<T> items,
   AccountSortOrder order, {

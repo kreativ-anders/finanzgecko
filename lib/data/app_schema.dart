@@ -6,10 +6,9 @@ import '../models/subscription.dart';
 
 const int currentSchemaVersion = 1;
 
-/// Parses a JSON list tolerantly: skips (rather than throws on) any entry
-/// that isn't a usable map or fails [fromJson] — one malformed row must never
-/// cost the caller the rest of the list. Shared between [AppSchema]'s own
-/// on-disk parsing and [AppStore.importAllData]'s backup parsing.
+/// Parses a JSON list tolerantly: skips any entry that isn't a usable map or
+/// fails [fromJson] — one malformed row must never cost the caller the rest of
+/// the list. Shared by on-disk and backup parsing.
 List<T> parseTolerantList<T>(dynamic raw, T Function(Map<String, dynamic>) fromJson) {
   if (raw is! List) return <T>[];
   final result = <T>[];
@@ -62,21 +61,21 @@ class AppSchema {
   DateTime? lastExportAt;
   WindowPrefs window;
 
-  // Reminder-Benachrichtigungen (OS-Notifications): episodenbasiert statt
-  // zeitbasiert gedrosselt — ein Flag/eine ID-Menge merkt sich, dass für den
-  // *aktuellen* überfälligen Zustand bereits benachrichtigt wurde. Die Aktion,
-  // die den Zustand auflöst (Export bzw. Neubewertung eines Vermögenswerts),
-  // setzt den jeweiligen Eintrag zurück. Siehe gherkin/notifications.feature.
+  // Reminder Benachrichtigungen (OS notifications): throttled per episode
+  // rather than by time — a flag/id set remembers that the *current* overdue
+  // state has already been notified. The action resolving that state (export,
+  // or re-valuing a Vermögenswert) resets the respective entry. See
+  // gherkin/notifications.feature.
   bool notificationsEnabled;
   bool backupOverdueNotified;
   List<int> assetOverdueNotifiedIds;
 
-  /// Einstellungen → Erscheinungsbild (System/Hell/Dunkel), Standard: System.
+  /// Einstellungen → Erscheinungsbild (system/light/dark), default: system.
   AppThemeMode themeMode;
 
-  /// Zustimmung zum Wechselkurs-Abruf. Fehlt der Schlüssel (jede vor diesem
-  /// Feature geschriebene Datei), ergibt sich `unset` — die App fragt dann beim
-  /// nächsten echten Kursbedarf einmalig nach. Siehe gherkin/currency_exchange.feature.
+  /// Consent for fetching Wechselkurse. If the key is absent (every file
+  /// written before this feature), `unset` results — the app then asks once at
+  /// the next genuine rate need. See gherkin/currency_exchange.feature.
   RateFetchConsent rateFetchConsent;
 
   AppSchema({
@@ -116,9 +115,9 @@ class AppSchema {
     window: WindowPrefs.defaults(),
   );
 
-  /// Parses a decoded JSON value. Returns null if it isn't a usable object
-  /// at all (caller then falls back to fresh [AppSchema.defaults]). Individual
-  /// malformed list entries are skipped rather than failing the whole file.
+  /// Parses a decoded JSON value; null if it isn't a usable object at all
+  /// (caller then falls back to [AppSchema.defaults]). Malformed list entries
+  /// are skipped rather than failing the whole file.
   static AppSchema? fromDynamic(dynamic parsed) {
     if (parsed is! Map) return null;
     final json = parsed;
@@ -129,11 +128,9 @@ class AppSchema {
         ? Map<String, dynamic>.from(json['ratesCache'] as Map)
         : <String, dynamic>{};
 
-    // Cached rates now live in their own standalone file; this only still
-    // parses the legacy in-store `ratesCache` so [AppStore] can migrate it
-    // out on first load. A single malformed entry must never cost the caller
-    // its accounts/balances/assets/subscriptions — skip the bad entry
-    // instead of throwing, which would otherwise abort parsing the whole file.
+    // Cached rates now live in their own file; this only still parses the
+    // legacy in-store `ratesCache` so [AppStore] can migrate it out on first
+    // load. A malformed entry is skipped rather than aborting the whole file.
     final ratesCache = <String, double>{};
     for (final entry in ratesRaw.entries) {
       final v = entry.value;

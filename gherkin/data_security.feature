@@ -22,8 +22,19 @@ Feature: Datenspeicherung, Verschlüsselung und Integrität
 
   Scenario: Schreibvorgänge sind atomar
     Given eine Änderung wird gespeichert
-    Then wird zunächst in eine temporäre Datei geschrieben, dann die alte Datei ersetzt, dann umbenannt
+    Then wird zunächst in eine temporäre Datei geschrieben und diese anschließend über die alte umbenannt
     And ein Absturz mitten im Schreibvorgang darf niemals eine halb geschriebene Hauptdatei hinterlassen
+
+  Scenario: Unter Linux und macOS wird die Datendatei nie vorher gelöscht
+    Given eine Änderung wird auf einem POSIX-System gespeichert
+    Then ersetzt das Umbenennen die bestehende Datei direkt, ohne sie vorher zu löschen
+    And es gibt zu keinem Zeitpunkt einen Moment, in dem gar keine Datendatei existiert
+    But unter Windows wird die alte Datei zuvor gelöscht, weil das Umbenennen dort sonst fehlschlägt
+
+  Scenario: Die Zugriffsrechte werden je Datei einmal pro Sitzung gesetzt
+    Given dieselbe Datei wird innerhalb einer Sitzung mehrfach gespeichert
+    Then wird der Rechte-Befehl des Betriebssystems nur beim ersten Mal ausgeführt
+    And er wird über seinen absoluten Pfad aufgerufen, nicht über die PATH-Suche
 
   Scenario: Parallele Schreibvorgänge werden serialisiert
     Given zwei Speicheraktionen werden nahezu gleichzeitig ausgelöst

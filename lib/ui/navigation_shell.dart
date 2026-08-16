@@ -15,10 +15,10 @@ import 'views/entries_view.dart';
 import 'views/settings_view.dart';
 import 'views/subscriptions_view.dart';
 
-/// Navigations-Shell der App: Top-Navigation über die sechs Ansichten,
-/// In-App-"Datei"-Menü-Ersatz und globale Tastenkürzel. Der Backup-Fluss selbst
-/// liegt in `backup_actions.dart`; hier wird er nur verdrahtet (Feature
-/// `navigation` vs. `backup_restore`).
+/// The app's navigation shell: top navigation across the six views, in-app
+/// replacement for a "File" menu, and global keyboard shortcuts. The backup
+/// flow itself lives in `backup_actions.dart` and is only wired up here
+/// (feature `navigation` vs. `backup_restore`).
 class NavigationShell extends StatefulWidget {
   const NavigationShell({super.key});
 
@@ -29,11 +29,10 @@ class NavigationShell extends StatefulWidget {
 class _NavigationShellState extends State<NavigationShell> {
   AppView _view = AppView.dashboard;
 
-  /// Set only by [_openAccountEntry]: the account whose input field
-  /// [EntriesView] should scroll to and focus on its next build. Deliberately
-  /// *not* threaded through [_navigate] — that stays a plain
-  /// `ValueChanged<AppView>`, which every view and `backup_actions.dart`
-  /// already depends on; widening it would touch six views for one caller.
+  /// Set only by [_openAccountEntry]: the account [EntriesView] should scroll
+  /// to and focus next build. Deliberately *not* threaded through [_navigate],
+  /// which stays a plain `ValueChanged<AppView>` — widening it would touch six
+  /// views for one caller.
   int? _focusAccountId;
 
   /// Any ordinary navigation clears the pending focus, so returning to

@@ -485,6 +485,68 @@ verlustfreie Round-Trip). Getestet in `test/csv_export_test.dart`.
 
 Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zugehörige Gherkin-Feature aktualisieren.
 
+## 4.6 Kommentare, Sprache im Code und statische Analyse
+
+### Kommentar vs. Dokumentation — die Trennlinie
+
+Ein Kommentar beantwortet **„warum ist diese Zeile so"** für jemanden, der ohnehin gerade diese Funktion liest.
+Alles, was **„wie ist diese App gebaut"** beantwortet, gehört in dieses Dokument, und der Kommentar wird zum
+Einzeiler mit Verweis (`Siehe AI_MASTER §4.1.`).
+
+Der Grund ist nicht Ästhetik: dieselbe Entscheidung an zwei Stellen zu erklären heißt, sie an zwei Stellen pflegen
+zu müssen — und nichts prüft, ob beide noch übereinstimmen. Der Kommentar-Layer war einmal auf ~11.000 Wörter
+angewachsen, größtenteils Architektur-Begründungen, die hier bereits ausführlicher standen.
+
+Praktische Regeln:
+
+- Ein Dartdoc-Block über **8 Zeilen** braucht einen Grund. Überschriften (`## Warum es das gibt`) **innerhalb**
+  eines Kommentars sind das Signal, dass daraus Dokumentation geworden ist — nach AI_MASTER verschieben.
+- Nicht kürzen darf man Kommentare, die einen konkreten Fehlerfall benennen, ein Messdatum tragen
+  („gemessen am 2026-08-13") oder erklären, warum etwas **absichtlich** nicht getan wird (z. B. der bewusst
+  *nicht* konstantzeitige Prüfsummen-Vergleich in `utils/update_assets.dart`). Das sind die Kommentare, deren
+  Fehlen jemanden Stunden kostet.
+- Restatements dessen, was der Code offensichtlich tut, ersatzlos streichen.
+
+### Sprache
+
+Kommentare und Dartdoc sind **englisch** — passend zu `README.md`, `ROADMAP.md` und `CONTRIBUTING.md`. Vorher war
+der Bestand gemischt, teils innerhalb derselben Datei (`app_store.dart`, `settings_view.dart`), was beim Lesen
+ständig den Modus wechseln ließ.
+
+**Ausgenommen und weiterhin deutsch:** die Domänenbegriffe aus Abschnitt 7 (Konto, Kontostand, Kontotyp,
+Fixposten, Vermögenswerte, Basiswährung, Kennzahlen, …) sowie wörtlich zitierte UI-Texte („Nach Updates suchen",
+„Noch nie exportiert"). Sie zu übersetzen bricht die Regenerierbarkeit — siehe Regel 3 unten.
+
+Die Prosa in `docs/`, die Gherkin-Features und dieses Dokument bleiben deutsch.
+
+### `analysis_options.yaml`
+
+Die Regelliste ist bewusst länger als das Flutter-Template: jeder Eintrag ersetzt etwas, das sonst ein Mensch beim
+Review bemerken müsste — dieselbe Logik wie bei `test/docs_consistency_test.dart` für Prosa. Bewusst **nicht**
+aktiviert sind `avoid_dynamic_calls` (die JSON-Pfade in `data/` sind absichtlich dynamisch, siehe
+`app_schema.dart`), `require_trailing_commas` (der Formatter erzeugt sie ohnehin) und `public_member_api_docs`
+(dies ist eine Anwendung, kein Package).
+
+Nach einer Änderung an dieser Datei: `dart fix --apply && dart format . && flutter analyze && flutter test`.
+
+### Register der mehrfach behaupteten Aussagen
+
+Diese Aussagen stehen an mehr als einer Stelle. Ändert sich eine, sind **alle** Fundstellen nachzuziehen. Die mit
+⚙ markierten prüft `test/docs_consistency_test.dart` mechanisch; die übrigen sind Handarbeit — und Kandidaten für
+den nächsten Test, sobald sie einmal auseinanderlaufen.
+
+| Aussage | Fundstellen |
+|---|---|
+| ⚙ Welche Netzwerkverbindungen die App überhaupt aufbaut | `docs/index.html` (Feature-Karte), `docs/llms.txt`, `docs/datenschutz.html`, hier §6, `services/currency_service.dart`, `services/update_service.dart` |
+| ⚙ Ob es eine Update-Prüfung in der App gibt und was sie tut | `docs/index.html` (FAQ + JSON-LD), `docs/download.html`, `README.md`, `ROADMAP.md`, `docs/datenschutz.html`, `docs/llms.txt`, `gherkin/settings.feature` |
+| ⚙ Backups können mit Passwort geschützt werden | `docs/documentation.html`, `ui/backup_actions.dart`, `data/backup_crypto.dart`, §7 Glossar |
+| ⚙ macOS ist signiert und geprüft — nur Windows warnt | `README.md`, `ROADMAP.md`, `docs/index.html` (FAQ), `docs/download.html` (Karten) |
+| ⚙ Dateinamens-Endungen der Release-Assets | `utils/update_assets.dart`, `.github/workflows/release.yml`, `docs/download.html` |
+| ⚙ Speicherort der Datendatei je Betriebssystem | `data/app_store.dart`, hier §4.1, `dev/setup.md`, `docs/datenschutz.html` |
+| ⚙ Die Liste der Kennzahlen | `ui/views/dashboard_view.dart`, `docs/index.html`, `docs/documentation.html`, §7 Glossar |
+| ⚙ Die Abschnitte der Einstellungen | `ui/views/settings_view.dart`, `docs/documentation.html`, `gherkin/settings.feature` |
+| Der Seiteneinstieg bleibt ohne Fachjargon | `docs/index.html` (`<h1>` + `.pitch`) — `<title>`/meta dürfen die Plattform-Keywords bewusst weiterführen |
+
 ## 5. UI-Konventionen
 
 **Farbpalette, Markenfarben-Regeln, Typografie, App-Icon — designer-lesbar:** siehe
@@ -747,7 +809,7 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 | Verteilung nach Kontotyp | Donut-Chart für einen einzelnen Monat |
 | Kennzahlen | Gesamtveränderung, bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand |
 | Zeitraum(-Filter) | Dashboard-weiter Zeitfenster-Filter ("Dieses Jahr" / "12 Monate" / "Letztes Jahr" / "Alle"), steuert alle zeitbasierten Karten |
-| Backup exportieren/importieren | Klartext-JSON-Export/Import über native Dateidialoge (verlustfreier Round-Trip) |
+| Backup exportieren/importieren | JSON-Export/Import über native Dateidialoge (verlustfreier Round-Trip); auf Wunsch mit selbst vergebenem Passwort verschlüsselt (`data/backup_crypto.dart`), ohne Passwort Klartext |
 | CSV-Export | Verlustbehafteter Tabellen-Export der Kontostände (kein Re-Import) |
 
 ## 8. Tests ↔ Gherkin-Zuordnung
@@ -820,6 +882,7 @@ und in `# Quelle:` gelistet ist.
 | `test/tooling_test.dart` | **Regeneriert beim Testlauf** die Demodaten (`buildDemoBackup` → `demo/…json`) und die Linux-Hicolor-Icons (`generateLinuxIcons`) und validiert sie (Schema, Referenzen, Domänenwerte, Icon-Größen) | Dev-Tooling (kein Feature) |
 | `test/entries_view_orphan_test.dart` | Verwaiste Balances archivierter Konten | `gherkin/balances_entries.feature` |
 | `test/formatting_test.dart` | Zahlen-/Geldformatierung, Parsing | quer über alle Features (nicht-funktional) |
+| `test/docs_consistency_test.dart` | **Prüft die Prosa gegen den Code**: offengelegte Netzwerk-Hosts, Asset-Endungen, dokumentierter Datenpfad, verbotener Signatur-Jargon, einmal falsche Aussagen (u. a. „keinen Auto-Updater", „Klartext-JSON"), macOS ohne Warnung, jargonfreier Seiteneinstieg, Kennzahlen- und Einstellungs-Parität zwischen App und `docs/documentation.html` | Meta (README, `docs/`) |
 | `test/gherkin_sync_test.dart` | **Verdrahtet Gherkin ↔ Code/Tests** (s. u.): `# Quelle:`-Pfade existieren, `// Gherkin:`-Marker zeigen auf echte Features, Coverage-Allow-List | alle `gherkin/**/*.feature` (Meta) |
 | `test/bdd/account_color_bdd_test.dart` | **Führt** `gherkin/executable/account_color.feature` aus (Runner) gegen `resolveAccountColor` | `gherkin/executable/account_color.feature` |
 | `test/bdd/analysis_bdd_test.dart` | **Führt** `gherkin/executable/net_worth_projection.feature` aus gegen `analysis.dart` | `gherkin/executable/net_worth_projection.feature` |

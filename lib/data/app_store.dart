@@ -24,34 +24,27 @@ const String _applicationId = 'de.finanzgecko.app';
 /// missing". Opening it from within the app failed the same way. Measured on
 /// 2026-08-13: a trailing slash does not help, only avoiding the suffix does.
 ///
-/// `~/Library/Application Support/FinanzGecko` is also the idiomatic macOS
-/// location, so this brings the app in line with the platform rather than away
-/// from it. Linux and Windows keep [_applicationId]: neither treats ".app"
-/// specially, and a reverse-DNS directory is idiomatic there.
-///
-/// Renaming was only affordable in the release that introduced the sandbox,
-/// because that release already relocates every macOS user's data — the rename
-/// rides along in the same copy instead of needing a migration of its own.
+/// Linux and Windows keep [_applicationId]: neither treats ".app" specially.
+/// The rename was only affordable in the release that introduced the sandbox,
+/// which already relocates every macOS user's data, so it rides along in the
+/// same copy instead of needing a migration of its own.
 const String _macOsDirectoryName = 'FinanzGecko';
 
 const String _storeFilename = 'finanzgecko-data.json';
-// Exchange rates are public ECB reference data and re-fetchable at any time,
-// so they live in their own small, unencrypted file rather than inside the
-// encrypted store — that way caching a freshly fetched rate doesn't force a
-// full re-encrypt-and-rewrite of the entire database.
+// Exchange rates are public ECB reference data and re-fetchable, so they live
+// in their own small unencrypted file — caching a fresh rate then doesn't force
+// a full re-encrypt-and-rewrite of the database.
 const String _ratesFilename = 'finanzgecko-rates.json';
 const int _envelopeVersion = 1;
 
 /// Thrown when the data file was encrypted by a *different* installation —
 /// its `keyId` doesn't match this machine's key.
 ///
-/// Deliberately its own type and deliberately **fatal**: every other read
-/// problem ends in "quarantine the file, start empty, write defaults", which
-/// for this case would be the worst possible outcome. Somebody who puts their
-/// data file in a synced folder and opens the app on a second computer would
-/// otherwise watch that file get replaced by an empty one. So nothing is moved
-/// and nothing is written — the startup guard in `main()` explains the
-/// situation and points at the export/import route instead.
+/// Its own type, and deliberately **fatal**: every other read problem ends in
+/// "quarantine the file, start empty, write defaults", which here would let
+/// someone who syncs their data file and opens the app on a second computer
+/// watch that file get replaced by an empty one. So nothing is moved and
+/// nothing is written — `main()` explains the situation instead.
 class ForeignKeyDataException implements Exception {
   const ForeignKeyDataException(this.filePath);
 
@@ -61,10 +54,9 @@ class ForeignKeyDataException implements Exception {
   String toString() => 'ForeignKeyDataException($filePath)';
 }
 
-/// Thrown by an update/delete lookup when the given id no longer exists in
-/// the store. Carries structural data only (no user-facing text) — composing
-/// German text from it is a UI-layer concern (see `describeError` in
-/// `ui/widgets/app_snackbar.dart`), not the persistence layer's.
+/// Thrown by an update/delete lookup when the id no longer exists. Structural
+/// data only — composing German text from it is a UI concern (see
+/// `describeError` in `ui/widgets/app_snackbar.dart`).
 class RecordNotFoundException implements Exception {
   const RecordNotFoundException(this.entity, this.id);
 
@@ -88,9 +80,9 @@ class UnsupportedBackupVersionException implements Exception {
   String toString() => 'UnsupportedBackupVersionException(imported: $importedVersion, supported: $supportedVersion)';
 }
 
-/// Thrown by [AppStore.importAllData] when an account in the backup names a
-/// bank [resolveAccountColor] doesn't recognize — the whole import is
-/// rejected rather than silently assigning an arbitrary color.
+/// Thrown by [AppStore.importAllData] when an account names a bank
+/// [resolveAccountColor] doesn't recognize — the whole import is rejected
+/// rather than silently assigning an arbitrary color.
 class AccountImportRejectedException implements Exception {
   const AccountImportRejectedException({required this.accountName, required this.unknownBank});
 
@@ -101,43 +93,24 @@ class AccountImportRejectedException implements Exception {
   String toString() => 'AccountImportRejectedException(account: $accountName, unknownBank: $unknownBank)';
 }
 
-/// Persists the entire app database as a single JSON file in the OS-native
-/// per-user data directory, so existing installs keep working without
-/// conversion:
+/// Persists the entire app database as a single AES-256-GCM encrypted JSON
+/// file in the OS-native per-user data directory. The key lives in the OS
+/// credential store via [SecureKeyStore], so the file is useless without that
+/// OS user's keychain — filesystem permissions (0600/0700, an equivalent ACL
+/// on Windows) are only defense in depth. Writes are atomic and serialized
+/// through one write queue, so concurrent saves cannot interleave on the
+/// shared temp file. Pre-sandbox macOS installations have their file one level
+/// up and are copied across once by [SandboxMigration].
 ///
-///  - Linux:   ~/.local/share/de.finanzgecko.app/finanzgecko-data.json
-///  - macOS:   ~/Library/Containers/de.finanzgecko.app/Data/Library/
-///             Application Support/FinanzGecko/finanzgecko-data.json
-///  - Windows: %APPDATA%\de.finanzgecko.app\finanzgecko-data.json
-///
-/// The macOS path is what the code below produces unchanged once the App
-/// Sandbox virtualises $HOME onto the container — the relative part is
-/// identical, only the root differs. Installations from before the sandbox
-/// have their file one level up, at ~/Library/Application Support/…, and are
-/// copied across once by [SandboxMigration].
-///
-/// The file content is AES-256-GCM encrypted (an "envelope" of
-/// nonce/cipherText/mac around the real JSON), with the key held in the
-/// OS-native credential store (Windows Credential Locker, macOS Keychain,
-/// Linux libsecret/kwallet) via [SecureKeyStore] — so the file is useless
-/// without that specific OS user's keychain unlock, not just filesystem
-/// permissions. Filesystem permissions (0700 dir / 0600 file on
-/// Linux/macOS, an equivalent current-user-only ACL via icacls on Windows)
-/// remain as defense in depth. Writes are atomic (temp file + rename) and
-/// serialized through a single write queue so concurrent saves can't
-/// interleave on the shared temp file.
+/// Per-platform paths and layout rationale: AI_MASTER §4.
 class AppStore {
-  /// [dataDirectory] overrides the OS-resolved data directory — used by
-  /// tests to point the store at a temp folder instead of the real
-  /// per-user app-data location. Production code should always use the
-  /// default (unnamed) constructor.
+  /// [dataDirectory] points the store at a temp folder for tests; production
+  /// code always uses the default constructor.
   ///
-  /// [persistToDisk] `false` keeps everything in memory and performs no
-  /// `dart:io` file operations at all. This exists for widget tests
-  /// (`testWidgets`), which run under a fake-async clock that never pumps the
-  /// real event loop — real file I/O would never complete there and would
-  /// hang the test. Persistence itself is covered by the plain `test()`-based
-  /// store tests, which run in real async with this left at its default.
+  /// [persistToDisk] `false` keeps everything in memory and does no `dart:io`
+  /// at all. Widget tests run under a fake-async clock that never pumps the
+  /// real event loop, so real file I/O would never complete and would hang the
+  /// test. Persistence is covered by the plain `test()`-based store tests.
   AppStore({Directory? dataDirectory, this.persistToDisk = true}) : _dataDirectoryOverride = dataDirectory;
 
   final Directory? _dataDirectoryOverride;
@@ -151,10 +124,9 @@ class AppStore {
   SecretKey? _key;
 
   /// Result of the one-time pre-sandbox migration attempted during
-  /// [ensureInitialized]. Kept so the UI can tell "you are a new user" apart
-  /// from "your data exists but I could not reach it" — see
-  /// [SandboxMigrationOutcome.failed], which is the case that must never be
-  /// presented as an empty app.
+  /// [ensureInitialized]. Kept so the UI can tell "new user" apart from "your
+  /// data exists but I could not reach it" ([SandboxMigrationOutcome.failed]),
+  /// which must never be presented as an empty app.
   SandboxMigrationOutcome lastSandboxMigration = SandboxMigrationOutcome.notApplicable;
 
   /// Serializes all disk writes. Every persist appends itself to this chain
@@ -207,15 +179,12 @@ class AppStore {
       decoded['cipherText'] is String &&
       decoded['mac'] is String;
 
-  /// Short, non-secret fingerprint of the encryption key: the first 8 bytes of
-  /// its SHA-256, base64. Written into the envelope in the clear so the app can
-  /// tell "this file belongs to a different installation" apart from "this file
-  /// is damaged" — without it, both look identical (decryption simply fails)
-  /// and the file would be quarantined as corrupt.
-  ///
-  /// A hash of the key reveals nothing about the key itself; 8 bytes are ample
-  /// to distinguish installations, and it is not a security boundary anyway —
-  /// AES-GCM's MAC still decides whether the data is authentic.
+  /// Short, non-secret fingerprint of the encryption key (first 8 bytes of its
+  /// SHA-256, base64), written into the envelope in the clear so the app can
+  /// tell "belongs to a different installation" apart from "damaged" — without
+  /// it both look identical (decryption simply fails) and the file would be
+  /// quarantined as corrupt. Not a security boundary: AES-GCM's MAC still
+  /// decides whether the data is authentic.
   static Future<String> keyFingerprint(SecretKey key) async {
     final bytes = await key.extractBytes();
     final digest = await Sha256().hash(bytes);
@@ -235,11 +204,11 @@ class AppStore {
   Future<String> _encryptToEnvelope(String plaintext) async {
     final box = await _cipher.encrypt(utf8.encode(plaintext), secretKey: _requireKey);
     return jsonEncode({
-      // `v` bleibt bewusst bei 1: `keyId` ist ein *additives* Feld, und
-      // _isEnvelope prüft nur die vier bekannten Schlüssel. Eine ältere
-      // App-Version liest eine neu geschriebene Datei damit weiterhin
-      // anstandslos — ein Versionsbump hätte genau das gebrochen. Gleiches
-      // Muster wie die additiven `meta`-Felder in AppSchema.
+      // `v` deliberately stays at 1: `keyId` is an *additive* field, and
+      // _isEnvelope only checks the four known keys. An older app version
+      // therefore still reads a newly written file without complaint — a
+      // version bump would have broken exactly that. Same pattern as the
+      // additive `meta` fields in AppSchema.
       'v': _envelopeVersion,
       'keyId': await keyFingerprint(_requireKey),
       'nonce': base64Encode(box.nonce),
@@ -250,17 +219,17 @@ class AppStore {
 
   static String _home() => Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '.';
 
-  /// Der vom Betriebssystem vorgesehene Ort — und bewusst der **einzige**.
+  /// The location the OS provides — and deliberately the **only** one.
   ///
-  /// Ein frei wählbarer Ordner wurde erwogen und wieder verworfen: der einzige
-  /// Grund, ihn zu wollen, ist "dann liegt meine Datei in einem Ordner, der in
-  /// die Cloud gesichert wird" — und genau das leistet er nicht. Die Datei ist
-  /// mit einem Schlüssel verschlüsselt, der auf diesem Gerät liegt; geht das
-  /// Gerät kaputt, ist auch die schönste Cloud-Kopie nicht mehr zu öffnen. Ein
-  /// Ordnerdialog würde also eine Sicherheit versprechen, die nicht existiert.
-  /// Wer ein wiederherstellbares Backup will, nimmt den Export (auf Wunsch mit
-  /// Passwort, siehe `data/backup_crypto.dart`) — der ist gerätunabhängig.
-  /// Siehe AI_MASTER §4.1.
+  /// A user-choosable folder was considered and rejected: the only reason to
+  /// want one is "then my file sits in a folder that gets backed up to the
+  /// cloud" — and that is exactly what it does not achieve. The file is
+  /// encrypted with a key that lives on this device; if the device dies, even
+  /// the nicest cloud copy can no longer be opened. A folder dialog would thus
+  /// promise a safety that does not exist. Anyone wanting a restorable backup
+  /// uses the export (optionally with a password, see
+  /// `data/backup_crypto.dart`) — that one is device-independent.
+  /// See AI_MASTER §4.1.
   static Directory resolveDataDirectory() {
     if (Platform.isLinux) {
       final xdg = Platform.environment['XDG_DATA_HOME'];
@@ -278,46 +247,56 @@ class AppStore {
     return Directory(p.join(Directory.current.path, '.finanzgecko-data'));
   }
 
-  /// True under `flutter test`, which sets this env var. Used to skip the
-  /// subprocess-based permission hardening below: `Process.run` never
-  /// completes inside the fake-async clock a `testWidgets` body runs under,
-  /// so shelling out on every persist would hang the widget tests. The
-  /// hardening is only meaningful for the real per-user data directory
-  /// anyway, not a throwaway test temp dir.
+  /// True under `flutter test`. Skips the subprocess-based permission
+  /// hardening below: `Process.run` never completes inside a `testWidgets`
+  /// fake-async clock, so shelling out on every persist would hang the tests —
+  /// and hardening a throwaway temp dir is pointless anyway.
   static bool get _inFlutterTest => Platform.environment.containsKey('FLUTTER_TEST');
+
+  /// Paths already hardened in this process. The permission bits survive a
+  /// rewrite, so re-running the subprocess on every persist buys nothing — and
+  /// persists are frequent (Fixposten amounts autosave after a typing pause).
+  /// One spawn per path per session instead of one per keystroke pause.
+  final Set<String> _hardened = <String>{};
+
+  /// Absolute rather than PATH-resolved on purpose: `PATH` is
+  /// attacker-influenced, and `/bin/chmod` is mandated by POSIX anyway.
+  static const String _chmodBinary = '/bin/chmod';
 
   Future<void> _chmod(String path, String mode) async {
     if (_inFlutterTest) return;
-    // Sandboxed (App Store) build: the data directory already lives inside a
-    // per-app, per-user container that no other app can reach, so the chmod
-    // bits add nothing — and spawning /bin/chmod from inside the sandbox is
-    // both restricted and a needless subprocess on every persist.
+    // Sandboxed (App Store) build: the container is already per-app and
+    // per-user, so the chmod bits add nothing and the subprocess is both
+    // restricted and needless.
     if (kIsMacAppStore) return;
     if (!Platform.isLinux && !Platform.isMacOS) return; // not applicable on Windows
+    if (!_hardened.add('chmod:$mode:$path')) return;
     try {
-      await Process.run('chmod', [mode, path]);
+      await Process.run(_chmodBinary, [mode, path]);
     } catch (_) {
       // Best-effort only.
     }
   }
 
   /// Windows counterpart to [_chmod] — NTFS has no chmod bits, but `icacls`
-  /// (built into every edition, no elevation needed on a folder/file you
-  /// own) gets the same "current user only" effect via ACLs. Applied to the
-  /// data directory with inheritable flags, so every file created inside it
-  /// afterwards — including the corrupt-file and pre-import backups written
-  /// later in this class — picks up the same restriction automatically,
-  /// without each call site needing to remember to lock its own file down.
+  /// gets the same "current user only" effect via ACLs. Applied to the data
+  /// directory with inheritable flags, so every file created inside it later
+  /// (quarantine copies, snapshots) picks up the restriction automatically
+  /// without each call site having to remember.
   Future<void> _restrictWindowsAccess(String path, {required bool isDirectory}) async {
     if (_inFlutterTest) return;
     if (!Platform.isWindows) return;
+    if (!_hardened.add('icacls:$path')) return;
     final user = Platform.environment['USERNAME'];
     if (user == null || user.isEmpty) return;
     final domain = Platform.environment['USERDOMAIN'];
     final principal = (domain != null && domain.isNotEmpty) ? '$domain\\$user' : user;
     final grant = isDirectory ? '$principal:(OI)(CI)F' : '$principal:F';
+    // Absolute path for the same reason as [_chmodBinary]: %SystemRoot% is set
+    // by the OS, %PATH% is not.
+    final systemRoot = Platform.environment['SystemRoot'] ?? r'C:\Windows';
     try {
-      await Process.run('icacls', [path, '/inheritance:r', '/grant:r', grant]);
+      await Process.run('$systemRoot\\System32\\icacls.exe', [path, '/inheritance:r', '/grant:r', grant]);
     } catch (_) {
       // Best-effort only.
     }
@@ -328,8 +307,8 @@ class AppStore {
 
     _key = await const SecureKeyStore().getOrCreateKey();
 
-    // In-memory mode (widget tests): no directory, no file reads/writes —
-    // just start from defaults. Every persist below is a no-op too.
+    // In-memory mode (widget tests): start from defaults, every persist is a
+    // no-op.
     if (!persistToDisk) {
       _data = AppSchema.defaults();
       _initialized = true;
@@ -343,20 +322,19 @@ class AppStore {
     await _chmod(dir.path, '700');
     await _restrictWindowsAccess(dir.path, isDirectory: true);
 
-    // Must run BEFORE the file is read below: on the first launch of a
-    // sandboxed build the container is empty and the real data still sits at
-    // the pre-sandbox path. Without this the read below would find nothing,
-    // conclude "fresh install" and write defaults — which is indistinguishable
-    // from data loss as far as the user is concerned. A no-op (and not even
-    // reached on non-macOS) in every other situation.
+    // Must run BEFORE the file is read below: on a sandboxed build's first
+    // launch the container is empty and the real data still sits at the
+    // pre-sandbox path. Without this the read would find nothing, conclude
+    // "fresh install" and write defaults — indistinguishable from data loss
+    // for the user. A no-op in every other situation.
     if (_dataDirectoryOverride == null && !_inFlutterTest) {
       lastSandboxMigration = await SandboxMigration.run(
         targetDirectory: dir,
         home: _home(),
         bundleId: _applicationId,
         // The OLD directory name, deliberately not [_macOsDirectoryName]: the
-        // source is what pre-sandbox versions wrote, the target is where this
-        // version reads. They differ, and that is the point.
+        // source is what pre-sandbox versions wrote. They differ, and that is
+        // the point.
         legacyDirectoryName: _applicationId,
         filenames: const [_storeFilename, _ratesFilename],
       );
@@ -385,12 +363,11 @@ class AppStore {
         _data = AppSchema.defaults();
         await _persist();
       } else {
-        // Vor dem Entschlüsselungsversuch: gehört die Datei überhaupt zu
-        // diesem Rechner? Ohne diese Prüfung wäre ein fremder Schlüssel von
-        // einer beschädigten Datei nicht zu unterscheiden (beides scheitert
-        // beim Entschlüsseln) und liefe unten in Quarantäne + Leerstart.
-        // Dateien ohne `keyId` stammen aus der Zeit vor diesem Feld und
-        // nehmen weiterhin den bisherigen Weg.
+        // Before attempting decryption: does the file even belong to this
+        // machine? Without this check a foreign key would be
+        // indistinguishable from a corrupted file (both fail to decrypt) and
+        // would run into quarantine + empty start below. Files without a
+        // `keyId` predate the field and still take the previous path.
         final storedKeyId = (decoded as Map)['keyId'];
         if (storedKeyId is String && storedKeyId != await keyFingerprint(_requireKey)) {
           throw ForeignKeyDataException(_filePath!);
@@ -403,13 +380,12 @@ class AppStore {
           _data = AppSchema.defaults();
           await _persist();
         } else if (onDiskVersion != null && onDiskVersion > currentSchemaVersion) {
-          // Downgrade guard: this file was written by a NEWER build. Parsing it
-          // here would silently drop fields this older build doesn't understand
-          // and then overwrite the user's only copy with a lossy re-write.
-          // Preserve the newer file verbatim and start fresh instead — the
-          // kept copy lets the user recover by updating the app. Mirrors the
-          // import-side check ([UnsupportedBackupVersionException]) for the
-          // everyday load path, which otherwise had no version guard at all.
+          // Downgrade guard: this file was written by a NEWER build. Parsing
+          // it here would silently drop unknown fields and then overwrite the
+          // user's only copy with a lossy re-write. Preserve it verbatim and
+          // start fresh instead — the kept copy lets the user recover by
+          // updating the app. Mirrors [UnsupportedBackupVersionException] on
+          // the import side, which the load path otherwise lacked.
           await _quarantineFile(file, 'newer-version');
           _data = AppSchema.defaults();
           await _persist();
@@ -421,27 +397,26 @@ class AppStore {
             // format, so a botched forward-migration is always recoverable.
             await _writePreMigrationBackup(file);
           }
-          // This build now owns the data: stamp it with the current version so
-          // subsequent persists/exports carry it.
+          // This build now owns the data: stamp the current version so later
+          // persists/exports carry it.
           validated.schemaVersion = currentSchemaVersion;
           _data = validated;
-          // Make the upgraded shape + version bump durable immediately, rather
-          // than waiting for the user's next mutation, so the on-disk file and
-          // its pre-migration backup can't drift apart across restarts.
+          // Made durable immediately rather than at the user's next mutation,
+          // so the on-disk file and its pre-migration backup can't drift apart
+          // across restarts.
           if (needsMigration) await _persist();
         }
       }
     } on ForeignKeyDataException {
-      // Muss am Auffangnetz unten vorbei: die Datei ist heil, sie gehört nur
-      // zu einem anderen Rechner. Nicht verschieben, nicht überschreiben —
-      // main() zeigt eine Erklärung, der Nutzer entscheidet.
+      // Must bypass the catch-all below: the file is intact, it just belongs
+      // to another machine. Do not move it, do not overwrite it — main() shows
+      // an explanation and the user decides.
       rethrow;
     } catch (_) {
-      // File missing (first run) -> start fresh, nothing to lose. File
-      // present but unreadable (corrupt JSON, wrong shape, tampered/failed
-      // envelope decryption, ...) -> preserve it under a new name first,
-      // since the next line would otherwise silently overwrite the user's
-      // only copy of their data with empty defaults.
+      // File missing (first run) -> start fresh, nothing to lose. File present
+      // but unreadable (corrupt JSON, wrong shape, failed decryption, ...) ->
+      // preserve it under a new name first, since the next line would
+      // otherwise overwrite the user's only copy with empty defaults.
       if (fileExisted) await _quarantineFile(file, 'unreadable');
       _data = AppSchema.defaults();
       await _persist();
@@ -449,9 +424,8 @@ class AppStore {
 
     await _loadRatesCache();
     // One-time migration: older stores kept the rate cache inside the
-    // encrypted database. Lift any such entries into the standalone rates
-    // file, then drop them from the in-memory store so the next persist
-    // writes the database without them.
+    // encrypted database. Lift such entries into the standalone rates file and
+    // drop them from the in-memory store.
     if (_data!.ratesCache.isNotEmpty) {
       _ratesCache.addAll(_data!.ratesCache);
       _data!.ratesCache = {};
@@ -461,9 +435,8 @@ class AppStore {
     _initialized = true;
   }
 
-  /// Loads the standalone rate cache. A missing file just means "nothing
-  /// cached yet"; a corrupt one is disposable (rates are re-fetchable), so a
-  /// parse failure is swallowed rather than surfaced.
+  /// Loads the standalone rate cache. A missing file means "nothing cached
+  /// yet"; a corrupt one is disposable, so parse failures are swallowed.
   Future<void> _loadRatesCache() async {
     final path = _ratesFilePath;
     if (path == null) return;
@@ -481,17 +454,15 @@ class AppStore {
     }
   }
 
-  /// Filesystem-safe timestamp suffix (no `:`/`.`) shared by every
-  /// side-file this class writes (quarantine copies, pre-import/-reset
-  /// snapshots).
+  /// Filesystem-safe timestamp suffix (no `:`/`.`) for every side-file this
+  /// class writes.
   static String _timestampSuffix() => DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
 
-  /// Best-effort copy of a store file that this build won't adopt, so a corrupt,
-  /// unexpectedly-shaped, or newer-schema file never gets silently destroyed by
-  /// [_persist] writing fresh defaults over it. [reason] becomes part of the
-  /// side-file name (`<file>.<reason>-<timestamp>`): `unreadable` for corrupt/
-  /// foreign/undecryptable files, `newer-version` for a file written by a newer
-  /// build (downgrade guard). A failed copy must not block startup.
+  /// Best-effort copy of a store file this build won't adopt, so a corrupt,
+  /// unexpectedly-shaped or newer-schema file is never silently destroyed by
+  /// [_persist] writing defaults over it. [reason] becomes part of the
+  /// side-file name: `unreadable` or `newer-version`. A failed copy must not
+  /// block startup.
   Future<void> _quarantineFile(File file, String reason) async {
     try {
       await file.copy('${file.path}.$reason-${_timestampSuffix()}');
@@ -499,17 +470,16 @@ class AppStore {
   }
 
   /// Byte-for-byte copy of the encrypted store file, taken before a forward
-  /// schema migration rewrites it in the new format, so a botched migration
-  /// stays recoverable. Best-effort — a failed copy must not block startup.
+  /// schema migration rewrites it, so a botched migration stays recoverable.
+  /// Best-effort — a failed copy must not block startup.
   Future<void> _writePreMigrationBackup(File file) async {
     try {
       await file.copy(p.join(file.parent.path, 'pre-migrate-backup-${_timestampSuffix()}.json'));
     } catch (_) {}
   }
 
-  /// Best-effort snapshot of the current state, written alongside the main
-  /// store file before a destructive one-way action (import, reset). Must
-  /// never throw or block the action it precedes.
+  /// Best-effort snapshot written before a destructive one-way action (import,
+  /// reset). Must never throw or block the action it precedes.
   Future<void> _writeSnapshotBackup(String label, Map<String, dynamic> snapshot) async {
     if (!persistToDisk) return;
     try {
@@ -521,17 +491,23 @@ class AppStore {
   }
 
   /// Atomically writes [content] to [path]: write to a sibling `.tmp` file,
-  /// delete any existing file, then rename the temp file into place — so a
-  /// crash mid-write never leaves a half-written file behind. Shared by
-  /// [_persistNow] (encrypted database) and [_persistRatesNow] (plain rate
-  /// cache); callers serialize their own calls through [_enqueueWrite].
+  /// then rename it into place — so a crash mid-write never leaves a
+  /// half-written file behind. Shared by [_persistNow] (encrypted database)
+  /// and [_persistRatesNow] (plain rate cache); callers serialize their own
+  /// calls through [_enqueueWrite].
+  ///
+  /// The target is deleted first **only on Windows**, where `rename` fails if
+  /// it exists. Doing that on POSIX would be actively harmful: `rename` is
+  /// already an atomic replace there, and deleting first opens a window in
+  /// which the data file does not exist at all — a crash inside it loses data
+  /// that was never in danger. There is no server to restore from.
   Future<void> _atomicWrite(String path, String content) async {
     if (!persistToDisk) return;
     final file = File(path);
     final tmpFile = File('$path.tmp');
     try {
       await tmpFile.writeAsString(content, flush: true);
-      if (await file.exists()) {
+      if (Platform.isWindows && await file.exists()) {
         try {
           await file.delete();
         } catch (_) {}
@@ -548,9 +524,8 @@ class AppStore {
     }
   }
 
-  /// Encrypts and writes the whole database. Serialized through the write
-  /// queue so it can never interleave with another save on the shared temp
-  /// file.
+  /// Encrypts and writes the whole database, serialized through the write
+  /// queue so it can never interleave with another save.
   Future<void> _persist() => _enqueueWrite(_persistNow);
 
   Future<void> _persistNow() async {
@@ -560,9 +535,8 @@ class AppStore {
     await _atomicWrite(filePath, envelopeJson);
   }
 
-  /// Writes the standalone (unencrypted) rate cache. Same atomic temp-file
-  /// dance as [_persistNow] and routed through the same write queue, but it
-  /// only ever touches the small rates file — not the encrypted database.
+  /// Writes the standalone (unencrypted) rate cache — same atomic write and
+  /// queue as [_persistNow], but only ever touches the small rates file.
   Future<void> _persistRates() => _enqueueWrite(_persistRatesNow);
 
   Future<void> _persistRatesNow() async {
@@ -779,10 +753,9 @@ class AppStore {
     return record;
   }
 
-  /// Changing [value] counts as a fresh re-evaluation today — that drives the
-  /// 6-month reminder without needing a separate "re-evaluate" button. Also
-  /// resolves this asset's overdue-notification episode (see
-  /// [assetOverdueNotifiedIds]), so it can notify again next time it's overdue.
+  /// Changing [value] counts as a fresh re-evaluation today, which drives the
+  /// 6-month reminder without a separate "re-evaluate" button, and resolves
+  /// this asset's overdue-notification episode (see [assetOverdueNotifiedIds]).
   Future<Asset> updateAsset(int id, {String? name, double? value}) async {
     final data = _requireData;
     final idx = data.assets.indexWhere((a) => a.id == id);
@@ -929,7 +902,7 @@ class AppStore {
     }
   }
 
-  // ---------- Reminder-Benachrichtigungen (OS-Notifications) ----------
+  // ---------- Reminder Benachrichtigungen (OS notifications) ----------
 
   bool get notificationsEnabled => _requireData.notificationsEnabled;
   bool get backupOverdueNotified => _requireData.backupOverdueNotified;
@@ -963,13 +936,13 @@ class AppStore {
     }
   }
 
-  // ---------- Wechselkurs-Abruf (Opt-in) ----------
+  // ---------- Wechselkurse fetching (opt-in) ----------
 
   RateFetchConsent get rateFetchConsent => _requireData.rateFetchConsent;
 
-  /// Einzige Stelle, an der entschieden wird, ob die App die Kurs-API
-  /// kontaktieren darf. `unset` zählt bewusst als **nicht** erlaubt: solange
-  /// niemand gefragt wurde, geht nichts raus.
+  /// The single place deciding whether the app may contact the rate API.
+  /// `unset` deliberately counts as **not** allowed: as long as nobody has
+  /// been asked, nothing leaves the machine.
   bool get mayFetchRates => rateFetchConsent == RateFetchConsent.granted;
 
   Future<void> setRateFetchConsent(RateFetchConsent value) async {
@@ -1008,15 +981,13 @@ class AppStore {
     }
   }
 
-  /// Wipes everything back to a fresh install: all accounts, balances,
-  /// assets and subscriptions gone, settings back to their defaults. Window
-  /// geometry is deliberately preserved — it isn't a user-visible "setting"
-  /// and resetting it would just move/resize the window unexpectedly.
+  /// Wipes everything back to a fresh install. Window geometry is deliberately
+  /// preserved — it isn't a user-visible "setting" and resetting it would just
+  /// move/resize the window unexpectedly.
   ///
-  /// Snapshots the pre-reset state first (mirroring [importAllData]'s
-  /// pre-import snapshot) since this is the app's other genuinely
-  /// irreversible action, then rolls the in-memory replacement back if the
-  /// write itself fails.
+  /// Snapshots the pre-reset state first (like [importAllData]) since this is
+  /// the app's other genuinely irreversible action, then rolls the in-memory
+  /// replacement back if the write fails.
   Future<void> resetAll() async {
     final previous = _requireData;
     await _writeSnapshotBackup('reset', previous.toExportJson());
@@ -1030,7 +1001,7 @@ class AppStore {
     }
   }
 
-  // ---------- Fenstergeometrie ----------
+  // ---------- Window geometry ----------
 
   WindowPrefs get windowPrefs => _requireData.window;
 
@@ -1070,17 +1041,14 @@ class AppStore {
 
   Map<String, dynamic> exportAllData() => _requireData.toExportJson();
 
-  /// Replaces ALL data with the contents of an imported backup. Returns a
-  /// snapshot of the previous state (useful for a future undo). The same
-  /// snapshot is also written to disk first (best-effort) so an accidental
-  /// import of the wrong file — confirmed by the user, but still a one-way
-  /// door in the UI today — leaves a recovery copy behind.
+  /// Replaces ALL data with an imported backup and returns a snapshot of the
+  /// previous state. That snapshot is also written to disk first (best-effort)
+  /// so an accidental import of the wrong file leaves a recovery copy behind.
   Future<Map<String, dynamic>> importAllData(Map<String, dynamic> imported) async {
-    // Reject backups written by a newer schema than this build understands.
-    // Silently importing could drop or misread fields this version doesn't
-    // know about — better to fail loudly and ask the user to update. Older
-    // or equal versions are always accepted (per-entry parsing below already
-    // tolerates missing fields).
+    // Reject backups written by a newer schema than this build understands:
+    // importing silently could drop or misread unknown fields. Older or equal
+    // versions are always accepted — per-entry parsing tolerates missing
+    // fields.
     final importedVersion = imported['schemaVersion'];
     if (importedVersion is num && importedVersion > currentSchemaVersion) {
       throw UnsupportedBackupVersionException(importedVersion: importedVersion, supportedVersion: currentSchemaVersion);
@@ -1095,10 +1063,9 @@ class AppStore {
     final assets = parseTolerantList(imported['assets'], Asset.fromJson);
     final subscriptions = parseTolerantList(imported['subscriptions'], Subscription.fromJson);
 
-    // Enforce the bank→color invariant on import: a known bank fixes the brand
-    // color, an empty bank falls back to the Kontotyp color, and an UNKNOWN
-    // (non-empty) bank aborts the whole import — no silent wrong color. Done
-    // before touching `data`, so a bad backup leaves the current data intact.
+    // Enforce the bank→color invariant on import: an UNKNOWN (non-empty) bank
+    // aborts the whole import rather than getting a silent wrong color. Done
+    // before touching `data`, so a bad backup leaves current data intact.
     final normalizedAccounts = <Account>[];
     for (final a in accounts) {
       try {
@@ -1114,9 +1081,8 @@ class AppStore {
 
     int maxId(Iterable<int> ids) => ids.fold(0, (m, id) => id > m ? id : m);
 
-    // Snapshotted so a failed persist below can roll the in-memory store back
-    // to exactly what it held before this import (mirrors every other
-    // mutator's rollback-on-failed-persist behavior).
+    // Snapshotted so a failed persist below can roll the in-memory store back,
+    // like every other mutator.
     final previousAccounts = data.accounts;
     final previousBalances = data.balances;
     final previousAssets = data.assets;

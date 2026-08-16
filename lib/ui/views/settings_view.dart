@@ -112,10 +112,10 @@ class SettingsView extends StatelessWidget {
             ),
           ),
           cardGap,
-          // Bewusst schon sichtbar, bevor jemals gefragt wurde ("Noch nicht
-          // entschieden"): wer wissen will, ob die App ins Netz geht, soll das
-          // hier nachlesen können, ohne erst einen Fremdwährungsbetrag erfassen
-          // zu müssen. Das Anzeigen löst selbst nie einen Abruf oder Dialog aus.
+          // Deliberately visible before anyone was ever asked ("Noch nicht
+          // entschieden"): whoever wants to know whether the app goes online
+          // should be able to read it here without first entering a
+          // foreign-currency amount. Showing it never triggers a fetch itself.
           SectionCard(
             title: 'Wechselkurse',
             child: Column(
@@ -232,10 +232,10 @@ class SettingsView extends StatelessWidget {
                   onOpen: () => _openInFileManager(context, dataDirectoryPath),
                 ),
                 const SizedBox(height: 12),
-                // Dauerhaft sichtbar, nicht als einmaliger Dialog: die
-                // Konsequenz der gerätegebundenen Verschlüsselung muss auch
-                // Jahre später noch nachlesbar sein, wenn jemand die Datei in
-                // einem Cloud-Ordner sieht und sie für ein Backup hält.
+                // Permanently visible, not a one-off dialog: the consequence
+                // of device-bound encryption must still be readable years
+                // later, when someone sees the file in a cloud folder and
+                // mistakes it for a backup.
                 _DeviceBoundHint(onExport: onExport),
               ],
             ),
@@ -378,31 +378,26 @@ String _keyStoreLabel() {
   return 'Betriebssystem-Schlüsselspeicher';
 }
 
-/// Opens [path] in the OS file manager (Explorer/Finder/Nautilus & co.) via
-/// a plain file:// URI — url_launcher's desktop backends hand that off to
-/// the platform's native "open this folder" call (ShellExecute on Windows,
-/// NSWorkspace on macOS, xdg-open/gio on Linux), so no extra plugin is
-/// needed beyond what the app already uses for web links.
+/// Opens [path] in the OS file manager via a plain file:// URI —
+/// url_launcher's desktop backends hand that off to the platform's native
+/// "open this folder" call, so no extra plugin is needed.
 Future<void> _openInFileManager(BuildContext context, String path) async {
   // macOS: open the PARENT directory, not the data directory itself.
   //
-  // The data directory is named after the application id and therefore ends in
-  // ".app" (…/Application Support/de.finanzgecko.app). LaunchServices reads
-  // that suffix as an application bundle, tries to *launch* the folder, and
-  // fails with "damaged or incomplete" / "the executable is missing" — an
-  // alarming dialog for what is purely a cosmetic action.
+  // The data directory is named after the application id and so ends in
+  // ".app". LaunchServices reads that suffix as an application bundle, tries to
+  // *launch* the folder, and fails with "damaged or incomplete" / "the
+  // executable is missing" — alarming, for a purely cosmetic action.
   //
   // Measured, not assumed (2026-08-13, macOS): a trailing slash does NOT help
   // — `open ".../de.finanzgecko.app/"` fails identically. Opening the parent is
-  // what actually works. The user lands one level up and sees the data folder
-  // in the listing; slightly less direct, but it opens instead of erroring.
+  // what actually works; the user lands one level up and sees the data folder
+  // in the listing.
   //
   // Renaming the directory would also fix it and is NOT an option: the name is
   // the bundle id and the sandbox container name, so changing it orphans every
-  // existing installation's data.
-  //
-  // Only macOS: Linux and Windows file managers do not treat ".app" specially,
-  // and there the deep link to the exact folder is the better behaviour.
+  // existing installation's data. Only macOS — elsewhere the deep link to the
+  // exact folder is the better behaviour.
   final target = Platform.isMacOS ? Directory(path).parent.path : path;
   final uri = Uri.directory(target, windows: Platform.isWindows);
   final opened = await launchUrl(uri);
@@ -411,23 +406,12 @@ Future<void> _openInFileManager(BuildContext context, String path) async {
   }
 }
 
-/// "Hilfe" section: system diagnostics useful when reporting a bug —
-/// version+build come from [PackageInfo], which reads them from the native
-/// package metadata each platform build embeds from pubspec.yaml's
-/// `version:` (bumped by the release workflow's bump-version job before the
-/// platform builds run), so this always reflects the actual installed
-/// release rather than a hardcoded string. Screen/window geometry comes from
-/// `dart:ui` (`PlatformDispatcher.displays` + `MediaQuery`) — useful for
-/// layout bug reports and to tell a multi-monitor setup from a single
-/// built-in display. The API reachability check is a live probe (not the
-/// cached "last successful rate" state), because it doubles as the privacy
-/// answer: the Wechselkurs-API is the app's only *automatic* external network
-/// destination, no telemetry/analytics of any kind. "Nach Updates suchen" is
-/// a second, deliberately manual-only network call (GitHub Releases API, see
-/// [UpdateService]) — never a silent background check, because an app that
-/// phones home on its own is exactly what this app promises not to be. That
-/// the builds are signed and notarized doesn't change that; it only makes the
-/// downloaded file verifiable, which is what the checksum step already covers.
+/// "Hilfe" section: system diagnostics useful when reporting a bug. Version
+/// and build come from [PackageInfo] so they reflect the actually installed
+/// release rather than a hardcoded string. The API reachability check is a
+/// live probe rather than the cached state, because it doubles as the privacy
+/// answer — for the app's two network occasions and why both are user
+/// triggered, see AI_MASTER §2.
 ///
 /// In the App Store build ([kIsMacAppStore]) the update entry is absent
 /// altogether: the App Store does the updating, and shipping a second
@@ -534,19 +518,15 @@ Future<void> _openIssueTracker() async {
   await launchUrl(uri);
 }
 
-/// The site's existing per-OS download page (docs/download.html) — one big
-/// button per platform, the same link end users already get via the website.
-/// Deliberately not GitHub's release page: that would leave picking the right
-/// asset (Setup.exe / .dmg / .AppImage) to the user.
+/// The site's per-OS download page (docs/download.html). Deliberately not
+/// GitHub's release page: that would leave picking the right asset
+/// (Setup.exe / .dmg / .AppImage) to the user.
 const _downloadPageUrl = 'https://finanzgecko.app/download.html';
 
 /// Manual, user-triggered update check against the GitHub Releases API (see
-/// [UpdateService]) — never automatic, never on launch, never periodic.
-///
-/// After the user confirms, the matching file for this platform is downloaded
-/// and checked against the release's `SHA256SUMS`. The app still never
-/// *executes* anything: it saves the verified file where the user chose and
-/// offers to show it in the file manager.
+/// [UpdateService]) — never automatic, never on launch, never periodic. After
+/// confirmation the platform's file is downloaded and checked against the
+/// release's `SHA256SUMS`; the app never *executes* anything.
 Future<void> _checkForUpdates(BuildContext context) async {
   final appState = context.read<AppState>();
   final info = await PackageInfo.fromPlatform();
@@ -571,9 +551,8 @@ Future<void> _checkForUpdates(BuildContext context) async {
   }
 }
 
-/// Shown instead of a snackbar for the "update available" result — unlike
-/// up-to-date/failed, this one is actionable and shouldn't be easy to miss
-/// or dismiss by accident via a passing snackbar.
+/// A dialog rather than a snackbar: unlike up-to-date/failed, this result is
+/// actionable and shouldn't be easy to miss or dismiss by accident.
 Future<bool?> _showUpdateAvailableDialog(
   BuildContext context, {
   required String currentVersion,
@@ -598,24 +577,22 @@ Future<bool?> _showUpdateAvailableDialog(
 /// Downloads the release file for this platform, verifies it and saves it
 /// where the user chose.
 ///
-/// The save dialog is deliberate, rather than dropping the file into
+/// The save dialog is deliberate rather than dropping the file into
 /// ~/Downloads: writing there unprompted makes macOS raise its own "would like
-/// to access files in your Downloads folder" permission dialog — an alarming
-/// thing for an app whose whole point is that it touches nothing. Picking a
-/// location grants access to exactly that one file, and it is the same dialog
-/// users already know from "Backup exportieren…".
+/// to access files in your Downloads folder" prompt — alarming for an app
+/// whose whole point is that it touches nothing. Picking a location grants
+/// access to exactly that one file.
 Future<void> _downloadUpdate(BuildContext context, {required Map<String, String> assets}) async {
   final assetName = selectAssetName(assets.keys, Platform.operatingSystem);
-  // No file for this platform in this release (a platform build failed, or the
-  // release predates the checksums): send the user to the download page rather
-  // than guess at the wrong file.
+  // No file for this platform in this release: send the user to the download
+  // page rather than guess at the wrong file.
   if (assetName == null) {
     await launchUrl(Uri.parse(_downloadPageUrl));
     return;
   }
 
   final location = await getSaveLocation(suggestedName: assetName);
-  if (location == null || !context.mounted) return; // Dialog abgebrochen
+  if (location == null || !context.mounted) return; // dialog cancelled
 
   final progress = ValueNotifier<double?>(null);
   unawaited(
@@ -648,26 +625,26 @@ Future<void> _downloadUpdate(BuildContext context, {required Map<String, String>
     assetName: assetName,
     targetPath: location.path,
     onProgress: (received, total) {
-      // Ohne Content-Length bleibt der Balken unbestimmt, statt einen
-      // erfundenen Fortschritt anzuzeigen.
+      // Without a Content-Length the bar stays indeterminate rather than
+      // showing an invented progress value.
       progress.value = (total == null || total <= 0) ? null : received / total;
     },
   );
 
   if (!context.mounted) return;
-  Navigator.of(context, rootNavigator: true).pop(); // Fortschritts-Dialog
+  Navigator.of(context, rootNavigator: true).pop(); // progress dialog
 
-  // Bewusst kein progress.dispose(): der Dialog wird erst nach seiner
-  // Schließ-Animation abgebaut und meldet seinen Listener DANN ab — ein
-  // sofortiges dispose() ließe genau das mit "used after being disposed"
-  // krachen. Ohne Listener wird der ValueNotifier ohnehin eingesammelt.
+  // Deliberately no progress.dispose(): the dialog is only torn down after its
+  // close animation and unregisters its listener THEN — an immediate dispose()
+  // would make exactly that crash with "used after being disposed". Without a
+  // listener the ValueNotifier gets collected anyway.
 
   switch (result.status) {
     case UpdateDownloadStatus.verified:
       await _showDownloadDoneDialog(context, filePath: result.filePath!);
     case UpdateDownloadStatus.checksumMismatch:
-      // Bewusst ein Dialog, kein Snackbar: die Datei kam beschädigt oder
-      // verändert an. Das darf nicht wegwischen, bevor es gelesen wurde.
+      // Deliberately a dialog, not a snackbar: the file arrived corrupted or
+      // altered. That must not slide away before it has been read.
       await _showChecksumMismatchDialog(context);
     case UpdateDownloadStatus.unavailable:
       showErrorSnackBar(context, 'Für dieses Release gibt es keine geprüfte Datei für dein System.');
@@ -677,14 +654,13 @@ Future<void> _downloadUpdate(BuildContext context, {required Map<String, String>
   }
 }
 
-/// What to do with the verified file. The app deliberately does not run it:
-/// on Windows that would mean launching a freshly downloaded executable, and
+/// What to do with the verified file. The app deliberately does not run it —
 /// the promise "FinanzGecko installs nothing by itself" is worth more than the
 /// saved click.
 Future<void> _showDownloadDoneDialog(BuildContext context, {required String filePath}) {
-  // Der Hinweis zum Beenden steht bewusst EINMAL für alle Plattformen davor,
-  // statt in jedem der drei Sätze unten: so kann er beim Ergänzen einer
-  // Plattform nicht versehentlich fehlen (genau das war er unter Linux schon).
+  // The "quit first" note deliberately appears ONCE ahead of all platforms
+  // instead of inside each of the three sentences below: that way it cannot go
+  // missing when a platform is added (which it already had on Linux).
   final hint = switch (Platform.operatingSystem) {
     'macos' => 'Öffne dann die Datei und ziehe FinanzGecko in den Programme-Ordner, über die vorhandene Version.',
     'windows' => 'Führe dann den Installer aus — er ersetzt die vorhandene Version.',
@@ -751,9 +727,9 @@ Future<void> _copyDebugInfo(BuildContext context, String displayLabel, Size wind
     'Dart-Laufzeit: ${Platform.version.split(' ').first}',
     'Bildschirm(e): $displayLabel',
     'Fenstergröße: ${windowSize.width.round()}×${windowSize.height.round()}',
-    // isApiReachable liefert null, wenn der Abruf nicht erlaubt ist, und geht
-    // dann gar nicht erst ins Netz — die Debug-Info darf keine stille Ausnahme
-    // von der Zustimmung sein, auch nicht "nur zur Diagnose".
+    // isApiReachable returns null when fetching is not allowed and does not go
+    // online at all — the debug info must not be a silent exception to the
+    // consent, not even "just for diagnostics".
     'Wechselkurs-API erreichbar: ${switch (apiReachable) {
       true => 'ja',
       false => 'nein',
@@ -765,18 +741,13 @@ Future<void> _copyDebugInfo(BuildContext context, String displayLabel, Size wind
   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Debug-Informationen kopiert.')));
 }
 
-/// Read-only "label: value" line used for non-sensitive encryption meta
-/// info in the security section — builds trust without exposing anything
-/// an attacker could use (algorithm name and storage path are public
-/// implementation facts, not secrets). When [onOpen] is set, an "open in
-/// file manager" button is shown after the value.
-/// Erklärt in Alltagssprache, dass die Datendatei an genau diesen Computer
-/// gebunden ist — und was stattdessen ein Backup ist.
+/// Explains in everyday language that the data file is bound to this one
+/// computer — and what a backup is instead.
 ///
-/// Bewusst dauerhaft an der Speicherort-Zeile statt als einmaliger Dialog beim
-/// Ordnerwechsel: eine weggeklickte Warnung erinnert niemand zwei Jahre später,
-/// wenn die Festplatte kaputt ist. Kein "Schlüssel", kein "Schlüsselbund",
-/// keine "Verschlüsselung" — die Konsequenz zählt, nicht der Mechanismus.
+/// Deliberately permanent next to the location row rather than a one-off
+/// dialog on folder change: nobody is reminded by a dismissed warning two
+/// years later when the disk dies. No "key", no "keychain", no "encryption" —
+/// the consequence is what counts, not the mechanism.
 class _DeviceBoundHint extends StatelessWidget {
   const _DeviceBoundHint({required this.onExport});
 
@@ -828,14 +799,13 @@ class _DeviceBoundHint extends StatelessWidget {
   }
 }
 
-/// "Wechselkurs-API"-Zeile im Hilfe-Bereich.
+/// "Wechselkurs-API" row in the Hilfe section.
 ///
-/// Pingt bewusst **nicht** beim Aufbau der Ansicht: das wäre ein Netzabruf,
-/// den niemand ausgelöst hat, und ein Zustimmungsdialog beim bloßen Öffnen der
-/// Einstellungen wäre für Nutzer nicht nachvollziehbar. Ohne erteilte
-/// Zustimmung steht hier deshalb nur der gespeicherte Zustand; erst der Klick
-/// auf "Jetzt prüfen" ist die ausdrückliche Handlung, die einen Abruf
-/// rechtfertigt — analog zu "Nach Updates suchen".
+/// Deliberately does **not** ping on building the view: that would be a fetch
+/// nobody triggered, and a consent dialog on merely opening the Einstellungen
+/// would be incomprehensible to users. Without granted consent only the stored
+/// state is shown; the click on "Jetzt prüfen" is the explicit action that
+/// justifies a fetch — same as "Nach Updates suchen".
 class _ApiReachabilityRow extends StatefulWidget {
   const _ApiReachabilityRow();
 
@@ -856,7 +826,7 @@ class _ApiReachabilityRowState extends State<_ApiReachabilityRow> {
       _result = switch (reachable) {
         true => 'Erreichbar',
         false => 'Nicht erreichbar',
-        // Zustimmung wurde zwischenzeitlich entzogen.
+        // Consent was revoked in the meantime.
         null => 'Nicht geprüft (Abruf nicht erlaubt)',
       };
     });
@@ -885,6 +855,10 @@ class _ApiReachabilityRowState extends State<_ApiReachabilityRow> {
   }
 }
 
+/// Read-only "label: value" line for non-sensitive encryption meta info in the
+/// security section — algorithm name and storage path are public
+/// implementation facts, not secrets. With [onOpen], an "open in file manager"
+/// button follows the value.
 class _SecurityMetaRow extends StatelessWidget {
   const _SecurityMetaRow({required this.label, required this.value, this.onOpen});
 

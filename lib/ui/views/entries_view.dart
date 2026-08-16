@@ -13,9 +13,8 @@ import '../widgets/month_picker_field.dart';
 import '../widgets/rate_consent_dialog.dart';
 import '../widgets/section_card.dart';
 
-/// Single screen for both capturing new balances and correcting/deleting
-/// existing ones — scoped to one month/year at a time (default: current
-/// month) so the list stays manageable as entries pile up over time.
+/// Captures new balances and corrects/deletes existing ones — scoped to one
+/// month at a time (default: current) so the list stays manageable.
 class EntriesView extends StatefulWidget {
   const EntriesView({super.key, required this.onNavigate, this.focusAccountId});
 
@@ -39,8 +38,8 @@ class _EntriesViewState extends State<EntriesView> {
   final Map<int, FocusNode> _focusNodes = {};
 
   /// Marks the row addressed by [EntriesView.focusAccountId] so it can be
-  /// scrolled to. `autofocus` alone only moves the focus — with a long account
-  /// list the focused field can sit far below the fold.
+  /// scrolled to. `autofocus` alone only moves focus — with a long list the
+  /// focused field can sit far below the fold.
   final GlobalKey _focusedRowKey = GlobalKey();
 
   @override
@@ -98,11 +97,9 @@ class _EntriesViewState extends State<EntriesView> {
   }
 
   /// Best-effort exchange rate for the live running total, without hitting the
-  /// network: 1 for base-currency accounts, otherwise the rate from this
-  /// account's last stored balance (or any recent balance in that currency).
-  /// [prev] is the account's own previous balance, already resolved by the
-  /// caller so this doesn't re-scan `app.balances` on top of that lookup.
-  /// Returns null when nothing is available to estimate with.
+  /// network: 1 for base-currency accounts, otherwise the rate from the last
+  /// stored balance in that currency. [prev] is passed in so this doesn't
+  /// re-scan `app.balances`. Null when nothing is available to estimate with.
   double? _rateEstimate(AppState app, Account acc, Balance? prev) {
     if (acc.currency == app.baseCurrency) return 1;
     if (prev != null && prev.currencyOriginal == acc.currency && prev.rate != 0) return prev.rate;
@@ -114,10 +111,9 @@ class _EntriesViewState extends State<EntriesView> {
   /// Running preview of what "Alle speichern" will produce, computed from the
   /// text fields as the user types — no network, using [_rateEstimate].
   ///
-  /// Rebuilds on every keystroke (see the amount fields' `onChanged` below),
-  /// so the per-account "previous balance" lookup is indexed once here
-  /// instead of re-filtering+sorting the full `app.balances` list per
-  /// account, as `AppState.previousBalance` does on its own.
+  /// Rebuilds on every keystroke, so the per-account "previous balance" lookup
+  /// is indexed once here instead of re-filtering+sorting the full
+  /// `app.balances` per account, as `AppState.previousBalance` would.
   _LiveTotals _computeLiveTotals(AppState app) {
     final byAccount = <int, List<Balance>>{};
     for (final b in app.balances) {
@@ -158,10 +154,10 @@ class _EntriesViewState extends State<EntriesView> {
   }
 
   Future<void> _submit(AppState app) async {
-    // The current month isn't over yet, so its last day is a future date
-    // with no published rate (Frankfurter 404s). Use today instead — the
-    // API itself falls back to the latest published business day. Closed
-    // months keep their own last-day rate for historical accuracy.
+    // The current month isn't over, so its last day is a future date with no
+    // published rate (Frankfurter 404s). Use today instead — the API falls
+    // back to the latest business day. Closed months keep their own last-day
+    // rate for historical accuracy.
     final dateISO = _period == currentPeriod() ? todayISO() : lastDayOfMonthISO(_period);
     final rateCache = <String, double?>{};
     var saved = 0;
@@ -308,9 +304,8 @@ class _EntriesViewState extends State<EntriesView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Full detail lives in the tooltip so it's available on
-                      // demand without permanently occupying three lines above
-                      // the account rows on every single visit.
+                      // Detail lives in the tooltip, so it doesn't
+                      // permanently occupy three lines above the account rows.
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -387,9 +382,9 @@ class _LiveTotals {
   final int withoutRate;
 }
 
-/// Sticky bottom bar: running net-worth preview + delta vs. the previous
-/// stored values, plus the single "Alle speichern" action — always reachable
-/// without scrolling, however long the account list gets.
+/// Sticky bottom bar: running net-worth preview, delta vs. the stored values
+/// and the "Alle speichern" action — reachable without scrolling however long
+/// the account list gets.
 class _SaveFooter extends StatelessWidget {
   const _SaveFooter({required this.totals, required this.notice, required this.baseCurrency, required this.onSave});
 
@@ -514,9 +509,9 @@ class _EntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final prev = app.previousBalance(account.id, period);
 
-    // Order-of-magnitude guard: a value 10x larger or smaller than this
-    // account's last balance is almost always a mistyped digit. Non-blocking —
-    // just a hint, since a genuine large move is still allowed to be saved.
+    // Order-of-magnitude guard: a value 10x off this account's last balance is
+    // almost always a mistyped digit. Non-blocking — a genuine large move is
+    // still allowed to be saved.
     final entered = parseInputNumber(controller.text.trim());
     final prevAmount = prev?.amountOriginal;
     String? anomaly;
@@ -622,9 +617,8 @@ class _EntryRow extends StatelessWidget {
   }
 }
 
-/// Balances left behind by accounts that have since been archived — kept
-/// visible here (with a way back to the account) since they no longer
-/// surface anywhere else in the app.
+/// Balances left behind by archived accounts — kept visible here (with a way
+/// back to the account) since they surface nowhere else.
 class _OrphanEntriesSection extends StatelessWidget {
   const _OrphanEntriesSection({required this.balances, required this.app, required this.onNavigate});
 

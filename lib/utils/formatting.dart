@@ -15,14 +15,12 @@ String fmtMoney(double value, String currency) {
 /// added automatically, positive sign is left to the caller (matches fmtMoney).
 String fmtPercent(double value) => '${NumberFormat('#,##0.0', 'de_DE').format(value)}%';
 
-/// [fmtMoney] with an explicit leading "+" for non-negative values, so a
-/// delta/change reads unambiguously (fmtMoney alone leaves positive values
-/// unsigned). Used throughout for month-over-month and forecast deltas.
+/// [fmtMoney] with an explicit leading "+" for non-negative values, so a delta
+/// reads unambiguously (fmtMoney alone leaves positive values unsigned).
 String fmtSignedMoney(double value, String currency) => '${value >= 0 ? '+' : ''}${fmtMoney(value, currency)}';
 
-/// [fmtMoney] rounded to whole currency units (no cents). For estimated
-/// figures where cent precision would be false precision — e.g. the
-/// contribution/market split in the dashboard header.
+/// [fmtMoney] rounded to whole currency units, for estimated figures where
+/// cents would be false precision (e.g. the dashboard's contribution split).
 String fmtMoneyRounded(double value, String currency) {
   try {
     return NumberFormat.simpleCurrency(locale: 'de_DE', name: currency, decimalDigits: 0).format(value);
@@ -35,18 +33,16 @@ String fmtMoneyRounded(double value, String currency) {
 String fmtSignedMoneyRounded(double value, String currency) =>
     '${value >= 0 ? '+' : ''}${fmtMoneyRounded(value, currency)}';
 
-/// Formats a number for prefilling an editable amount field: German grouping
-/// and decimal separators (matching fmtMoney's look), trailing zeros trimmed.
-/// Stays a plain numeric string (no currency symbol) so it round-trips
+/// Formats a number for prefilling an editable amount field: German
+/// separators, trailing zeros trimmed, no currency symbol — so it round-trips
 /// through [parseInputNumber].
 String fmtInputNumber(double value) => NumberFormat('#,##0.##', 'de_DE').format(value);
 
 /// Parses text typed into an amount field. Accepts German notation
 /// ("1.234,56") as well as a bare decimal point ("1234.56", what older
-/// versions of this app used to prefill fields with) so existing habits and
-/// values keep working. A lone dot followed by exactly 3 digits is treated
-/// as a thousands separator (financial amounts here never carry 3 decimal
-/// places), not a decimal point.
+/// versions prefilled), so existing values keep working. A lone dot followed
+/// by exactly 3 digits is a thousands separator, not a decimal point —
+/// amounts here never carry 3 decimal places.
 double? parseInputNumber(String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) return null;

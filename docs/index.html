@@ -96,7 +96,7 @@
         "name": "Wie installiere ich FinanzGecko — und warum warnt mein System?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Für macOS ist FinanzGecko signiert und von Apple geprüft — dort erscheint keine Warnung mehr. Für Windows gibt es diese Prüfung noch nicht, weil das nötige Zertifikat jährlich Geld kostet und die SmartScreen-Warnung anders als bei Apple nicht sofort beseitigt, sondern erst mit steigender Verbreitung. Windows: Bei der SmartScreen-Meldung auf 'Weitere Informationen' und dann 'Trotzdem ausführen' klicken. macOS: Die Datei …-mac.dmg öffnen und FinanzGecko auf Programme ziehen — fertig. Linux: Dem AppImage das Ausführungsrecht geben (per Dateimanager oder chmod +x) und starten — es wird nichts installiert. Zu jedem Release gehört zusätzlich eine Datei SHA256SUMS mit den Prüfsummen aller Dateien."
+          "text": "Datei öffnen, fertig. Weil FinanzGecko nicht aus einem App-Store kommt, sondern direkt von der Entwickler-Seite, fragt Windows beim ersten Start einmal nach: 'Herkunft nicht bestätigt' bedeutet nicht, dass etwas Schädliches gefunden wurde. Windows: bei dieser Rückfrage auf 'Weitere Informationen' und dann 'Trotzdem ausführen' klicken, danach läuft der Installer wie jeder andere. macOS: die Datei …-mac.dmg doppelklicken und FinanzGecko auf Programme ziehen — die App ist signiert und von Apple geprüft und startet ohne Rückfrage. Linux: dem AppImage einmal das Ausführungsrecht geben (Dateimanager oder chmod +x), installiert wird nichts. Zu jeder Version gehört eine Datei SHA256SUMS mit Prüfsummen, und der komplette Quellcode liegt offen."
         }
       },
       {
@@ -104,7 +104,7 @@
         "name": "Wie bekomme ich Updates?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Es gibt keinen Auto-Updater: Update bedeutet, das neue Release-Artefakt von GitHub zu laden — Windows-Installer erneut ausführen, Linux-AppImage ersetzen, unter macOS die App aus dem neuen DMG erneut nach Programme ziehen. Beende FinanzGecko vorher: eine laufende Anwendung zu ersetzen führt zu Fehlern. Deine Daten bleiben beim Update erhalten."
+          "text": "In der App unter Einstellungen → Nach Updates suchen. FinanzGecko prüft auf eine neuere Version, lädt auf Wunsch die passende Datei für dein System, verifiziert sie gegen die veröffentlichte Prüfsumme und legt sie ab, wo du möchtest. Nichts davon läuft im Hintergrund, und installiert wird nichts ohne dich. Die Datei öffnest du dann wie beim ersten Mal — beende FinanzGecko vorher. Deine Daten bleiben beim Update erhalten."
         }
       },
       {
@@ -164,18 +164,18 @@
     <section class="hero">
       <div class="wrap">
         <img class="logo" src="assets/icon-192.png" width="88" height="88" alt="FinanzGecko Logo" />
-        <h1>FinanzGecko — Vermögenstracker für Linux, macOS &amp; Windows</h1>
+        <h1>Sieh, wie sich dein Vermögen entwickelt.</h1>
         <p class="pitch">
-          Ein nativer Desktop-Vermögenstracker für Linux, macOS und Windows. Kein Server,
-          keine Cloud, kein Account — alle Daten bleiben lokal und AES-256-verschlüsselt
-          auf deinem Rechner.
+          Einmal im Monat trägst du deine Kontostände ein. FinanzGecko rechnet daraus dein
+          Gesamtvermögen, zeigt den Verlauf über die Jahre und wagt eine Prognose —
+          alles auf deinem eigenen Computer, ohne Anmeldung, ohne Cloud.
         </p>
 
         <div class="cta-group">
           <a class="btn" href="#download">Kostenlos herunterladen →</a>
           <a class="btn btn-secondary" href="documentation.html">Zur Dokumentation</a>
         </div>
-        <p class="micro-trust">Für Linux, macOS &amp; Windows · kein Account nötig · Daten bleiben auf deinem Gerät</p>
+        <p class="micro-trust">Kostenlos · Ohne Anmeldung · Deine Daten bleiben auf deinem Computer</p>
 
         <div class="tags">
           <span class="tag-group" aria-label="Unterstützte Betriebssysteme">
@@ -186,7 +186,7 @@
           <span class="tag-divider" aria-hidden="true"></span>
           <span class="tag-group" aria-label="Kerneigenschaften">
             <span class="tag tag-feature">100% lokal</span>
-            <span class="tag tag-feature">AES-256-GCM</span>
+            <span class="tag tag-feature">Verschlüsselt</span>
             <span class="tag tag-feature">Quelloffen</span>
           </span>
         </div>
@@ -395,11 +395,11 @@
           </div>
           <div class="feature-card">
             <h3>Kennzahlen &amp; Verteilung</h3>
-            <p>Bester/schwächster Monat, Ø-Veränderung und Verteilung nach Kontotyp auf einen Blick.</p>
+            <p>Gesamtveränderung, Bester Monat, Schwächster Monat, Ø Veränderung/Monat, Monate im Plus, Höchststand — und die Verteilung nach Kontotyp.</p>
           </div>
           <div class="feature-card">
-            <h3>Ende-zu-Ende lokal</h3>
-            <p>AES-256-GCM-verschlüsselt, Schlüssel im OS-Keychain. Von sich aus geht die App gar nicht ins Netz: öffentliche Wechselkurse nur nach deiner Zustimmung, die Update-Prüfung nur auf Klick — nie mit deinen Finanzdaten.</p>
+            <h3>Bleibt auf deinem Computer</h3>
+            <p>Alles liegt verschlüsselt auf deiner Festplatte, der Schlüssel im Schlüsselbund deines Betriebssystems. Von sich aus geht die App nie ins Netz: Wechselkurse nur, wenn du zustimmst, die Update-Prüfung nur auf Klick — und nie mit deinen Zahlen.</p>
           </div>
         </div>
       </div>
@@ -459,7 +459,7 @@
           </details>
           <details>
             <summary>Wo werden meine Daten gespeichert?</summary>
-            <p>Ausschließlich lokal auf deinem Gerät, in einer einzigen AES-256-GCM-verschlüsselten Datei. Es gibt keine Cloud-Synchronisierung und keinen Server.</p>
+            <p>Nur auf deinem eigenen Computer, in einer einzigen verschlüsselten Datei. Es gibt keine Cloud und keinen Server — und damit auch niemanden, der mitlesen könnte. (Für Technikinteressierte: AES-256-GCM, der Schlüssel liegt im Schlüsselbund deines Betriebssystems.)</p>
           </details>
           <details>
             <summary>Brauche ich einen Account?</summary>
@@ -471,14 +471,15 @@
           </details>
           <details id="faq-install">
             <summary>Wie installiere ich FinanzGecko — und warum warnt mein System?</summary>
-            <p>Für <strong>macOS</strong> ist FinanzGecko signiert und von Apple geprüft — dort erscheint keine Warnung mehr. Für <strong>Windows</strong> gibt es diese Prüfung noch nicht: das nötige Zertifikat kostet jährlich Geld und würde die SmartScreen-Warnung, anders als bei Apple, nicht sofort beseitigen, sondern erst mit steigender Verbreitung. Windows zeigt deshalb beim ersten Start einen Hinweis. Er besagt „Herkunft nicht bestätigt&#8220; — nicht, dass etwas Schädliches gefunden wurde. Wer das nicht auf Treu und Glauben hinnehmen möchte: Zu jedem Release gehört eine Datei <span class="kbd">SHA256SUMS</span> mit den Prüfsummen aller Dateien, und der komplette <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">Quellcode liegt offen auf GitHub</a> und lässt sich selbst bauen.</p>
-            <p><strong>Windows</strong> — die Datei <span class="kbd">…-Setup.exe</span> starten. Meldet SmartScreen „Der Computer wurde durch Windows geschützt&#8220;, auf <em>Weitere Informationen</em> klicken und dann auf <em>Trotzdem ausführen</em>. Danach führt der Installer wie gewohnt durch.</p>
-            <p><strong>macOS</strong> — die Datei <span class="kbd">…-mac.dmg</span> per Doppelklick öffnen und FinanzGecko im erscheinenden Fenster auf <em>Programme</em> ziehen. Das war es: die App ist signiert und von Apple geprüft, macOS startet sie ohne Rückfrage.</p>
-            <p><strong>Linux</strong> — das AppImage braucht das Ausführungsrecht. Je nach Distribution ist es bereits gesetzt, dann genügt ein Doppelklick. Sonst im Dateimanager unter <em>Eigenschaften → Rechte → Als Programm ausführbar</em> setzen oder im Terminal <span class="kbd">chmod +x</span> auf die Datei anwenden. Es wird nichts installiert und nichts entpackt.</p>
+            <p>Der Download ist derselbe, egal welches System du nutzt: Datei öffnen, fertig. Weil FinanzGecko nicht aus einem App-Store kommt, sondern direkt von der Entwickler-Seite, fragt <strong>Windows</strong> beim ersten Start einmal nach. Das heißt „Herkunft nicht bestätigt&#8220; — nicht, dass etwas Schädliches gefunden wurde. Du kannst bestätigen, oder vorher selbst nachsehen: zu jeder Version gehört eine Datei <span class="kbd">SHA256SUMS</span> mit Prüfsummen, und der <a href="https://github.com/kreativ-anders/finanzgecko" target="_blank" rel="noopener">komplette Quellcode liegt offen</a>. Unter <strong>macOS</strong> und <strong>Linux</strong> erscheint diese Frage nicht.</p>
+            <p><strong>Windows</strong> — <span class="kbd">…-Setup.exe</span> starten. Kommt die Rückfrage „Der Computer wurde durch Windows geschützt&#8220;, auf <em>Weitere Informationen</em> und dann auf <em>Trotzdem ausführen</em> klicken. Danach läuft der Installer wie jeder andere.</p>
+            <p><strong>macOS</strong> — <span class="kbd">…-mac.dmg</span> doppelklicken und FinanzGecko im Fenster auf <em>Programme</em> ziehen. Das war es: die App ist signiert und von Apple geprüft, sie startet ohne Rückfrage.</p>
+            <p><strong>Linux</strong> — das AppImage braucht einmal das Ausführungsrecht. Oft ist es schon gesetzt, dann genügt ein Doppelklick. Sonst im Dateimanager unter <em>Eigenschaften → Rechte → Als Programm ausführbar</em> anhaken (oder <span class="kbd">chmod +x</span>). Installiert wird nichts.</p>
           </details>
           <details>
             <summary>Wie bekomme ich Updates?</summary>
-            <p>Es gibt keinen Auto-Updater: Update bedeutet, das neue Release-Artefakt von GitHub zu laden — Windows-Installer erneut ausführen, Linux-AppImage ersetzen, unter macOS die App aus dem neuen DMG erneut nach <em>Programme</em> ziehen und das Ersetzen bestätigen. <strong>Beende FinanzGecko vorher</strong>: eine laufende Anwendung zu ersetzen führt zu Fehlern. Deine Daten bleiben beim Update erhalten — eine Sicherung vorher ist trotzdem die bessere Gewohnheit.</p>
+            <p>In der App unter <em>Einstellungen → Nach Updates suchen</em>. FinanzGecko schaut dann nach, ob es eine neuere Version gibt, lädt auf Wunsch die passende Datei für dein System herunter, prüft sie gegen die veröffentlichte Prüfsumme und legt sie dort ab, wo du möchtest. Nichts davon passiert von allein: die App sucht nie im Hintergrund und installiert nichts ohne dich.</p>
+            <p>Die heruntergeladene Datei öffnest du dann wie beim ersten Mal. <strong>Beende FinanzGecko vorher</strong> — ein laufendes Programm zu ersetzen geht schief. Deine Daten bleiben beim Update erhalten; ein Backup vorher ist trotzdem die bessere Gewohnheit.</p>
           </details>
           <details>
             <summary>Unter welcher Lizenz steht FinanzGecko?</summary>

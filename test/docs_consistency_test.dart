@@ -154,6 +154,27 @@ void main() {
         files: ['README.md', 'dev/troubleshooting.md'],
         why: 'Der Gatekeeper-Umweg ist seit der Notarisierung gegenstandslos.',
       ),
+      (
+        phrase: 'keinen Auto-Updater',
+        files: ['docs/index.html', 'docs/download.html', 'docs/documentation.html'],
+        why:
+            'Die deutsche Entsprechung derselben Falschaussage — und die teurere, weil sie auf der '
+            'Startseite stand. "Nach Updates suchen" lädt seit v1.7 die passende Datei, prüft sie '
+            'gegen SHA256SUMS und legt sie ab; das FAQ schickte Leute trotzdem von Hand zu GitHub.',
+      ),
+      (
+        phrase: 'Klartext-JSON',
+        files: ['docs/index.html', 'docs/download.html', 'docs/documentation.html'],
+        why:
+            'Backups lassen sich seit v1.7 mit einem selbst vergebenen Passwort schützen '
+            '(data/backup_crypto.dart). Ohne diesen Zusatz sagt der Satz datenschutzbewussten '
+            'Leser:innen das Gegenteil dessen, was die App kann.',
+      ),
+      (
+        phrase: 'linken Navigation',
+        files: ['docs/documentation.html'],
+        why: 'Die Navigation liegt am oberen Rand (ui/navigation_shell.dart), nicht links.',
+      ),
     ];
 
     for (final claim in stale) {
@@ -198,5 +219,152 @@ void main() {
             'Stattdessen: "Signiert und von Apple geprüft."',
       );
     });
+
+    // Manuel's rule (2026-08-16): "keep the install wording generic". Generic
+    // in TONE, specific in FACT — a shared paragraph may explain why a computer
+    // asks about downloaded software at all, but the per-OS line must stay
+    // true. macOS is signed and checked by Apple and shows nothing; only
+    // Windows warns. This is the same claim `stale` already guards for the
+    // README, one abstraction up: it stops the *next* rewrite from tidying the
+    // three cards into one warning sentence.
+    //
+    // Block-level, not sentence-level: the download cards carry no sentence
+    // punctuation, so splitting on ". " glues all three into one string and the
+    // Windows card's "SmartScreen-Warnung" lands next to the macOS card. A doc
+    // linter that cries wolf gets muted.
+    test('keine Nutzerseite schreibt macOS eine Warnung zu', () {
+      const warningWords = ['Warnung', 'warnt', 'blockiert', 'SmartScreen'];
+      final blockPattern = RegExp(r'<(p|li|summary|h1|h2|h3)\b[^>]*>(.*?)</\1>', dotAll: true);
+      final offenders = <String>[];
+
+      for (final file in Directory('docs').listSync(recursive: true).whereType<File>()) {
+        if (!file.path.endsWith('.html')) continue;
+        final source = stripNonProse(file.readAsStringSync());
+        for (final block in blockPattern.allMatches(source)) {
+          final text = plainText(block.group(2)!);
+          if (!text.contains('macOS')) continue;
+          for (final word in warningWords) {
+            if (text.toLowerCase().contains(word.toLowerCase())) {
+              offenders.add('${file.path}: "$word" im selben Absatz wie "macOS" — «${_clip(text)}»');
+            }
+          }
+        }
+      }
+
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'Eine Nutzerseite behauptet wieder, macOS warne:\n${offenders.join('\n')}\n'
+            'macOS-Builds sind signiert und von Apple geprüft und starten ohne Rückfrage — nur '
+            'Windows zeigt einen Hinweis. Den Text pro Betriebssystem trennen, nicht '
+            'zusammenfassen.',
+      );
+    });
+
+    // The entry sentence is where non-technical readers bounce: the page used
+    // to open with "nativer Desktop-Vermögenstracker für Linux, macOS und
+    // Windows … AES-256-verschlüsselt", and the first question a real first-time
+    // reader asked was "what is Linux, Windows, macOS?". Operating systems are a
+    // download decision, not an opening line.
+    //
+    // Deliberately scoped to the VISIBLE hero only. <title>, meta description
+    // and Open Graph keep the platform keywords on purpose — different audience,
+    // different job. Do not "harmonise" the two.
+    test('die Startseite öffnet ohne Betriebssystem- und Krypto-Vokabular', () {
+      const banned = ['AES', 'GCM', 'nativ', 'Linux', 'macOS', 'Windows', 'Keychain'];
+      final source = read('docs/index.html');
+
+      final h1 = RegExp(r'<h1[^>]*>(.*?)</h1>', dotAll: true).firstMatch(source)?.group(1);
+      final pitch = RegExp(r'<p class="pitch"[^>]*>(.*?)</p>', dotAll: true).firstMatch(source)?.group(1);
+      expect(h1, isNotNull, reason: 'Kein <h1> in docs/index.html gefunden.');
+      expect(pitch, isNotNull, reason: 'Kein <p class="pitch"> in docs/index.html gefunden.');
+
+      final hero = plainText('$h1 $pitch').toLowerCase();
+      final offenders = banned.where((t) => hero.contains(t.toLowerCase())).toList();
+
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            'Der erste Bildschirm nennt wieder $offenders.\n'
+            'Betriebssysteme gehören zu den Download-Karten, die Verschlüsselung ins FAQ — '
+            'nicht in den Satz, der erklären soll, wofür die App überhaupt gut ist. '
+            '<title>/meta dürfen die Begriffe weiterhin führen, die sind für Suchmaschinen.',
+      );
+    });
+  });
+
+  group('Die Dokumentation beschreibt, was die App wirklich zeigt', () {
+    // Both lists drifted silently: the website named three Kennzahlen where the
+    // app rendered six, and five Einstellungen where it has eight — including
+    // the exchange-rate consent, exactly the control a privacy-minded reader
+    // goes looking for. Extracted from the code so a new tile or section fails
+    // here instead of waiting to be noticed.
+    test('documentation.html nennt jede Kennzahl des Dashboards', () {
+      final source = read('lib/ui/views/dashboard_view.dart');
+      final cardIndex = source.indexOf("title: 'Kennzahlen'");
+      expect(cardIndex, greaterThan(-1), reason: "Die Kennzahlen-SectionCard heißt nicht mehr 'Kennzahlen'.");
+
+      final tilesIndex = source.lastIndexOf('final tiles', cardIndex);
+      expect(tilesIndex, greaterThan(-1), reason: 'Die Kachel-Liste vor der Kennzahlen-Karte wurde umbenannt.');
+
+      final labels = RegExp(
+        r"label: '([^']+)'",
+      ).allMatches(source.substring(tilesIndex, cardIndex)).map((m) => m.group(1)!).toList();
+      expect(labels, isNotEmpty, reason: 'Keine Kachel-Labels gefunden — Extraktion prüfen.');
+
+      final docs = read('docs/documentation.html');
+      for (final label in labels) {
+        expect(
+          docs.contains(label),
+          isTrue,
+          reason:
+              'Das Dashboard zeigt die Kennzahl "$label", docs/documentation.html nennt sie nicht.\n'
+              'Die Liste dort muss wörtlich dieselben Labels führen — sonst sucht jemand in der App '
+              'nach etwas, das anders heißt.',
+        );
+      }
+    });
+
+    test('documentation.html nennt jeden Abschnitt der Einstellungen', () {
+      final source = read('lib/ui/views/settings_view.dart');
+      final titles = RegExp(
+        r"SectionCard\((?:[^()]|\([^()]*\))*?title: '([^']+)'",
+        dotAll: true,
+      ).allMatches(source).map((m) => m.group(1)!).toSet();
+      expect(titles, isNotEmpty, reason: 'Keine SectionCard-Titel gefunden — Extraktion prüfen.');
+
+      final docs = read('docs/documentation.html');
+      for (final title in titles) {
+        expect(
+          docs.contains(title),
+          isTrue,
+          reason:
+              'Die Einstellungen haben einen Abschnitt "$title", docs/documentation.html erwähnt ihn nicht.\n'
+              'Undokumentierte Einstellungen sind besonders teuer, wenn sie — wie "Wechselkurse" — '
+              'darüber entscheiden, ob die App ins Netz geht.',
+        );
+      }
+    });
   });
 }
+
+/// Strips everything that is markup or machinery rather than prose, so the
+/// prose checks never trip over a `<script>` payload or an HTML comment.
+String stripNonProse(String html) => html
+    .replaceAll(RegExp(r'<script[\s\S]*?</script>', caseSensitive: false), '')
+    .replaceAll(RegExp(r'<style[\s\S]*?</style>', caseSensitive: false), '')
+    .replaceAll(RegExp(r'<!--[\s\S]*?-->'), '');
+
+/// Tags out, entities in, whitespace collapsed.
+String plainText(String html) => html
+    .replaceAll(RegExp(r'<[^>]+>'), ' ')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&nbsp;', ' ')
+    .replaceAll('&#8220;', '"')
+    .replaceAll('&#8222;', '"')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .trim();
+
+String _clip(String text) => text.length <= 120 ? text : '${text.substring(0, 117)}…';

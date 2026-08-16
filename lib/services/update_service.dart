@@ -69,15 +69,48 @@ class UpdateDownloadResult {
 /// `SHA256SUMS`, and only then saved where they chose. The app never replaces
 /// itself and never executes the downloaded file on its own.
 class UpdateService {
-  UpdateService({http.Client? client}) : _client = client ?? http.Client();
+  UpdateService({http.Client? client, Set<String>? allowedAssetHosts})
+    : _client = client ?? http.Client(),
+      _allowedAssetHosts = allowedAssetHosts ?? _githubAssetHosts;
 
   final http.Client _client;
+
+  /// Overridable only so tests can point at a fake host. Production always
+  /// takes the default.
+  final Set<String> _allowedAssetHosts;
   static const _apiBase = 'https://api.github.com/repos/kreativ-anders/finanzgecko';
   static const _requestTimeout = Duration(seconds: 8);
 
   /// Gap between two chunks, not a budget for the whole transfer — a 20 MB
   /// download over a slow line is fine, a stalled socket is not.
   static const _stallTimeout = Duration(seconds: 30);
+
+  /// Ceiling for a downloaded release asset. The whole file is held in memory
+  /// to hash it before anything touches disk, so an unbounded response is an
+  /// out-of-memory crash waiting for a bad day. Releases are ~20 MB; 200 MB is
+  /// far above anything this project ships and far below anything that hurts.
+  static const int _maxAssetBytes = 200 * 1024 * 1024;
+
+  /// Hosts a release asset may legitimately come from. The URLs handed to
+  /// [downloadAndVerify] arrive inside the GitHub API response — trusted, but
+  /// trusted is not validated, and this is the one place where a value from
+  /// the network decides what the app connects to and writes to disk.
+  static const Set<String> _githubAssetHosts = {
+    'github.com',
+    'objects.githubusercontent.com',
+    'release-assets.githubusercontent.com',
+  };
+
+  Uri? _safeAssetUri(String? raw) {
+    if (raw == null) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri == null || uri.scheme != 'https' || !_allowedAssetHosts.contains(uri.host)) return null;
+    return uri;
+  }
+
+  /// Releases the underlying connection pool. Only meaningful for the default
+  /// client — an injected one belongs to whoever injected it.
+  void dispose() => _client.close();
 
   /// Never throws — any failure (offline, repo not public yet, malformed
   /// response, rate limiting) collapses to [UpdateCheckResult.failed] so the
@@ -129,26 +162,35 @@ class UpdateService {
     void Function(int received, int? total)? onProgress,
   }) async {
     try {
-      final assetUrl = assets[assetName];
-      final checksumsUrl = assets[checksumsAssetName];
       // Older releases predate the checksums file; without it we do not offer
-      // an unverified download at all.
-      if (assetUrl == null || checksumsUrl == null) return const UpdateDownloadResult.unavailable();
+      // an unverified download at all. A URL that is not an https GitHub
+      // release host is treated the same way — unavailable, not attempted.
+      final assetUri = _safeAssetUri(assets[assetName]);
+      final checksumsUri = _safeAssetUri(assets[checksumsAssetName]);
+      if (assetUri == null || checksumsUri == null) return const UpdateDownloadResult.unavailable();
 
-      final sums = await _client.get(Uri.parse(checksumsUrl)).timeout(_requestTimeout);
+      final sums = await _client.get(checksumsUri).timeout(_requestTimeout);
       if (sums.statusCode != 200) return const UpdateDownloadResult.failed();
       final expected = parseChecksums(sums.body)[assetName];
       if (expected == null) return const UpdateDownloadResult.unavailable();
 
-      final response = await _client.send(http.Request('GET', Uri.parse(assetUrl))).timeout(_requestTimeout);
+      final response = await _client.send(http.Request('GET', assetUri)).timeout(_requestTimeout);
       if (response.statusCode != 200) return const UpdateDownloadResult.failed();
 
       final total = response.contentLength;
-      final bytes = <int>[];
+      if (total != null && total > _maxAssetBytes) return const UpdateDownloadResult.failed();
+
+      // BytesBuilder rather than a growing List<int>: same result, far less
+      // allocation churn on a ~20 MB stream. `copy: false` is safe because the
+      // chunks handed over by the HTTP stream are not reused afterwards.
+      final builder = BytesBuilder(copy: false);
       await for (final chunk in response.stream.timeout(_stallTimeout)) {
-        bytes.addAll(chunk);
-        onProgress?.call(bytes.length, total);
+        builder.add(chunk);
+        // A missing or lying Content-Length must not become unbounded memory.
+        if (builder.length > _maxAssetBytes) return const UpdateDownloadResult.failed();
+        onProgress?.call(builder.length, total);
       }
+      final bytes = builder.takeBytes();
 
       final digest = hexEncode((await Sha256().hash(bytes)).bytes);
       if (!digestMatches(expected, digest)) return const UpdateDownloadResult.checksumMismatch();

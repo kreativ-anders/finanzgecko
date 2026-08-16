@@ -14,15 +14,12 @@ import 'theme.dart';
 import 'widgets/app_snackbar.dart';
 import 'widgets/backup_passphrase_dialog.dart';
 
-/// Export-/Import-Fluss für Backups (native Datei-Dialoge, Sicherheitsabfrage,
-/// Bestätigungs-/Fehler-Snackbars). Reine UI-Orchestrierung — die eigentliche
-/// Persistenz, Schemaprüfung, Bank→Farbe-Ableitung und Verschlüsselung liegen
-/// in [AppState]/AppStore (siehe `# Quelle:` in gherkin/backup_restore.feature).
+/// Export/import flow for backups. Pure UI orchestration — persistence, schema
+/// checking, bank→colour derivation and encryption live in [AppState]/AppStore
+/// (see `# Quelle:` in gherkin/backup_restore.feature).
 ///
-/// Bewusst als freie Funktionen (statt Methoden in `navigation_shell.dart`), damit die
-/// Navigations-Shell (Feature `navigation`) und der Backup-Fluss (Feature
-/// `backup_restore`) je eine eigene Primär-Datei haben. `onNavigate` dient den
-/// Snackbar-Aktionen und dem Sprung aufs Dashboard nach erfolgreichem Import.
+/// Free functions rather than methods in `navigation_shell.dart`, so the
+/// navigation shell and the backup flow each have their own primary file.
 
 const _backupTypeGroups = [
   XTypeGroup(label: 'JSON-Backup', extensions: ['json']),
@@ -37,19 +34,19 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
   final exportData = appState.exportAllData();
   final suggestedName = 'finanzgecko-backup-${todayISO()}.json';
 
-  // Passwortfrage vor dem Dateidialog: sie betrifft den Inhalt, nicht den Ort.
-  // Leerer String = bewusst ohne Passwort, null = abgebrochen — das dürfen wir
-  // nicht verwechseln, sonst entstünde aus einem Abbruch ein ungeschützter
-  // Export.
+  // Password prompt before the file dialog: it concerns the content, not the
+  // location. Empty string = deliberately no password, null = cancelled — the
+  // two must not be confused, or a cancellation would turn into an unprotected
+  // export.
   final passphrase = await promptNewBackupPassphrase(context);
   if (passphrase == null) return;
 
   final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _backupTypeGroups);
-  if (location == null) return; // Dialog abgebrochen
+  if (location == null) return; // dialog cancelled
 
   try {
-    // Ohne Passwort exakt das bisherige Klartext-JSON — bestehende Abläufe und
-    // ältere App-Versionen lesen das unverändert weiter.
+    // Without a password, exactly the previous plaintext JSON — existing flows
+    // and older app versions keep reading it unchanged.
     final jsonStr = passphrase.isEmpty
         ? const JsonEncoder.withIndent('  ').convert(exportData)
         : await encryptBackup(exportData, passphrase);
@@ -67,10 +64,9 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
   }
 }
 
-/// Exportiert die Kontostände als CSV-Tabelle (für Tabellenkalkulationen).
-/// Anders als das JSON-Backup ist das verlustbehaftet und nur lesend, zählt
-/// daher bewusst NICHT als Backup (kein `markExported`, setzt den
-/// Backup-Reminder nicht zurück).
+/// Exports the Kontostände as a CSV table (for spreadsheets). Unlike the JSON
+/// backup this is lossy and read-only, so it deliberately does NOT count as a
+/// backup (no `markExported`, does not reset the backup reminder).
 Future<void> exportBalancesCsv(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
   final csv = buildBalancesCsv(
@@ -81,7 +77,7 @@ Future<void> exportBalancesCsv(BuildContext context, ValueChanged<AppView> onNav
   final suggestedName = 'finanzgecko-kontostaende-${todayISO()}.csv';
 
   final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _csvTypeGroups);
-  if (location == null) return; // Dialog abgebrochen
+  if (location == null) return; // dialog cancelled
 
   try {
     // Leading BOM so Excel opens the UTF-8 file with correct umlauts.
@@ -97,7 +93,7 @@ Future<void> exportBalancesCsv(BuildContext context, ValueChanged<AppView> onNav
 Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
   final file = await openFile(acceptedTypeGroups: _backupTypeGroups);
-  if (file == null) return; // Dialog abgebrochen
+  if (file == null) return; // dialog cancelled
 
   if (!context.mounted) return;
   final confirmed = await showDialog<bool>(
@@ -117,21 +113,21 @@ Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate
     final raw = await file.readAsString();
     final decoded = jsonDecode(raw);
 
-    // Verschlüsselte Backups erkennt der Import an ihrer Struktur, nicht an
-    // Dateiendung oder Namen — ein Klartext-Backup nimmt unverändert den
-    // bisherigen Weg und fragt nach gar nichts.
+    // The import recognises encrypted backups by their structure, not by file
+    // extension or name — a plaintext backup takes the previous path unchanged
+    // and asks for nothing.
     Map<String, dynamic>? payload;
     if (isEncryptedBackup(decoded)) {
       var wasWrong = false;
       while (payload == null) {
         if (!context.mounted) return;
         final passphrase = await promptExistingBackupPassphrase(context, wasWrong: wasWrong);
-        if (passphrase == null) return; // abgebrochen: nichts wurde verändert
+        if (passphrase == null) return; // cancelled: nothing was changed
         try {
           payload = await decryptBackup(decoded as Map, passphrase);
         } on WrongBackupPassphraseException {
-          // Erneut fragen statt abbrechen — ein Tippfehler soll nicht den
-          // ganzen Ablauf kosten.
+          // Ask again instead of aborting — a typo should not cost the whole
+          // flow.
           wasWrong = true;
         }
       }

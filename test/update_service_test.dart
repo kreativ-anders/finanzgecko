@@ -106,6 +106,10 @@ void main() {
   group('UpdateService.downloadAndVerify', () {
     const assetName = 'FinanzGecko-2.0.0-mac.dmg';
     const assets = {assetName: 'https://example.test/dmg', 'SHA256SUMS': 'https://example.test/sums'};
+    // downloadAndVerify only follows https URLs on a known GitHub release
+    // host. These tests serve from a fake host, so they widen the allowlist
+    // explicitly — production never passes this parameter.
+    const fakeHosts = {'example.test'};
     // Bekannter Testvektor: sha256("hello"). Bewusst hartkodiert statt im Test
     // selbst berechnet — sonst prüfte der Test die Implementierung gegen sich
     // selbst und ein falsches Hex-Padding fiele nicht auf.
@@ -123,7 +127,10 @@ void main() {
 
     test('schreibt die Datei, wenn die Prüfsumme passt', () async {
       final target = '${tmp.path}/$assetName';
-      final service = UpdateService(client: clientWith(sums: '$payloadDigest  $assetName\n'));
+      final service = UpdateService(
+        allowedAssetHosts: fakeHosts,
+        client: clientWith(sums: '$payloadDigest  $assetName\n'),
+      );
 
       final result = await service.downloadAndVerify(assets: assets, assetName: assetName, targetPath: target);
 
@@ -134,7 +141,10 @@ void main() {
 
     test('schreibt NICHTS, wenn die Prüfsumme abweicht', () async {
       final target = '${tmp.path}/$assetName';
-      final service = UpdateService(client: clientWith(sums: '${'0' * 64}  $assetName\n'));
+      final service = UpdateService(
+        allowedAssetHosts: fakeHosts,
+        client: clientWith(sums: '${'0' * 64}  $assetName\n'),
+      );
 
       final result = await service.downloadAndVerify(assets: assets, assetName: assetName, targetPath: target);
 
@@ -144,7 +154,7 @@ void main() {
     });
 
     test('meldet unavailable, wenn das Release keine SHA256SUMS beilegt (ältere Releases)', () async {
-      final service = UpdateService(client: clientWith(sums: ''));
+      final service = UpdateService(allowedAssetHosts: fakeHosts, client: clientWith(sums: ''));
 
       final result = await service.downloadAndVerify(
         assets: const {assetName: 'https://example.test/dmg'},
@@ -156,7 +166,10 @@ void main() {
     });
 
     test('meldet unavailable, wenn die Prüfsummen-Datei diese Datei nicht kennt', () async {
-      final service = UpdateService(client: clientWith(sums: '$payloadDigest  irgendwas-anderes.dmg\n'));
+      final service = UpdateService(
+        allowedAssetHosts: fakeHosts,
+        client: clientWith(sums: '$payloadDigest  irgendwas-anderes.dmg\n'),
+      );
 
       final result = await service.downloadAndVerify(
         assets: assets,
@@ -167,8 +180,34 @@ void main() {
       expect(result.status, UpdateDownloadStatus.unavailable);
     });
 
+    test('lädt nichts von einem fremden Host, selbst wenn die API ihn nennt', () async {
+      var contacted = false;
+      // Kein allowedAssetHosts-Override: hier gilt die Produktions-Liste.
+      // Die URLs stammen aus der GitHub-Antwort — vertrauenswürdig, aber
+      // ungeprüft. Genau hier entscheidet ein Wert aus dem Netz, wohin die App
+      // sich verbindet und was sie auf die Platte schreibt.
+      final service = UpdateService(
+        client: MockClient((request) async {
+          contacted = true;
+          return http.Response(payload, 200);
+        }),
+      );
+
+      final result = await service.downloadAndVerify(
+        assets: assets,
+        assetName: assetName,
+        targetPath: '${tmp.path}/$assetName',
+      );
+
+      expect(result.status, UpdateDownloadStatus.unavailable);
+      expect(contacted, isFalse, reason: 'ein nicht erlaubter Host darf nicht einmal kontaktiert werden');
+    });
+
     test('meldet failed statt zu werfen, wenn das Netz wegbricht', () async {
-      final service = UpdateService(client: MockClient((request) async => throw const SocketException('no network')));
+      final service = UpdateService(
+        allowedAssetHosts: fakeHosts,
+        client: MockClient((request) async => throw const SocketException('no network')),
+      );
 
       final result = await service.downloadAndVerify(
         assets: assets,

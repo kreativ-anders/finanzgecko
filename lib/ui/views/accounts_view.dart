@@ -93,9 +93,9 @@ class _BankFieldState extends State<_BankField> {
                           height: 12,
                           decoration: BoxDecoration(color: colorFromHex(hex), shape: BoxShape.circle),
                         ),
-                        // noSelect: siehe AI_MASTER §5 — sonst überstimmt der
-                        // Text-Cursor der SelectionArea den Klick-Cursor des
-                        // ListTile.
+                        // noSelect: see AI_MASTER §5 — otherwise the
+                        // SelectionArea's text cursor overrides the ListTile's
+                        // click cursor.
                         title: noSelect(Text(name)),
                         onTap: () => onSelected(name),
                       );
@@ -181,9 +181,8 @@ class _BankSuggestionHint extends StatelessWidget {
 }
 
 /// The Bank/Name/Typ/Währung field group shared by the "Neues Konto" form and
-/// the inline edit form — both wrap this in their own [Form] (with their own
-/// submit button and validation trigger), so only the field layout itself is
-/// shared here.
+/// the inline edit form — each wraps it in its own [Form], so only the field
+/// layout is shared here.
 class _AccountFormFields extends StatelessWidget {
   const _AccountFormFields({
     required this.nameCtrl,

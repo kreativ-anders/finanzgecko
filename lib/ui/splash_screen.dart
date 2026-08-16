@@ -4,19 +4,15 @@ import 'package:flutter/material.dart';
 
 import 'theme.dart';
 
-/// Brief branded splash shown on startup, crediting kreativ.anders. App data
-/// is already loaded by the time [main] calls runApp, so this is purely a
-/// timed brand moment (not gating on any real loading work) — held for at
-/// least [minDuration] and faded into [child].
+/// Brief branded splash shown on startup. App data is already loaded by the
+/// time [main] calls runApp, so this is purely a timed brand moment — held for
+/// at least [minDuration] and faded into [child].
 ///
-/// The 1100ms + 400ms fade were reviewed deliberately (issue #11) and kept:
-/// they are a brand decision, not a placeholder. Note that they land *on top
-/// of* the time the window is already visible — [main] runs
-/// `windowManager.show()` before `runApp`, so the user first sees an empty
-/// [kBackground] window, then this splash, for ~1.5s total. Shortening it
-/// would make startup feel snappier; that trade-off was considered and
-/// declined, so don't "optimize" these values without asking (see AI_MASTER
-/// §5 and `gherkin/window.feature`).
+/// The 1100ms + 400ms fade were reviewed deliberately (issue #11) and kept as
+/// a brand decision, not a placeholder. They land *on top of* the time the
+/// window is already visible ([main] shows it before `runApp`), so startup is
+/// ~1.5s total. That trade-off was considered and declined — don't "optimize"
+/// these values without asking (see AI_MASTER §5 and `gherkin/window.feature`).
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.child, this.minDuration = const Duration(milliseconds: 1100)});
 
@@ -54,12 +50,13 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ACHTUNG, die Namen bezeichnen die *Bildfarbe*, nicht das Theme —
-          // so heißen sie auch im Quell-Repo kreativ-anders/static-assets:
-          //   …-light-…  = helles Logo (weiße Schrift) → für den DUNKLEN Grund
-          //   …-dark-…   = dunkles Logo (schwarze Schrift) → für den HELLEN Grund
-          // Vor dieser Zuordnung lief das helle Logo in beiden Themes und war
-          // auf Hell mit 1,3:1 praktisch unsichtbar. Nicht "geradeziehen".
+          // CAREFUL: the names denote the *image colour*, not the theme —
+          // that is also how they are named in the source repo
+          // kreativ-anders/static-assets:
+          //   …-light-…  = light logo (white text) → for the DARK background
+          //   …-dark-…   = dark logo (black text) → for the LIGHT background
+          // Before this mapping the light logo was used in both themes and was
+          // practically invisible on light at 1.3:1. Do not "straighten out".
           Image.asset(
             kIsDarkTheme
                 ? 'assets/logo/kreativ-anders-light-512.png'

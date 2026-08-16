@@ -1,14 +1,14 @@
-/// Passwortgeschützte Backup-Dateien.
+/// Password-protected backup files.
 ///
-/// Bewusst ein **eigenes** Format, getrennt vom Envelope der Datendatei
-/// (`app_store.dart`): jener wird mit dem gerätegebundenen Schlüssel aus dem
-/// Betriebssystem verschlüsselt und ist deshalb nur auf genau einem Rechner
-/// lesbar. Ein Backup soll das Gegenteil sein — überall einlesbar. Der
-/// Schlüssel wird daher aus einem Passwort abgeleitet, das die Person kennt.
+/// Deliberately its **own** format, separate from the data file's envelope
+/// (`app_store.dart`): that one is encrypted with the device-bound key from
+/// the OS and is therefore readable on exactly one machine. A backup should be
+/// the opposite — readable anywhere, so its key is derived from a password the
+/// person knows.
 ///
-/// Die Verschlüsselung ist **optional**: ohne Passwort schreibt der Export
-/// weiterhin exakt das bisherige Klartext-JSON, und der Import erkennt beide
-/// Formen an ihrer Struktur. Bestehende Backups bleiben damit gültig.
+/// Encryption is **optional**: without a password the export still writes
+/// exactly the previous plaintext JSON, and the import recognises both shapes
+/// by their structure, so existing backups stay valid.
 library;
 
 import 'dart:convert';
@@ -17,19 +17,19 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 
-/// Marker im Klartext, an dem der Import ein verschlüsseltes Backup erkennt,
-/// ohne es entschlüsseln zu müssen.
+/// Plaintext marker by which the import recognises an encrypted backup without
+/// having to decrypt it.
 const String _magic = 'finanzgecko-backup';
 const int _formatVersion = 1;
 
-/// PBKDF2-HMAC-SHA256. Die Zahl steht **in der Datei**, nicht nur hier — so
-/// lässt sie sich später anheben, ohne ältere Backups unlesbar zu machen.
-/// 200.000 ist ein Kompromiss: die reine Dart-Implementierung läuft im
-/// UI-Isolate, und ein Export darf nicht gefühlt hängen bleiben.
+/// PBKDF2-HMAC-SHA256. The number is stored **in the file**, not only here —
+/// so it can be raised later without making older backups unreadable. 200,000
+/// is a compromise: the pure-Dart implementation runs on the UI isolate, and
+/// an export must not feel like it hangs.
 const int _defaultIterations = 200000;
 
-/// Falsches Passwort (oder nachträglich veränderte Datei — beides ist am
-/// fehlgeschlagenen MAC nicht unterscheidbar).
+/// Wrong password (or a file altered afterwards — the failed MAC cannot tell
+/// the two apart).
 class WrongBackupPassphraseException implements Exception {
   const WrongBackupPassphraseException();
 
@@ -37,8 +37,8 @@ class WrongBackupPassphraseException implements Exception {
   String toString() => 'WrongBackupPassphraseException';
 }
 
-/// Datei sieht aus wie ein verschlüsseltes Backup, ist aber unvollständig oder
-/// stammt aus einer neueren Version.
+/// File looks like an encrypted backup but is incomplete or comes from a newer
+/// version.
 class UnsupportedBackupFormatException implements Exception {
   const UnsupportedBackupFormatException(this.reason);
 
@@ -48,13 +48,13 @@ class UnsupportedBackupFormatException implements Exception {
   String toString() => 'UnsupportedBackupFormatException($reason)';
 }
 
-/// True, wenn [decoded] (das Ergebnis von `jsonDecode`) ein passwortgeschütztes
-/// Backup ist. Ein Klartext-Backup hat diesen Marker nicht und läuft dadurch
-/// unverändert über den bisherigen Importpfad.
+/// True if [decoded] (the result of `jsonDecode`) is a password-protected
+/// backup. A plaintext backup lacks the marker and therefore still goes through
+/// the previous import path unchanged.
 bool isEncryptedBackup(dynamic decoded) => decoded is Map && decoded['format'] == _magic;
 
-/// Verschlüsselt [data] mit [passphrase]. Ergebnis ist der komplette
-/// Dateiinhalt (JSON-Text).
+/// Encrypts [data] with [passphrase]; returns the complete file content
+/// (JSON text).
 Future<String> encryptBackup(Map<String, dynamic> data, String passphrase) async {
   if (passphrase.isEmpty) {
     throw ArgumentError('encryptBackup ohne Passwort aufgerufen — der Aufrufer entscheidet über Klartext.');
@@ -66,8 +66,8 @@ Future<String> encryptBackup(Map<String, dynamic> data, String passphrase) async
   return const JsonEncoder.withIndent('  ').convert({
     'format': _magic,
     'v': _formatVersion,
-    // Parameter mitschreiben, damit ein späteres Anheben alte Dateien nicht
-    // bricht — beim Entschlüsseln wird gelesen, was hier steht.
+    // Write the parameters along so that raising them later does not break old
+    // files — decryption reads whatever is stored here.
     'kdf': {'algo': 'pbkdf2-hmac-sha256', 'salt': base64Encode(salt), 'iterations': _defaultIterations},
     'nonce': base64Encode(box.nonce),
     'cipherText': base64Encode(box.cipherText),
@@ -75,9 +75,9 @@ Future<String> encryptBackup(Map<String, dynamic> data, String passphrase) async
   });
 }
 
-/// Gegenstück zu [encryptBackup]. Wirft [WrongBackupPassphraseException] bei
-/// falschem Passwort und [UnsupportedBackupFormatException] bei kaputter oder
-/// zu neuer Struktur.
+/// Counterpart to [encryptBackup]. Throws [WrongBackupPassphraseException] on a
+/// wrong password and [UnsupportedBackupFormatException] on a broken or
+/// too-new structure.
 Future<Map<String, dynamic>> decryptBackup(Map decoded, String passphrase) async {
   if (!isEncryptedBackup(decoded)) {
     throw const UnsupportedBackupFormatException('kein verschlüsseltes Backup');
@@ -105,7 +105,7 @@ Future<Map<String, dynamic>> decryptBackup(Map decoded, String passphrase) async
   try {
     clear = await AesGcm.with256bits().decrypt(box, secretKey: key);
   } catch (_) {
-    // AES-GCM prüft den MAC — ein falsches Passwort scheitert genau hier.
+    // AES-GCM verifies the MAC — a wrong password fails exactly here.
     throw const WrongBackupPassphraseException();
   }
 
