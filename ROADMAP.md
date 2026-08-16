@@ -4,62 +4,48 @@ What's planned for FinanzGecko. Quarters are intent, not promises.
 
 ## Currently working on
 
-- **v1.8 — the sandboxed macOS release.** Every macOS build now runs in the App Sandbox; existing data is copied
-  into the container once on first launch.
+- **v1.8 — sandboxed macOS release.** All macOS builds now run in the App Sandbox; existing data is copied into
+  the container once on first launch.
 
 ## On hold
 
-- **Mac App Store.** Paused: the added complexity does not currently justify what it buys. FinanzGecko stays a
-  free, manually downloaded app, signed and checked by Apple. The groundwork stays in the repo
-  (`packaging/macos/build_appstore.sh`, `AppStore.entitlements`) and costs nothing while unused.
-
-- **Windows — signed installer.** A certificate costs money every year and, unlike on macOS, does not remove the
-  warning: it only turns the SmartScreen block into a one-click "run anyway" that fades as downloads accumulate.
-  The cheap cloud option (Azure Artifact Signing, ~$10/month) is not open to individual developers outside the
-  US and Canada.
-- **Linux — Flathub.** Nothing urgent, since Linux shows no security warning in the first place. Flathub no
-  longer accepts applications containing AI-assisted code, and FinanzGecko is openly developed with AI
-  assistance.
+- **Mac App Store.** Not worth the added complexity right now. Groundwork stays in the repo
+  (`packaging/macos/build_appstore.sh`, `AppStore.entitlements`), costs nothing unused.
+- **Windows — signed installer.** Certificate costs money yearly and, unlike macOS, doesn't remove the SmartScreen
+  warning — just softens it. The cheap option (Azure Artifact Signing, ~$10/mo) isn't open outside US/Canada.
+- **Linux — Flathub.** No urgency (Linux shows no warning anyway), and Flathub no longer accepts apps with
+  AI-assisted code.
 
 ## Planned
 
 **Q4 2026**
 
-- Drawdown from peak — how far below the all-time high.
-- Currency exposure — EUR vs. foreign share.
-- **winget** — `winget install KreativAnders.FinanzGecko` for Windows. Manifests and the release automation are
-  in the repo; the first submission to `microsoft/winget-pkgs` still has to be made by hand. It does not remove
-  the SmartScreen prompt, but it is a convenient install path and the downloads help build the reputation that
-  eventually does.
-- **Get listed where people look** — heise Download (the German audience this app is written for), AlternativeTo
-  ("MoneyMoney alternative", "Mint alternative"), Product Hunt. Free, and more useful than any certificate:
-  SmartScreen reputation is earned by download volume, not bought.
-- **AUR** — a PKGBUILD wrapping the AppImage, so Arch users find FinanzGecko where they expect to. Lives in its
-  own repository on aur.archlinux.org and changes nothing here.
+- Drawdown from peak (how far below all-time high).
+- Currency exposure (EUR vs. foreign share).
+- **winget** — manifests + release automation already in repo; first submission to `microsoft/winget-pkgs` still
+  manual. Doesn't remove SmartScreen, but builds download-reputation over time.
+- **Get listed** — heise Download, AlternativeTo, Product Hunt. Free, and SmartScreen reputation is earned by
+  download volume, not bought.
+- **AUR** — PKGBUILD wrapping the AppImage. Lives in its own repo on aur.archlinux.org, doesn't touch this repo.
 
 **2027**
 
 - English UI.
-- **Homebrew Cask** — `brew install --cask finanzgecko`, the nicest install story macOS has. Blocked on
-  Homebrew's notability rules: 75 stars / 30 forks / 30 watchers if someone else submits it, and 225 stars for a
-  self-submission. A self-hosted tap would skip that, but since Homebrew 6 users must explicitly trust
-  third-party taps — which makes it harder, not easier. Revisit at 75 stars.
-- **Q3 2027 — remove the sandbox migration.** Introduced in v1.8 (August 2026) as deliberate, dated technical
-  debt: `lib/data/sandbox_migration.dart`, its test and the `temporary-exception` entitlement go together in one
-  commit, once pre-sandbox installations have become rare. That entitlement is the only thing letting the app
-  read anything outside its own container, so dropping it strictly tightens the sandbox. Deleting anyone's old
-  files is a separate, later question — doing it in the release that first copies them would make a bad copy
-  unrecoverable.
+- **Homebrew Cask** — blocked on Homebrew's notability rules (75 stars/30 forks/30 watchers, or 225 stars for
+  self-submission; a self-hosted tap needs explicit user trust so doesn't really help). Revisit at 75 stars.
+- **Q3 2027 — remove sandbox migration.** `lib/data/sandbox_migration.dart` + the `temporary-exception`
+  entitlement were added in v1.8 as deliberate, dated debt — drop them once pre-sandbox installs are rare. That
+  entitlement is the only outside-container read access, so removing it tightens the sandbox. Deleting anyone's
+  old files is a separate, later decision.
 
 ## Done
 
-- **macOS — signed and checked by Apple.** DMG instead of a zipped bundle (a DMG can carry the ticket),
-  Developer ID certificate, Hardened Runtime, stapled in CI. Existing data keeps opening afterwards.
-- **macOS — sandboxed** (v1.8). Every build runs in the App Sandbox. Existing data is copied into the container
-  once on first launch; the old files stay where they are as a fallback.
-- **Checksums** — every release ships a `SHA256SUMS` file and repeats the hashes in the release notes.
-- **Assisted update** — "Nach Updates suchen" downloads the right file for your system, verifies it against the
-  published checksum and hands it over ready to install. Only when you ask; never in the background.
-- **Website** — install instructions and the privacy page match the signed builds.
+- **macOS — signed & notarized.** DMG (carries the notarization ticket), Developer ID, Hardened Runtime, stapled
+  in CI.
+- **macOS — sandboxed** (v1.8). Existing data copied into the container on first launch; old files kept as fallback.
+- **Checksums** — every release ships `SHA256SUMS`, hashes repeated in release notes.
+- **Assisted update** — "Nach Updates suchen" downloads the right file, verifies checksum, hands off ready to
+  install. Only on request, never in the background.
+- **Website** — install instructions and privacy page match the signed builds.
 
 Ideas and feedback: [open an issue](https://github.com/kreativ-anders/finanzgecko/issues).
