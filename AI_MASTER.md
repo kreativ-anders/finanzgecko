@@ -164,6 +164,9 @@ finanzgecko/
 ├── demo/finanzgecko-demo.json     # importierbare Demodaten für Screenshots (generiert, .gitignore) — via "Backup importieren…"
 ├── packaging/linux/               # .desktop-Datei + install.sh fürs Linux-Startmenü, build_appimage.sh → FinanzGecko-<Version>-x86_64.AppImage
 ├── packaging/windows/             # finanzgecko.iss (Inno Setup) → FinanzGecko-<Version>-Setup.exe
+│                                  # winget/: Manifest-Vorlagen + render.sh für die ERSTE Einreichung bei
+│                                  #   microsoft/winget-pkgs; danach aktualisiert der Job "winget" in
+│                                  #   release.yml automatisch. ProductCode dort = AppId aus der .iss + "_is1"
 ├── packaging/macos/               # build_dmg.sh: signieren (Developer ID, Hardened Runtime) + notarisieren + DMG bauen
 │                                  #   → FinanzGecko-<Version>-mac.dmg; ohne Zugangsdaten unsigniert statt Abbruch
 │                                  # build_appstore.sh: sandboxed App-Store-Build (--dart-define=FINANZGECKO_MAS=true,

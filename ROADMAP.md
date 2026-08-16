@@ -27,10 +27,23 @@ What's planned for FinanzGecko. Quarters are intent, not promises.
 
 - Drawdown from peak — how far below the all-time high.
 - Currency exposure — EUR vs. foreign share.
+- **winget** — `winget install KreativAnders.FinanzGecko` for Windows. Manifests and the release automation are
+  in the repo; the first submission to `microsoft/winget-pkgs` still has to be made by hand. It does not remove
+  the SmartScreen prompt, but it is a convenient install path and the downloads help build the reputation that
+  eventually does.
+- **Get listed where people look** — heise Download (the German audience this app is written for), AlternativeTo
+  ("MoneyMoney alternative", "Mint alternative"), Product Hunt. Free, and more useful than any certificate:
+  SmartScreen reputation is earned by download volume, not bought.
+- **AUR** — a PKGBUILD wrapping the AppImage, so Arch users find FinanzGecko where they expect to. Lives in its
+  own repository on aur.archlinux.org and changes nothing here.
 
 **2027**
 
 - English UI.
+- **Homebrew Cask** — `brew install --cask finanzgecko`, the nicest install story macOS has. Blocked on
+  Homebrew's notability rules: 75 stars / 30 forks / 30 watchers if someone else submits it, and 225 stars for a
+  self-submission. A self-hosted tap would skip that, but since Homebrew 6 users must explicitly trust
+  third-party taps — which makes it harder, not easier. Revisit at 75 stars.
 - **Q3 2027 — remove the sandbox migration.** Introduced in v1.8 (August 2026) as deliberate, dated technical
   debt: `lib/data/sandbox_migration.dart`, its test and the `temporary-exception` entitlement go together in one
   commit, once pre-sandbox installations have become rare. That entitlement is the only thing letting the app

@@ -459,3 +459,60 @@ jobs:
           tag_name: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
           files: dist/*
           body_path: ${{ runner.temp }}/release_body.md
+
+  # Meldet die neue Version an den Windows-Paketmanager winget (`winget install
+  # KreativAnders.FinanzGecko`). Die Action liest das fertige GitHub-Release,
+  # baut die Manifeste daraus und öffnet einen Pull Request gegen
+  # microsoft/winget-pkgs.
+  #
+  # Läuft BEWUSST nach `release` und nicht parallel: die Action lädt die
+  # Setup.exe von der Release-Seite, um ihre Prüfsumme zu bilden — vorher gibt
+  # es die URL noch nicht.
+  #
+  # **Entfernt die SmartScreen-Warnung nicht.** winget führt denselben
+  # unsignierten Installer aus, und Mark-of-the-Web greift genauso (siehe
+  # ROADMAP "Windows — signed installer"). Der Nutzen ist Auffindbarkeit und
+  # ein bequemer Installationsweg — und die Downloads, die SmartScreen-Reputation
+  # überhaupt erst aufbauen.
+  #
+  # Voraussetzung: Secret WINGET_TOKEN (klassischer PAT mit `public_repo`), und
+  # ein Fork von microsoft/winget-pkgs im eigenen Account. Fehlt das Secret,
+  # wird der Job übersprungen statt das Release rot zu färben — dieselbe Logik
+  # wie beim unsignierten DMG in build_dmg.sh.
+  winget:
+    needs: [bump-version, release]
+    if: |
+      !cancelled() &&
+      needs.release.result == 'success' &&
+      github.repository == 'kreativ-anders/finanzgecko'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auf WINGET_TOKEN prüfen
+        id: check
+        run: |
+          if [ -n "${{ secrets.WINGET_TOKEN }}" ]; then
+            echo "have_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_token=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::WINGET_TOKEN nicht gesetzt — winget-Manifest wird nicht aktualisiert."
+          fi
+
+      # winget erwartet die nackte Version ("1.8.0"), nicht den Tag ("v1.8.0")
+      # und nicht die pubspec-Form mit Build-Nummer ("1.8.0+18") — die
+      # PackageVersion im Manifest muss exakt so aussehen wie in
+      # packaging/windows/winget/, sonst legt die Action eine zweite,
+      # parallele Version im Store an.
+      - name: Version aus dem Tag ableiten
+        id: v
+        env:
+          TAG: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: winget-Manifest aktualisieren
+        if: steps.check.outputs.have_token == 'true'
+        uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: KreativAnders.FinanzGecko
+          version: ${{ steps.v.outputs.version }}
+          installers-regex: '-Setup\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
