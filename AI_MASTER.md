@@ -654,6 +654,22 @@ Splash).
 
 ## 6. Plattform-Besonderheiten (siehe auch [dev/setup.md](dev/setup.md) und [dev/building.md](dev/building.md) für Details)
 
+- **Mindest-OS-Versionen folgen Flutter, ohne eigene Prüfung.** Hebt ein Flutter-Upgrade eine Plattform-Untergrenze
+  an (zuletzt: 3.47 hebt macOS von 10.15 auf 12), wird das übernommen und nicht gegen eine eigene Liste abgewogen.
+  Begründung, einmal nachgerechnet am 2026-08-16: Flutter liegt mit seinen Untergrenzen **hinter** dem jeweiligen
+  Hersteller-Support, nicht davor — macOS 12 bekam seine letzten Sicherheitsupdates im September 2024, Windows 10
+  im Oktober 2025, Debian 10 (auch LTS) im Juni 2024; alle drei sind bei Flutter weiterhin Minimum. Wer von einer
+  solchen Anhebung betroffen ist, läuft also seit Jahren auf einem ungepatchten System. Für eine App, deren
+  Versprechen die Sicherheit lokaler Finanzdaten ist, ist das Mitschleppen solcher Systeme nicht die großzügigere,
+  sondern die schlechtere Entscheidung. Google pflegt diese Fristen ohnehin gegen die Hersteller-Zyklen — eine
+  zweite Liste im Repo wäre nur eine weitere Stelle, die veraltet.
+  **Ausnahme, die eine echte Entscheidung braucht:** eine Anhebung, die eine OS-Version ausschließt, für die der
+  Hersteller *noch* Sicherheitsupdates liefert. Das ist bisher nie vorgekommen.
+- **Intel-Macs sind der eine Punkt, der beobachtet werden muss** — Hardware, nicht OS. macOS 26 Tahoe ist die letzte
+  macOS-Version für Intel; Flutter stuft x64-macOS derzeit als Warnung aus. Wird daraus ein Fehler, müssen die
+  beiden "Apple Silicon & Intel"-Aussagen in `docs/download.html` im selben Commit mitgezogen werden (Kandidat für
+  einen Guard in `test/docs_consistency_test.dart`).
+
 - Cross-Platform-Builds sind **nicht möglich** — jede Plattform muss auf ihrem eigenen OS gebaut werden; alle drei
   gleichzeitig nur über GitHub Actions (`.github/workflows/release.yml`, per Tag-Push `v*.*.*` oder manuell über
   `workflow_dispatch`). Vor den Build-Jobs läuft ein `gate`-Job (analyze + test + Icon-Pipeline); schlägt er fehl,
@@ -1012,6 +1028,7 @@ bestehenden App oder zur Regenerierung einer neuen Instanz aus diesen Dokumenten
 5. **Architekturentscheidungen mit dokumentierter Begründung nicht ohne Rücksprache rückgängig machen**, u. a.:
    - Wechselkurs-Cache in eigener unverschlüsselter Datei (nicht in der DB) — Abschnitt 4.1.
    - `usesDataProtectionKeychain: false` auf macOS — Abschnitt 4.1.
+   - Mindest-OS-Versionen werden von Flutter übernommen, ohne eigene EOL-Liste — Abschnitt 6.
    - App-Sandbox deaktiviert auf macOS — Abschnitt 4.1.
    - Fensterposition wird bewusst nicht gespeichert — Abschnitt 4.3.
    - Splash-Dauer 1100ms + 400ms Überblendung — Abschnitt 5.

@@ -134,6 +134,31 @@ void main() {
     });
   });
 
+  group('Die genannte macOS-Mindestversion stimmt mit dem Build überein', () {
+    // Bis v1.8 stand auf der Seite gar keine Mindestversion — bei einem Ziel von
+    // 10.15 traf sie niemanden. Mit 12 ist das anders: wer auf macOS 11 lädt,
+    // bekommt ein DMG, das sich nicht öffnet, und die Seite erklärt es nicht.
+    // Die Zahl steht damit an zwei Orten und driftet beim nächsten Anheben.
+    test('docs/download.html nennt das Deployment-Target aus dem Xcode-Projekt', () {
+      final pbxproj = read('macos/Runner.xcodeproj/project.pbxproj');
+      final targets = RegExp(
+        r'MACOSX_DEPLOYMENT_TARGET = ([0-9]+)(?:\.[0-9]+)*;',
+      ).allMatches(pbxproj).map((m) => m.group(1)!).toSet();
+
+      expect(targets, hasLength(1), reason: 'Uneinheitliche MACOSX_DEPLOYMENT_TARGET-Werte: $targets');
+      final major = targets.single;
+
+      expect(
+        read('docs/download.html').contains('macOS $major oder neuer'),
+        isTrue,
+        reason:
+            'Das Xcode-Projekt baut für macOS $major, docs/download.html nennt das nicht.\n'
+            'Ohne diese Angabe lädt jemand mit einer älteren macOS-Version ein DMG herunter, das sich '
+            'wortlos nicht öffnet — der Fall, für den eine Downloadseite da ist.',
+      );
+    });
+  });
+
   group('Aussagen, die einmal falsch waren, kommen nicht zurück', () {
     // Each entry is a regression, not a style preference: the phrase was in the
     // repo, described behaviour that had already changed, and shipped that way.

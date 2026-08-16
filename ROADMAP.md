@@ -20,6 +20,13 @@ What's planned for FinanzGecko. Quarters are intent, not promises.
 
 **Q4 2026**
 
+- **Replace `local_notifier` with `flutter_local_notifications`.** The current plugin was last published in April
+  2024: no Swift Package Manager support, and on macOS it calls `NSUserNotification`, deprecated since macOS 11.
+  Flutter still falls back to CocoaPods, but that registry goes read-only on 2026-12-02, and if Apple drops the old
+  API the reminders stop firing silently. The replacement is maintained and covers all three platforms. **Decide
+  first:** the modern macOS API needs user authorization, so this adds a permission prompt where there is none —
+  a real change for an app that otherwise asks for nothing. Touches `notification_service.dart` and
+  `gherkin/notifications.feature`.
 - Drawdown from peak (how far below all-time high).
 - Currency exposure (EUR vs. foreign share).
 - **winget** — manifests + release automation already in repo; first submission to `microsoft/winget-pkgs` still
