@@ -97,7 +97,7 @@ class _NavigationShellState extends State<NavigationShell> {
       case AppView.settings:
         return SettingsView(
           onExport: () => exportBackup(context, _navigate),
-          onExportCsv: () => exportBalancesCsv(context, _navigate),
+          onExportCsv: () => exportCsvTables(context, _navigate),
           onImport: () => importBackup(context, _navigate),
           onNavigate: _navigate,
         );

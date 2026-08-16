@@ -269,12 +269,13 @@ class SettingsView extends StatelessWidget {
                 ),
                 Divider(height: 28, color: kBorder),
                 Text(
-                  'Als Tabelle (CSV) für Excel/Numbers exportieren — alle Kontostände je Monat und Konto. '
-                  'Kein Backup: die CSV kann nicht wieder importiert werden.',
+                  'Als Tabellen (CSV) für Excel/Numbers exportieren — vier Dateien in einen Ordner deiner Wahl: '
+                  'Konten, Kontostände, Fixposten und Vermögenswerte. Kein Backup: CSV-Dateien lassen sich nicht '
+                  'wieder importieren.',
                   style: TextStyle(color: kMuted),
                 ),
                 const SizedBox(height: 14),
-                OutlinedButton(onPressed: onExportCsv, child: noSelect(const Text('Als CSV exportieren…'))),
+                OutlinedButton(onPressed: onExportCsv, child: noSelect(const Text('Als CSV-Tabellen exportieren…'))),
               ],
             ),
           ),

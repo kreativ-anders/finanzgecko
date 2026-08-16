@@ -136,13 +136,14 @@ finanzgecko/
 │   │   └── app_state.dart        # Zentraler ChangeNotifier: CRUD-Fassade + berechnete Werte (Reminder, Summen) für die UI
 │   ├── utils/
 │   │   ├── analysis.dart         # Reine, UI-freie Berechnungen (Trend, Prognose, Anomalie-Check, Kennzahlen, Zeitraum-Filter) — unit-testbar
-│   │   ├── csv_export.dart       # Reiner CSV-Builder für den Kontostände-Export (verlustbehaftet, kein Re-Import)
+│   │   ├── csv_export.dart       # Reine CSV-Builder, eine Tabelle je Domäne (Konten, Kontostände, Fixposten,
+│   │                             #   Vermögenswerte) + Dateinamen (verlustbehaftet, kein Re-Import)
 │   │   ├── formatting.dart       # Geld-/Prozent-/Datumsformatierung, Zahlen-Parsing, Perioden-Helper, Hex→Color
 │   │   └── update_assets.dart    # Reine Update-Logik: Release-Asset je Plattform wählen, SHA256SUMS parsen,
 │   │                             #   Digests vergleichen — netz- und dateisystemfrei, daher ausführbar spezifiziert
 │   └── ui/
 │       ├── navigation_shell.dart # Navigation-Shell: Top-Nav, In-App-"Datei"-Menü, Tastenkürzel-Wiring (→ backup_actions)
-│       ├── backup_actions.dart   # Backup-Fluss: Export-/Import-/CSV-Datei-Dialoge, Sicherheitsabfrage, Snackbars
+│       ├── backup_actions.dart   # Backup-Fluss: Export-/Import-Datei-Dialoge, CSV-Ordner-Dialog, Sicherheitsabfrage, Snackbars
 │       ├── app_view.dart         # enum AppView (die 6 Ansichten) + deutsche Labels
 │       ├── splash_screen.dart    # Splash beim Start
 │       ├── theme.dart            # Farb-Konstanten (Hell/Dunkel/System via `ThemeScope`), ThemeData, `noSelect()`-Helper
@@ -226,7 +227,7 @@ englischem Fließtext nicht übersetzt**, siehe §7 und "Regeln für KI-Agenten"
 | `accounts_view.dart` | `accounts` | Konten | Konten anlegen/bearbeiten/archivieren/wiederherstellen |
 | `subscriptions_view.dart` | `subscriptions` | Fixposten | Wiederkehrende Ein-/Ausgaben anlegen/bearbeiten/löschen |
 | `assets_view.dart` | `assets` | Vermögenswerte | Sachwerte (kein Zeitverlauf) anlegen/inline bearbeiten/löschen |
-| `settings_view.dart` | `settings` | Einstellungen | Basiswährung, Sicherheits-Info, Backup-Export/Import, CSV-Export, Hilfe (Version/System-Info/Support), Reset |
+| `settings_view.dart` | `settings` | Einstellungen | Basiswährung, Sicherheits-Info, Backup-Export/Import, CSV-Export (4 Tabellen), Hilfe (Version/System-Info/Support), Reset |
 
 Navigation ist **kein Router**, sondern ein einfacher `enum`-Switch in `navigation_shell.dart` (`_content()`), gesteuert über
 `ValueChanged<AppView> onNavigate`, das jede View nach oben durchreicht (z. B. für "Jetzt erfassen"-Buttons in
@@ -479,9 +480,22 @@ Bewusst **UI-frei und deterministisch** gehalten, damit sie ohne Flutter-Binding
   (`enum HistoryRange { ytd, twelveMonths, lastYear, all }`, `now` injizierbar für Tests). `availableRanges` blendet ein
   Preset aus, solange es dieselbe Menge wie "Alle" ergäbe (Dedup); `defaultRange` = "Dieses Jahr", sonst "Alle".
 
-Reiner CSV-Export lebt in `lib/utils/csv_export.dart` (`buildBalancesCsv`): eine Zeile pro Konto+Monat, `;`-getrennt,
-Dezimalkomma, RFC-4180-Quoting — bewusst verlustbehaftet und **ohne Re-Import** (der JSON-Backup-Pfad ist der einzige
-verlustfreie Round-Trip). Getestet in `test/csv_export_test.dart`.
+Reiner CSV-Export lebt in `lib/utils/csv_export.dart` — **eine Tabelle je Domäne** statt einer breiten Datei:
+`buildAccountsCsv`, `buildBalancesCsv`, `buildSubscriptionsCsv`, `buildAssetsCsv`, gebündelt von `buildCsvExports`,
+das die vier Inhalte samt fester Dateinamen (`finanzgecko-<domäne>-<YYYY-MM-DD>.csv`) zurückgibt. Warum getrennt: die
+Konto-Stammdaten (Bank, Kontotyp) gehören zum Konto, nicht zum Monat — in einer Datei wiederholten sie sich in jeder
+Monatszeile und machten die Tabelle unpivotierbar. **`Konto-ID`** ist die Verbindungsspalte zwischen Konten- und
+Kontostände-Tabelle; sie trägt auch dann, wenn zwei Konten denselben Namen haben.
+
+Bewusst schmal: **jeder Betrag steht genau einmal, in seiner Erfassungswährung** — kein Kurs, kein zweiter
+umgerechneter Betrag, kein Monatsäquivalent, keine Datumsspalten. Alles, was eine Tabellenkalkulation selbst
+ausrechnen kann, bleibt draußen; der Fixposten-Betrag gilt je Intervall (die Spalte "Intervall" steht daneben).
+Umrechnung ist damit Sache der auswertenden Tabelle — der Export liefert die erfassten Werte, nicht deren Auswertung.
+Durchgängig `;`-getrennt, Dezimalkomma, RFC-4180-Quoting, Beträge mit Vorzeichen — verlustbehaftet
+und **ohne Re-Import** (der JSON-Backup-Pfad ist der einzige verlustfreie Round-Trip). Geschrieben werden die Dateien in
+einen vom Nutzer gewählten **Ordner** (`getDirectoryPath`, `backup_actions.dart`), mit einer einzigen
+Überschreiben-Rückfrage für den gesamten Satz — der Ordner-Dialog stellt sie, anders als der Speichern-Dialog, nicht
+selbst. Getestet in `test/csv_export_test.dart`.
 
 Bei jeder Änderung an diesen Formeln: `test/analysis_test.dart` **und** das zugehörige Gherkin-Feature aktualisieren.
 
@@ -826,7 +840,7 @@ verwenden (auch in Variablennamen wo sinnvoll, siehe z. B. `kTags`, "Fixposten" 
 | Kennzahlen | Gesamtveränderung, bester/schwächster Monat, Ø-Veränderung, Monate im Plus, Höchststand |
 | Zeitraum(-Filter) | Dashboard-weiter Zeitfenster-Filter ("Dieses Jahr" / "12 Monate" / "Letztes Jahr" / "Alle"), steuert alle zeitbasierten Karten |
 | Backup exportieren/importieren | JSON-Export/Import über native Dateidialoge (verlustfreier Round-Trip); auf Wunsch mit selbst vergebenem Passwort verschlüsselt (`data/backup_crypto.dart`), ohne Passwort Klartext |
-| CSV-Export | Verlustbehafteter Tabellen-Export der Kontostände (kein Re-Import) |
+| CSV-Export | Verlustbehafteter Tabellen-Export in vier Dateien — Konten, Kontostände, Fixposten, Vermögenswerte (kein Re-Import) |
 
 ## 8. Tests ↔ Gherkin-Zuordnung
 
@@ -893,7 +907,7 @@ und in `# Quelle:` gelistet ist.
 | `test/app_store_ops_test.dart` | Store-CRUD, Export/Import, Schema-Versionsprüfung, Import-Bank→Farbe-Regel | `gherkin/backup_restore.feature` |
 | `test/account_color_test.dart` | `resolveAccountColor` (bekannte Bank → Markenfarbe, leer → Kontotyp, unbekannt → Fehler) | `gherkin/accounts.feature`, `gherkin/backup_restore.feature` |
 | `test/backup_hardening_test.dart` | Backup-Export→Import-Round-Trip & Fehlertoleranz (AppSchema-Ebene) | `gherkin/backup_restore.feature` |
-| `test/csv_export_test.dart` | CSV-Export (Trennzeichen, Dezimalkomma, Sortierung, Quoting) | `gherkin/settings.feature` |
+| `test/csv_export_test.dart` | CSV-Export je Domäne (Spalten, Trennzeichen, Dezimalkomma, Sortierung, Quoting, Formel-Guard, Dateinamen) | `gherkin/settings.feature` |
 | `test/update_service_test.dart` | Manueller Update-Check gg. gemockte GitHub-Releases-API: neuere/gleiche/ältere Version, HTTP-Fehler, Netzwerkfehler, unerwartete Antwortform — nie eine Exception nach außen | `gherkin/settings.feature` |
 | `test/tooling_test.dart` | **Regeneriert beim Testlauf** die Demodaten (`buildDemoBackup` → `demo/…json`) und die Linux-Hicolor-Icons (`generateLinuxIcons`) und validiert sie (Schema, Referenzen, Domänenwerte, Icon-Größen) | Dev-Tooling (kein Feature) |
 | `test/entries_view_orphan_test.dart` | Verwaiste Balances archivierter Konten | `gherkin/balances_entries.feature` |

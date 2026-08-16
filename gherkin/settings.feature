@@ -1,4 +1,4 @@
-# Quelle: lib/ui/views/settings_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart, lib/services/update_service.dart, lib/utils/update_assets.dart
+# Quelle: lib/ui/views/settings_view.dart, lib/ui/backup_actions.dart, lib/utils/csv_export.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart, lib/services/update_service.dart, lib/utils/update_assets.dart
 # Implementierung: lib/ui/views/settings_view.dart
 @settings
 Feature: Einstellungen
@@ -60,20 +60,48 @@ Feature: Einstellungen
     Then zeigt der Export-Bereich das Tastenkürzel "Strg+E" (bzw. "⌘+E" auf macOS)
     And der Import-Bereich zeigt "Strg+I" (bzw. "⌘+I")
 
-  Scenario: Kontostände zusätzlich als CSV exportieren
+  Scenario: Daten zusätzlich als CSV-Tabellen exportieren
     Given ich bin im Export-Bereich
-    When ich auf "Als CSV exportieren…" klicke
-    Then öffnet sich ein nativer Speichern-Dialog mit Vorschlagsnamen "finanzgecko-kontostaende-<YYYY-MM-DD>.csv"
-    And es wird eine UTF-8-CSV (mit BOM) geschrieben: eine Zeile je Konto und Monat, mit ";" getrennt und Dezimalkomma
+    When ich auf "Als CSV-Tabellen exportieren…" klicke
+    Then öffnet sich ein nativer Ordner-Dialog (kein Datei-Dialog: der Export besteht aus mehreren Dateien)
+    And in den gewählten Ordner werden vier UTF-8-CSV-Dateien (mit BOM) mit festen Namen geschrieben:
+      "finanzgecko-konten-<YYYY-MM-DD>.csv" — je Konto: Konto-ID, Konto, Bank, Kontotyp
+      "finanzgecko-kontostaende-<YYYY-MM-DD>.csv" — je Konto und Monat: Monat, Konto-ID, Konto, Währung, Betrag
+      "finanzgecko-fixposten-<YYYY-MM-DD>.csv" — je Fixposten: Fixposten, Art (Einnahme/Ausgabe), Intervall,
+      Währung, Betrag
+      "finanzgecko-vermoegenswerte-<YYYY-MM-DD>.csv" — je Vermögenswert: Vermögenswert, Wert (Basiswährung)
+    And alle Dateien sind ";"-getrennt, nutzen Dezimalkomma und RFC-4180-Quoting
+    And "Konto-ID" verbindet die Konten- mit der Kontostände-Tabelle — Stammdaten (Bank, Kontotyp) stehen genau
+      einmal statt in jeder Monatszeile
+    And jeder Betrag steht genau einmal, in seiner Erfassungswährung — kein Kurs, kein zweiter umgerechneter Betrag,
+      keine abgeleitete Spalte (auch kein Monatsäquivalent: das Intervall steht daneben)
+    And Umrechnung ist Sache der auswertenden Tabelle, nicht des Exports
+    And der Fixposten-Betrag gilt je Intervall, nicht je Monat
+    And Einnahmen stehen vor Ausgaben und Konten/Fixposten/Vermögenswerte sind nach Namen sortiert, wie in den
+      jeweiligen Ansichten
+    And archivierte Konten sind enthalten (sonst zeigten ihre historischen Kontostände ins Leere), aber nicht
+      als archiviert markiert
     And dieser Export zählt NICHT als Backup — der Backup-Reminder und "zuletzt exportiert" bleiben unberührt
-    And die CSV ist bewusst nicht wieder importierbar (nur der JSON-Export ist ein verlustfreier Round-Trip)
+    And die CSVs sind bewusst nicht wieder importierbar (nur der JSON-Export ist ein verlustfreier Round-Trip)
 
-  Scenario: CSV-Export neutralisiert Formel-Injection in Konto-Name/Bank
-    Given ein Konto, dessen Name oder Bank mit "=", "+", "-" oder "@" beginnt (z. B. aus einem importierten Backup)
-    When ich die Kontostände als CSV exportiere
+  Scenario: Ein leerer Bereich ergibt trotzdem eine Tabelle
+    Given ich habe (noch) keine Fixposten oder Vermögenswerte erfasst
+    When ich die Daten als CSV exportiere
+    Then entstehen trotzdem vier Dateien; die leeren enthalten nur ihre Kopfzeile
+
+  Scenario: Vorhandene Dateien werden nur nach Rückfrage überschrieben
+    Given im gewählten Ordner liegen bereits Dateien mit diesen Namen (z. B. ein früherer Export von heute)
+    When ich den Ordner bestätige
+    Then erscheint genau eine Rückfrage "Dateien überschreiben?" für den gesamten Satz
+    And bei "Abbrechen" wird keine einzige Datei geschrieben
+
+  Scenario: CSV-Export neutralisiert Formel-Injection in freien Textfeldern
+    Given ein Konto-Name, eine Bank, ein Fixposten- oder ein Vermögenswert-Name beginnt mit
+      "=", "+", "-" oder "@" (z. B. aus einem importierten Backup)
+    When ich die Daten als CSV exportiere
     Then wird dem betroffenen Feld ein führendes "'" vorangestellt, damit Tabellenkalkulationen (Excel/LibreOffice)
       es beim Öffnen nicht als Formel/DDE-Kommando interpretieren
-    And Zahlen-/Enum-Spalten (Kontotyp, Währung, Beträge) bleiben unverändert, damit z. B. negative Beträge
+    And Zahlen-/Enum-Spalten (Kontotyp, Intervall, Währung, Betrag) bleiben unverändert, damit z. B. negative Beträge
       weiterhin normal in Summenformeln funktionieren
 
   Scenario: Hilfe-Bereich zeigt App- und Systeminformationen

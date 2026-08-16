@@ -25,10 +25,6 @@ const _backupTypeGroups = [
   XTypeGroup(label: 'JSON-Backup', extensions: ['json']),
 ];
 
-const _csvTypeGroups = [
-  XTypeGroup(label: 'CSV', extensions: ['csv']),
-];
-
 Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
   final exportData = appState.exportAllData();
@@ -64,26 +60,61 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
   }
 }
 
-/// Exports the Kontostände as a CSV table (for spreadsheets). Unlike the JSON
-/// backup this is lossy and read-only, so it deliberately does NOT count as a
-/// backup (no `markExported`, does not reset the backup reminder).
-Future<void> exportBalancesCsv(BuildContext context, ValueChanged<AppView> onNavigate) async {
+/// Exports the data as CSV tables — one file per domain (Konten, Kontostände,
+/// Fixposten, Vermögenswerte), all written into one folder the user picks.
+/// Unlike the JSON backup this is lossy and read-only, so it deliberately does
+/// NOT count as a backup (no `markExported`, does not reset the backup
+/// reminder).
+Future<void> exportCsvTables(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
-  final csv = buildBalancesCsv(
-    appState.allAccountsIncludingArchived(),
-    appState.balances,
+  final files = buildCsvExports(
+    accounts: appState.allAccountsIncludingArchived(),
+    balances: appState.balances,
+    subscriptions: appState.subscriptions,
+    assets: appState.assets,
     baseCurrency: appState.baseCurrency,
+    dateStamp: todayISO(),
   );
-  final suggestedName = 'finanzgecko-kontostaende-${todayISO()}.csv';
 
-  final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _csvTypeGroups);
-  if (location == null) return; // dialog cancelled
+  // A folder, not four save dialogs: the tables only make sense together (the
+  // Konto-ID column joins Konten and Kontostände), and fixed file names keep a
+  // re-export recognizable next to the previous one.
+  final directoryPath = await getDirectoryPath(confirmButtonText: 'Exportieren');
+  if (directoryPath == null) return; // dialog cancelled
+
+  final targets = [for (final f in files) File('$directoryPath${Platform.pathSeparator}${f.fileName}')];
+
+  // The folder picker — unlike the save dialog — never asks about overwriting,
+  // so ask once here for the whole set instead of silently replacing an
+  // earlier export.
+  final existing = targets.where((f) => f.existsSync()).length;
+  if (existing > 0) {
+    if (!context.mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Dateien überschreiben?'),
+        content: Text(
+          existing == 1
+              ? 'In diesem Ordner existiert bereits eine CSV-Datei von heute. Sie wird überschrieben.'
+              : 'In diesem Ordner existieren bereits $existing CSV-Dateien von heute. Sie werden überschrieben.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: noSelect(const Text('Überschreiben'))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+  }
 
   try {
-    // Leading BOM so Excel opens the UTF-8 file with correct umlauts.
-    await File(location.path).writeAsString('\u{FEFF}$csv');
+    for (var i = 0; i < files.length; i++) {
+      // Leading BOM so Excel opens the UTF-8 file with correct umlauts.
+      await targets[i].writeAsString('\u{FEFF}${files[i].content}');
+    }
     if (!context.mounted) return;
-    showSavedSnackBar(context, onNavigate, message: 'CSV exportiert.');
+    showSavedSnackBar(context, onNavigate, message: '${files.length} CSV-Tabellen exportiert.');
   } catch (err) {
     if (!context.mounted) return;
     showErrorSnackBar(context, 'CSV-Export fehlgeschlagen: $err');
