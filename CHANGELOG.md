@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.9.0 - 2026-08-16
+
+- 🔖 Version 1.9.0+19 (3aa2b0d)
+- ⬆️  Raise macOS minimum to 12 and document policy (ee28df9)
+- 🐛 Add missing Flutter and typed_data imports (9e550e2)
+- 🦖 Harden update/download paths and sync docs (9375728)
+- 🚧 Tighten ROADMAP copy (c0070f5)
+- 👷 Add winget packaging and release automation (b5de4db)
+- 📝 Changelog für v1.8.0 (9c0dba7)
+
+
 ## v1.8.0 - 2026-08-14
 
 - 🔖 Version 1.8.0+18 (7665434)
