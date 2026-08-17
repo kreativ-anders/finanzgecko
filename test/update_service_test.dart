@@ -110,9 +110,9 @@ void main() {
     // host. These tests serve from a fake host, so they widen the allowlist
     // explicitly — production never passes this parameter.
     const fakeHosts = {'example.test'};
-    // Bekannter Testvektor: sha256("hello"). Bewusst hartkodiert statt im Test
-    // selbst berechnet — sonst prüfte der Test die Implementierung gegen sich
-    // selbst und ein falsches Hex-Padding fiele nicht auf.
+    // Known test vector: sha256("hello"). Deliberately hardcoded instead of
+    // computed in the test itself — otherwise the test would check the
+    // implementation against itself and a wrong hex padding would go unnoticed.
     const payload = 'hello';
     const payloadDigest = '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
 
@@ -182,10 +182,10 @@ void main() {
 
     test('lädt nichts von einem fremden Host, selbst wenn die API ihn nennt', () async {
       var contacted = false;
-      // Kein allowedAssetHosts-Override: hier gilt die Produktions-Liste.
-      // Die URLs stammen aus der GitHub-Antwort — vertrauenswürdig, aber
-      // ungeprüft. Genau hier entscheidet ein Wert aus dem Netz, wohin die App
-      // sich verbindet und was sie auf die Platte schreibt.
+      // No allowedAssetHosts override: the production list applies here.
+      // The URLs come from the GitHub response — trusted, but unverified.
+      // This is exactly where a value from the network decides what the app
+      // connects to and what it writes to disk.
       final service = UpdateService(
         client: MockClient((request) async {
           contacted = true;

@@ -1,245 +1,242 @@
-# Quelle: lib/ui/views/dashboard_view.dart, lib/state/app_state.dart, lib/utils/analysis.dart, lib/constants.dart
-# Implementierung: lib/ui/views/dashboard_view.dart
+# Source: lib/ui/views/dashboard_view.dart, lib/state/app_state.dart, lib/utils/analysis.dart, lib/constants.dart
+# Implementation: lib/ui/views/dashboard_view.dart
 @dashboard
-Feature: Dashboard — Vermögensübersicht
-  Als Nutzer:in sehe ich auf einen Blick mein Gesamtvermögen, dessen Verlauf und Prognose, die Verteilung nach
-  Kontotyp und wichtige Kennzahlen, gefiltert nach einem wählbaren Zeitraum.
+Feature: Dashboard — net-worth overview
+  As a user, I see my Gesamtvermögen at a glance, along with its Verlauf and projection, the Verteilung by
+  Kontotyp, and key Kennzahlen, filtered by a selectable Zeitraum.
 
   Background:
-    Given die App ist gestartet und initialisiert
+    Given the app is started and initialized
 
-  Rule: Leerer Zustand — zweistufiges Onboarding
+  Rule: Empty state — two-stage onboarding
 
-    Scenario: Noch kein Konto angelegt
-      Given es existiert noch kein einziges Konto
-      When ich das Dashboard öffne
-      Then sehe ich eine zentrierte Willkommens-Karte mit einem Button "Konto anlegen", der zur Ansicht "Konten" führt
-      And trotzdem werden die Abschnitte "Fixposten" und "Vermögenswerte" mit ihrem jeweiligen Leer- oder Ist-Zustand angezeigt
+    Scenario: No Konto created yet
+      Given not a single Konto exists yet
+      When I open the Dashboard
+      Then I see a centered welcome card with a "Konto anlegen" button that leads to the "Konten" view
+      And the "Fixposten" and "Vermögenswerte" sections still show, each in its own empty or actual state
 
-    Scenario: Konto vorhanden, aber noch kein einziger Kontostand
-      Given mindestens ein Konto existiert, aber es existiert noch kein einziger erfasster Kontostand
-      When ich das Dashboard öffne
-      Then sehe ich eine zentrierte Karte mit einem Button "Einträge erfassen", der zur Ansicht "Einträge" führt
-      And trotzdem werden die Abschnitte "Fixposten" und "Vermögenswerte" mit ihrem jeweiligen Leer- oder Ist-Zustand angezeigt
+    Scenario: A Konto exists, but not a single Kontostand yet
+      Given at least one Konto exists, but not a single Kontostand has been recorded yet
+      When I open the Dashboard
+      Then I see a centered card with an "Einträge erfassen" button that leads to the "Einträge" view
+      And the "Fixposten" and "Vermögenswerte" sections still show, each in its own empty or actual state
 
-    Scenario: Erster Kontostand vorhanden
-      Given mindestens ein Kontostand ist erfasst
-      When ich das Dashboard öffne
-      Then sehe ich die normale Dashboard-Ansicht mit Verlauf, Verteilung und Kennzahlen statt der Onboarding-Karte
+    Scenario: The first Kontostand exists
+      Given at least one Kontostand has been recorded
+      When I open the Dashboard
+      Then I see the normal Dashboard view with Verlauf, Verteilung, and Kennzahlen instead of the
+        onboarding card
 
-  Rule: Zeitraum-Filter steuert das gesamte Dashboard
+  Rule: The Zeitraum filter drives the entire Dashboard
 
-    Scenario: Verfügbare Zeitraum-Presets hängen von der Datenhistorie ab
-      Given es gibt erfasste Kontostände über mehrere Jahre
-      Then sind die Presets "Dieses Jahr", "12 Monate", "Letztes Jahr" und "Alle" verfügbar,
-        jedes nur, wenn es eine vom Gesamtzeitraum ("Alle") unterscheidbare, nicht-leere Untermenge ergibt
-      And "Alle" ist immer verfügbar
-      And die Presets sitzen als globales Steuerelement oben rechts in der Kopfzeile (auf Höhe der Überschrift,
-        über der Verlauf-Karte) statt auf einer Zeile mit einem Beschriftungstext
+    Scenario: Available Zeitraum presets depend on the data history
+      Given there are recorded Kontostände spanning several years
+      Then the presets "Dieses Jahr", "12 Monate", "Letztes Jahr", and "Alle" are available, each only when
+        it yields a non-empty subset distinguishable from the full range ("Alle")
+      And "Alle" is always available
+      And the presets sit as a global control in the top right of the header (level with the heading, above
+        the Verlauf card) instead of on a row with a label
 
-    Scenario: Standard-Preset ist "Dieses Jahr", wenn verfügbar
-      Given "Dieses Jahr" liefert eine vom Gesamtzeitraum unterscheidbare Teilmenge
-      When ich das Dashboard zum ersten Mal in dieser Sitzung öffne
-      Then ist "Dieses Jahr" vorausgewählt
-      Given "Dieses Jahr" ist nicht als eigenes Preset verfügbar (z. B. weil es der Gesamthistorie entspricht)
-      Then ist stattdessen "Alle" vorausgewählt
+    Scenario: The default preset is "Dieses Jahr" when available
+      Given "Dieses Jahr" yields a subset distinguishable from the full range
+      When I open the Dashboard for the first time this session
+      Then "Dieses Jahr" is preselected
+      Given "Dieses Jahr" isn't available as its own preset (e.g. because it equals the full history)
+      Then "Alle" is preselected instead
 
-    Scenario: Zeitraum-Wechsel wirkt auf alle zeitbasierten Karten gleichzeitig
-      When ich im Zeitraum-Filter ein anderes Preset wähle
-      Then aktualisieren sich gleichzeitig: die Gesamtvermögens-Kopfzeile, die Verlaufs-Karte samt Prognose, die
-        Zusammensetzungs-Karte, die Verteilungs-Karte und die Kennzahlen-Karte
+    Scenario: Changing the Zeitraum affects every time-based card at once
+      When I choose a different preset in the Zeitraum filter
+      Then the following update simultaneously: the Gesamtvermögen header, the Verlauf card with its
+        projection, the Zusammensetzung card, the Verteilung card, and the Kennzahlen card
 
-    Scenario: Prognose nur sichtbar, wenn der Zeitraum bis zum aktuellsten Monat reicht
-      Given ich wähle das Preset "Letztes Jahr"
-      Then wird in der Verlaufs-Karte keine Prognose gezeichnet, weil der Anker nicht mehr aktuell wäre
-      Given ich wähle ein Preset, dessen letzter Monat der neueste insgesamt erfasste Monat ist
-      Then wird eine Prognose bis zum Jahresende gezeichnet (im Dezember: ein volles Jahr vorausprojiziert)
+    Scenario: The projection is only visible when the Zeitraum reaches the most recent month
+      Given I choose the "Letztes Jahr" preset
+      Then no projection is drawn in the Verlauf card, since its anchor would no longer be current
+      Given I choose a preset whose last month is the overall most recently recorded month
+      Then a projection is drawn through year end (in December: a full year projected forward)
 
-    Scenario: Zeitraum-Filter, Sortierung und "inkl. Sachwerte" bleiben beim Wechseln der Ansicht erhalten
-      Given ich wähle im Zeitraum-Filter ein anderes Preset als das voreingestellte, ändere die Konto-Karten-Sortierung
-        und schalte "inkl. Sachwerte" ein
-      When ich zu einer anderen Ansicht wechsle und zum Dashboard zurückkehre
-      Then sind Zeitraum-Preset, Konto-Karten-Sortierung und "inkl. Sachwerte" weiterhin wie zuletzt gewählt
-      And diese drei Einstellungen leben nur im laufenden `AppState` (nicht in `AppSchema`/auf Festplatte) und
-        setzen sich beim nächsten Start der App auf ihre Vorgaben zurück
+    Scenario: Zeitraum filter, sorting, and "inkl. Sachwerte" persist across view changes
+      Given I choose a preset other than the default in the Zeitraum filter, change the Konto card sort
+        order, and turn on "inkl. Sachwerte"
+      When I switch to another view and come back to the Dashboard
+      Then the Zeitraum preset, Konto card sort order, and "inkl. Sachwerte" are still as last chosen
+      And these three settings live only in the running `AppState` (not in `AppSchema`/on disk) and reset
+        to their defaults the next time the app starts
 
-  Rule: Gesamtvermögens-Kopfzeile
+  Rule: Gesamtvermögen header
 
-    Scenario: Vermögenswerte sind standardmäßig nicht in der Summe enthalten
-      Given es existieren sowohl Kontostände als auch Vermögenswerte
-      When ich das Dashboard öffne
-      Then zeigt die Kopfzeile "GESAMTVERMÖGEN" nur die Summe der Kontostände
-      And ein Schalter "inkl. Sachwerte" ist sichtbar (nur wenn Vermögenswerte existieren)
-      When ich auf "inkl. Sachwerte" umschalte
-      Then wird die Summe der Vermögenswerte addiert und die Beschriftung wechselt auf
+    Scenario: Vermögenswerte are not included in the total by default
+      Given both Kontostände and Vermögenswerte exist
+      When I open the Dashboard
+      Then the "GESAMTVERMÖGEN" header shows only the sum of the Kontostände
+      And an "inkl. Sachwerte" toggle is visible (only when Vermögenswerte exist)
+      When I toggle "inkl. Sachwerte" on
+      Then the sum of the Vermögenswerte is added and the label switches to
         "GESAMTVERMÖGEN INKL. SACHWERTE"
 
-    Scenario: Veränderung gegenüber dem Vormonat
-      Given es gibt einen vorherigen erfassten Monat innerhalb des aktiven Zeitraums
-      Then zeigt die Kopfzeile die absolute und prozentuale Veränderung gegenüber diesem Vormonat, grün bei ≥0,
-        rot bei <0
-      Given es gibt keinen Vormonat im aktiven Zeitraum
-      Then zeigt die Kopfzeile "Noch kein Vergleichsmonat" statt einer Delta-Angabe
+    Scenario: Change against the previous month
+      Given there is a previous recorded month within the active Zeitraum
+      Then the header shows the absolute and percentage change against that previous month, green at ≥0,
+        red at <0
+      Given there is no previous month in the active Zeitraum
+      Then the header shows "Noch kein Vergleichsmonat" instead of a delta
 
-    Scenario: Geschätzte Aufteilung in Einzahlungen vs. Markt
-      Given es gibt Fixposten und einen Vormonat
-      Then wird die Veränderung direkt unter der Delta-Zeile in zwei kompakte Chips aufgeteilt: "… eingezahlt"
-        (Fixposten-Netto × Monatsabstand) und "… Markt" (Rest)
-      And die Chip-Beträge sind auf ganze Währungseinheiten gerundet, weil die Aufteilung eine Schätzung ist und
-        Cent-Genauigkeit Scheingenauigkeit wäre
-      Given es gibt keine Fixposten
-      Then entfallen diese Chips
+    Scenario: Estimated split into contributions vs. market
+      Given there are Fixposten and a previous month
+      Then the change is split directly below the delta row into two compact chips: "… eingezahlt"
+        (Fixposten net × month gap) and "… Markt" (the rest)
+      And the chip amounts are rounded to whole currency units, since the split is an estimate and cent
+        precision would be false precision
+      Given there are no Fixposten
+      Then these chips are omitted
 
-    Scenario: Erfassungsstand des aktuellen Monats nur bei Unvollständigkeit
-      Given für den aktuellen Monat sind alle Konten erfasst (X = Y)
-      Then erscheint kein Erfassungsstand-Hinweis (die Anzahl ist ohnehin im Verlauf-Diagramm sichtbar)
-      Given für den aktuellen Monat fehlen Konten (X < Y)
-      Then erscheint ein amberfarbener Warnhinweis "Nur X von Y Konten für diesen Monat erfasst — Summe evtl.
-        unvollständig."
+    Scenario: The current month's recording status only shows when incomplete
+      Given all Konten are recorded for the current month (X = Y)
+      Then no recording-status hint appears (the count is visible in the Verlauf chart anyway)
+      Given Konten are missing for the current month (X < Y)
+      Then an amber warning "Nur X von Y Konten für diesen Monat erfasst — Summe evtl. unvollständig."
+        appears
 
-    Scenario: Hinweis auf Rundungsdifferenzen bei Fremdwährungskonten
-      Given mindestens ein Konto der aktuellen Periode hat eine von der Basiswährung abweichende Währung
-      Then erscheint ein kurzer Hinweis "Fremdwährungskonten: Rundungsdifferenzen von wenigen Cent möglich."
-      And dieser Hinweistext bleibt auf eine lesbare Zeilenbreite begrenzt statt über die volle (auf breiten Fenstern
-        sehr lange) Dashboard-Breite zu laufen
+    Scenario: Hint about rounding differences for foreign-currency Konten
+      Given at least one Konto in the current period has a currency other than the Basiswährung
+      Then a short hint "Fremdwährungskonten: Rundungsdifferenzen von wenigen Cent möglich." appears
+      And this hint text stays capped at a readable line width instead of running the full (very long on
+        wide windows) Dashboard width
 
-  Rule: Verlauf & Prognose
+  Rule: Verlauf & projection
 
-    Scenario: Prognose blendet Trend und Fixposten-Plan
-      Given es gibt mindestens zwei Monate Verlaufs-Historie
-      Then basiert die monatliche Prognoserate auf einer linearen Trendschätzung der Historie, stabilisiert durch
-        das Fixposten-Netto als Prior, dessen Einfluss mit wachsender Historie abnimmt
-      And der Beschriftungstext benennt die verwendete Basis ("Prognose aus X Monaten Verlauf, mit Fixposten
-        geglättet" / "Prognose aus X Monaten Verlauf" / "Prognose aus den Fixposten (noch wenig Verlauf)")
+    Scenario: The projection blends trend and the Fixposten plan
+      Given there are at least two months of Verlauf history
+      Then the monthly projection rate is based on a linear trend estimate of the history, stabilized by
+        the Fixposten net as a prior whose influence shrinks as the history grows
+      And the label names the basis used ("Prognose aus X Monaten Verlauf, mit Fixposten geglättet" /
+        "Prognose aus X Monaten Verlauf" / "Prognose aus den Fixposten (noch wenig Verlauf)")
 
-    Scenario: Prognosehorizont reicht bis Jahresende
-      Given der aktive Zeitraum reicht bis zum aktuellsten Monat
-      Then wird die Prognose bis zum Ende des Kalenderjahres des letzten Monats projiziert
-      And im Dezember wird stattdessen ein volles Jahr (12 Monate) projiziert statt 0
+    Scenario: The projection horizon reaches to year end
+      Given the active Zeitraum reaches the most recent month
+      Then the projection is drawn through the end of that last month's calendar year
+      And in December, a full year (12 months) is projected instead of 0
 
   Rule: Zusammensetzung & Verteilung
 
-    Scenario: Zusammensetzung über Zeit gruppiert nach Kontotyp
-      Given es gibt mindestens zwei Monate mit Daten
-      Then zeigt eine gestapelte Flächen-Karte je Kontotyp-Serie über alle Monate des aktiven Zeitraums
-      And negative Kontotyp-Summen (z. B. überzogenes Konto) fließen mit 0 statt negativ in den Stapel ein
-      And Kontotypen werden in der Reihenfolge der bekannten Liste angezeigt, unbekannte/benutzerdefinierte Typen
-        werden angehängt
+    Scenario: Zusammensetzung über Zeit is grouped by Kontotyp
+      Given there are at least two months with data
+      Then a stacked-area card shows one series per Kontotyp across every month of the active Zeitraum
+      And negative Kontotyp totals (e.g. an overdrawn Konto) enter the stack as 0 instead of negative
+      And Kontotypen are shown in the order of the known list, unknown/custom types are appended
 
-    Scenario: Zusammensetzung über Zeit zeigt beim Hover eine Monats-Tooltip
-      Given der Mauszeiger steht über einem Monat der Zusammensetzungs-Karte
-      Then erscheint eine senkrechte Hilfslinie an diesem Monat
-      And ein Tooltip listet jeden im Stapel enthaltenen Kontotyp mit Farbpunkt, Name, Betrag und Anteil (in Prozent
-        der Monatssumme) für genau diesen Monat auf
-      And der Tooltip verschwindet, sobald der Mauszeiger die Karte verlässt
+    Scenario: Zusammensetzung über Zeit shows a month tooltip on hover
+      Given the mouse pointer is over a month on the Zusammensetzung card
+      Then a vertical guide line appears at that month
+      And a tooltip lists every Kontotyp in the stack with a color dot, name, amount, and share (as a
+        percentage of the month's total) for exactly that month
+      And the tooltip disappears as soon as the mouse pointer leaves the card
 
-    Scenario: Verteilungs-Donut zeigt nur den aktuellsten Monat des aktiven Zeitraums
-      Then zeigt der Donut die Summen je Kontotyp für genau den letzten Monat des aktiven Zeitraums
+    Scenario: The Verteilung donut shows only the most recent month of the active Zeitraum
+      Then the donut shows the totals per Kontotyp for exactly the last month of the active Zeitraum
 
-    Scenario: Verteilungs-Donut zeigt beim Hover Anteil und Kontotyp im Freiraum der Mitte
-      Given der Mauszeiger steht über einem Segment des Verteilungs-Donuts
-      Then wächst dieses Segment sichtbar leicht nach außen
-      And im leeren Innenkreis des Donuts erscheinen der Kontotyp und sein Prozentanteil
-      And die Anzeige verschwindet, sobald der Mauszeiger das Segment verlässt
+    Scenario: The Verteilung donut shows the share and Kontotyp in the empty center on hover
+      Given the mouse pointer is over a segment of the Verteilung donut
+      Then that segment visibly grows slightly outward
+      And the Kontotyp and its percentage share appear in the donut's empty inner circle
+      And the display disappears as soon as the mouse pointer leaves the segment
 
-    Scenario: Konzentrationsrisiko-Hinweis
-      Given mindestens zwei Kontotypen mit positiver Summe existieren
-      And der größte Kontotyp-Anteil an der positiven Gesamtsumme beträgt mindestens 65%
-      Then erscheint ein roter Hinweis, der den Kontotyp und seinen Prozentanteil nennt
-      Given der größte Anteil liegt unter 65% oder es gibt nur einen positiven Kontotyp
-      Then erscheint kein Konzentrationsrisiko-Hinweis
+    Scenario: Concentration-risk hint
+      Given at least two Kontotypen with a positive total exist
+      And the largest Kontotyp's share of the positive total is at least 65%
+      Then a red hint appears naming the Kontotyp and its percentage share
+      Given the largest share is below 65% or there's only one positive Kontotyp
+      Then no concentration-risk hint appears
 
   Rule: Kennzahlen
 
-    Scenario: Kennzahlen-Karte erscheint erst ab zwei Monaten Historie
-      Given weniger als zwei Monate mit Daten liegen im aktiven Zeitraum
-      Then wird keine Kennzahlen-Karte angezeigt
-      Given mindestens zwei Monate mit Daten liegen vor
-      Then zeigt die Karte: Gesamtveränderung seit Startmonat, bester Monat, schwächster Monat,
-        Ø-Veränderung/Monat, Monate im Plus (Anzahl und Anteil) sowie Höchststand und dessen Monat
+    Scenario: The Kennzahlen card only appears from two months of history on
+      Given fewer than two months with data lie within the active Zeitraum
+      Then no Kennzahlen card is shown
+      Given at least two months with data exist
+      Then the card shows: total change since the starting month, best month, worst month, average
+        change/month, months in the black (count and share), plus the high point and its month
 
-    Scenario: Kennzahlen-Kacheln fließen zeilenweise gemäß verfügbarer Breite
-      Given die Kennzahlen-Karte ist schmaler als für alle Kacheln in einer Zeile nötig
-      Then füllt sich jede Zeile mit so vielen Kacheln in ihrer natürlichen Breite, wie hineinpassen,
-        und ordnet sich beim Ändern der Fensterbreite live neu an
-      Given das Zeilenumbrechen würde eine einzelne Kachel allein in der letzten Zeile zurücklassen
-      Then wird stattdessen die letzte Kachel der vorherigen Zeile in die letzte Zeile übernommen, sodass
-        keine Zeile allein dasteht
+    Scenario: Kennzahlen tiles flow row by row according to available width
+      Given the Kennzahlen card is narrower than what all tiles need in one row
+      Then each row fills with as many tiles at their natural width as fit, and rearranges live as the
+        window width changes
+      Given the line wrap would leave a single tile alone on the last row
+      Then the previous row's last tile is instead pulled down into the last row, so no row stands alone
 
-  Rule: Reminder-Banner (Reihenfolge ist bewusst gewählt)
+  Rule: Reminder banners (the order is deliberate)
 
-    Scenario: Update-Reminder, wenn der aktuelle Monat noch nicht erfasst ist
-      Given es gibt bereits Historie, aber für den aktuellen Kalendermonat existiert noch kein Kontostand
-      Then erscheint als erstes Banner ein Hinweis mit dem zuletzt erfassten Monat und einer Aktion "Jetzt erfassen",
-        die zur Ansicht "Einträge" führt
-      Given der aktuelle Monat ist bereits vollständig oder teilweise erfasst (oder es gibt noch keine Historie)
-      Then erscheint dieses Banner nicht
+    Scenario: Update reminder when the current month hasn't been recorded yet
+      Given history already exists, but no Kontostand exists yet for the current calendar month
+      Then the first banner shown is a hint with the last recorded month and a "Jetzt erfassen" action
+        leading to the "Einträge" view
+      Given the current month is already fully or partially recorded (or there's no history yet)
+      Then this banner doesn't appear
 
-    Scenario: Overspend-Banner bei negativem Fixposten-Netto
-      Given es existieren Fixposten und ihre Summe (Einnahmen − Ausgaben) ist negativ
-      Then erscheint ein auffälliges rotes Banner mit den monatlichen Ausgaben- und Einnahmenbeträgen und einer
-        Aktion "Fixposten prüfen"
-      Given das Netto ist ≥0 oder es gibt keine Fixposten
-      Then erscheint dieses Banner nicht
+    Scenario: Overspend banner on a negative Fixposten net
+      Given Fixposten exist and their sum (income − expenses) is negative
+      Then a prominent red banner appears with the monthly expense and income amounts and a
+        "Fixposten prüfen" action
+      Given the net is ≥0 or there are no Fixposten
+      Then this banner doesn't appear
 
-    Scenario: Kein Backup-Reminder, solange die App komplett leer ist
-      Given es existieren weder Konten noch Kontostände noch Vermögenswerte noch Fixposten
-      Then erscheint kein Backup-Reminder-Banner, unabhängig davon, ob je exportiert wurde
-        (nichts erfasst heißt nichts zu sichern)
+    Scenario: No backup reminder while the app is completely empty
+      Given neither Konten, Kontostände, Vermögenswerte, nor Fixposten exist
+      Then no backup reminder banner appears, regardless of whether an export ever happened (nothing
+        recorded means nothing to back up)
 
-    Scenario: Backup-Reminder, wenn nie exportiert wurde
-      Given es existiert mindestens ein Konto, Kontostand, Vermögenswert oder Fixposten
-      And noch nie ein Export durchgeführt wurde
-      And die früheste erfasste Aktivität liegt mindestens kBackupReminderFirstDays (182, ~6 Monate) zurück
-      Then erscheint ein Banner "Noch nie exportiert — leg jetzt ein erstes Backup an und bewahre es außerhalb
-        dieses Computers auf. Nur das Backup lässt sich auf einem anderen Rechner öffnen."
-      And der Text nennt bewusst beides — den Aufbewahrungsort und die Übertragbarkeit: die Erinnerung ist für die
-        meisten Nutzer die einzige Stelle, an der sie je vom Export erfahren, und ein automatisches Backup gibt es
-        bewusst nicht (siehe AI_MASTER §4.1)
-      Given die früheste erfasste Aktivität liegt weniger als kBackupReminderFirstDays zurück
-      Then erscheint noch kein Backup-Reminder-Banner (nur eine unauffällige Info in den Einstellungen)
+    Scenario: Backup reminder when never exported
+      Given at least one Konto, Kontostand, Vermögenswert, or Fixposten exists
+      And no export has ever been performed
+      And the earliest recorded activity is at least kBackupReminderFirstDays (182, ~6 months) ago
+      Then a banner "Noch nie exportiert — leg jetzt ein erstes Backup an und bewahre es außerhalb dieses
+        Computers auf. Nur das Backup lässt sich auf einem anderen Rechner öffnen." appears
+      And the text deliberately names both — the storage location and portability: for most users this
+        reminder is the only place they ever learn about export, and there's deliberately no automatic
+        backup (see AI_MASTER §4.1)
+      Given the earliest recorded activity is less than kBackupReminderFirstDays ago
+      Then no backup reminder banner appears yet (only an unobtrusive note in Einstellungen)
 
-    Scenario: Backup-Reminder nach einem bereits erfolgten Export
-      Given mindestens einmal wurde bereits exportiert
-      And der letzte Export liegt mindestens kBackupReminderRepeatDays (90, ~3 Monate) zurück
-      Then erscheint ein Banner mit der Anzahl Tage seit dem letzten Export
-      Given der letzte Export liegt weniger als kBackupReminderRepeatDays zurück
-      Then erscheint kein Backup-Reminder-Banner (nur eine unauffällige Info in den Einstellungen)
+    Scenario: Backup reminder after a previous export
+      Given at least one export has already happened
+      And the last export is at least kBackupReminderRepeatDays (90, ~3 months) ago
+      Then a banner appears with the number of days since the last export
+      Given the last export is less than kBackupReminderRepeatDays ago
+      Then no backup reminder banner appears (only an unobtrusive note in Einstellungen)
 
-    Scenario: Asset-Reevaluation-Reminder
-      Given mindestens ein Vermögenswert wurde seit mindestens 182 Tagen (~6 Monate) nicht neu bewertet
-        (oder nie)
-      Then erscheint ein Banner, das die betroffenen Vermögenswerte namentlich auflistet, mit Aktion "Jetzt prüfen"
+    Scenario: Asset re-evaluation reminder
+      Given at least one Vermögenswert hasn't been re-evaluated for at least 182 days (~6 months), or never
+      Then a banner appears listing the affected Vermögenswerte by name, with a "Jetzt prüfen" action
 
-  Rule: Konto-Karten
+  Rule: Konto cards
 
-    Scenario: Jede Konto-Karte zeigt Mini-Verlauf und Monatsvergleich
-      Given ein Konto hat mindestens einen erfassten Kontostand
-      Then zeigt seine Karte den aktuellsten Betrag, ein Mini-Liniendiagramm über alle erfassten Monate dieses
-        Kontos, und — falls ein Vormonat existiert — die Veränderung dagegen (grün/rot)
-      Given ein Konto hat noch keinen erfassten Kontostand
-      Then zeigt seine Karte "—" statt eines Betrags und keinen Verlauf
+    Scenario: Every Konto card shows a mini Verlauf and a month-over-month comparison
+      Given a Konto has at least one recorded Kontostand
+      Then its card shows the most recent amount, a mini line chart over every recorded month for this
+        Konto, and — if a previous month exists — the change against it (green/red)
+      Given a Konto has no recorded Kontostand yet
+      Then its card shows "—" instead of an amount and no Verlauf
 
-    Scenario: Klick auf eine Konto-Karte führt direkt zur Erfassung
-      Given der Mauszeiger steht über einer Konto-Karte
-      Then ist die gesamte Karte als Klickziel erkennbar (Hover-Effekt) und ein Tooltip nennt
+    Scenario: Clicking a Konto card leads directly to recording
+      Given the mouse pointer is over a Konto card
+      Then the whole card is recognizable as a click target (hover effect) and a tooltip reads
         'Kontostand für "<Kontoname>" erfassen'
-      And der Mauszeiger wird zur Hand — der Karteninhalt ist dafür von der App-weiten Textauswahl ausgenommen,
-        sonst gewänne deren Text-Cursor gegen den Klick-Cursor
-      When ich die Karte anklicke
-      Then wechselt die App in die Ansicht "Einträge"
-      And dort ist die Zeile genau dieses Kontos sichtbar gescrollt und ihr Betragsfeld hat den Fokus
-      And nicht nur das Mini-Diagramm, sondern die ganze Karte reagiert — bei schmalen Karten wäre die 70px hohe
-        Diagrammfläche allein ein zu kleines und schwer auffindbares Klickziel
+      And the mouse pointer turns into a hand — the card's content is excluded from the app-wide text
+        selection for this, otherwise its text cursor would win against the click cursor
+      When I click the card
+      Then the app switches to the "Einträge" view
+      And there, exactly this Konto's row is scrolled into view and its amount field has focus
+      And not just the mini chart but the whole card responds — on narrow cards, the 70px-tall chart area
+        alone would be too small and hard to find as a click target
 
-    Scenario: Konto-Karten sind sortierbar
-      Given der Nutzer öffnet die Sortierauswahl über den Konto-Karten
-      Then stehen die Optionen "Standard", "Name (A–Z)", "Betrag (hoch → niedrig)",
-        "Betrag (niedrig → hoch)", "Veränderung (größter Zuwachs)" und
-        "Veränderung (größter Rückgang)" zur Auswahl
-      And "Standard" (Erstellungsreihenfolge der Konten) ist voreingestellt
-      And Konten ohne Kontostand bzw. ohne Vormonat sortieren bei Betrag- bzw.
-        Veränderungs-Sortierung ans Ende, statt an den Anfang zu springen
-      And die Auswahl bleibt für die restliche Sitzung erhalten (siehe "Zeitraum-Filter, Sortierung und
-        'inkl. Sachwerte' bleiben beim Wechseln der Ansicht erhalten"), wird aber nicht auf Festplatte
-        gespeichert und setzt sich bei einem Neustart der App zurück
+    Scenario: Konto cards are sortable
+      Given the user opens the sort picker above the Konto cards
+      Then the options "Standard", "Name (A–Z)", "Betrag (hoch → niedrig)", "Betrag (niedrig → hoch)",
+        "Veränderung (größter Zuwachs)", and "Veränderung (größter Rückgang)" are available
+      And "Standard" (the Konten's creation order) is preselected
+      And Konten without a Kontostand resp. without a previous month sort to the end under amount- resp.
+        change-based sorting, instead of jumping to the front
+      And the selection persists for the rest of the session (see "Zeitraum filter, sorting, and
+        'inkl. Sachwerte' persist across view changes"), but isn't saved to disk and resets on the next
+        app restart

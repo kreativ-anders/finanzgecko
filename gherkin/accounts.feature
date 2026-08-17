@@ -1,98 +1,98 @@
-# Quelle: lib/ui/views/accounts_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/account.dart
-# Implementierung: lib/ui/views/accounts_view.dart
+# Source: lib/ui/views/accounts_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/account.dart
+# Implementation: lib/ui/views/accounts_view.dart
 @accounts
-Feature: Konten verwalten
-  Als Nutzer:in verwalte ich meine Konten (Girokonto, Tagesgeld, Depot, Bargeld, Krypto, …), damit ich darauf
-  monatlich Kontostände erfassen kann.
+Feature: Manage Konten
+  As a user, I manage my Konten (Girokonto, Tagesgeld, Depot, Bargeld, Krypto, …), so that I can record
+  Kontostände on them every month.
 
-  Hinweis zur bekannten Bankenliste: `kBanks` (`lib/constants.dart`) ist eine von Hand gepflegte, bewusst
-  nicht-erschöpfende Liste — aktuell u. a. deutsche Filial-, Genossenschafts-, Förder- und Autobanken, gängige
-  Neobanken/Fintechs und Broker sowie PayPal/Wise als internationale Zahlungsdienste. Sie wächst mit jeder
-  bestätigten Nutzeranfrage (siehe "Bank fehlt?"-Hinweis unten); `kBanks` selbst ist die einzige Quelle der
-  Wahrheit für den aktuellen Stand, nicht dieses Dokument.
+  Note on the known bank list: `kBanks` (`lib/constants.dart`) is a hand-maintained, deliberately
+  non-exhaustive list — currently including German branch, cooperative, development, and auto banks, common
+  neobanks/fintechs and brokers, plus PayPal/Wise as international payment services. It grows with every
+  confirmed user request (see the "Bank fehlt?" hint below); `kBanks` itself is the single source of truth
+  for the current state, not this document.
 
   Background:
-    Given die App ist gestartet und initialisiert
+    Given the app is started and initialized
 
-  Scenario: Neues Konto anlegen mit Pflichtfeldern
-    Given ich bin auf der Ansicht "Konten"
-    When ich im Formular "Neues Konto" folgende Werte eingebe:
-      | Feld     | Wert          |
+  Scenario: Create a new Konto with required fields
+    Given I am on the "Konten" view
+    When I enter the following values in the "Neues Konto" form:
+      | Field    | Value         |
       | Bank     | DKB           |
       | Name     | Gehaltskonto  |
       | Typ      | Girokonto     |
       | Währung  | EUR           |
-    And ich auf "Konto anlegen" klicke
-    Then wird ein neues Konto mit diesen Werten gespeichert
-    And die Akzentfarbe des Kontos ist die Markenfarbe von "DKB"
-    And das Konto ist nicht archiviert
-    And ich sehe die Bestätigung "Angelegt."
-    And das Formular ist wieder leer (Bank/Name geleert, Typ/Währung auf Vorgabewerte zurückgesetzt)
+    And I click "Konto anlegen"
+    Then a new Konto is saved with these values
+    And the Konto's accent color is the brand color of "DKB"
+    And the Konto is not archived
+    And I see the confirmation "Angelegt."
+    And the form is empty again (Bank/Name cleared, Typ/Währung reset to their defaults)
 
-  Scenario: Bankfeld erlaubt nur bekannte Banken
-    Given ich bin auf der Ansicht "Konten" im Formular "Neues Konto"
-    When ich im Bankfeld einen Text eingebe, der zu keiner Bank aus der bekannten Liste passt
-    Then zeigt das Formular den Validierungsfehler "Bitte eine Bank aus der Liste auswählen"
-    And das Konto wird nicht angelegt
+  Scenario: The bank field only allows known banks
+    Given I am on the "Konten" view in the "Neues Konto" form
+    When I enter text in the bank field that matches no bank from the known list
+    Then the form shows the validation error "Bitte eine Bank aus der Liste auswählen"
+    And the Konto is not created
 
-  Scenario: Bankfeld schlägt passende Banken mit Farb-Vorschau vor
-    Given ich bin auf der Ansicht "Konten" im Formular "Neues Konto"
-    When ich im Bankfeld einen Teiltext einer bekannten Bank eingebe
-    Then erscheinen passende Vorschläge, jeweils mit der Markenfarbe der Bank als Farbpunkt
-    And ein Hinweis "Bank fehlt?" mit Links zu "Auf GitHub vorschlagen" und "E-Mail schreiben" ist sichtbar
+  Scenario: The bank field suggests matching banks with a color preview
+    Given I am on the "Konten" view in the "Neues Konto" form
+    When I enter a partial match of a known bank in the bank field
+    Then matching suggestions appear, each with the bank's brand color as a color dot
+    And a "Bank fehlt?" hint with links to "Auf GitHub vorschlagen" and "E-Mail schreiben" is visible
 
-  Scenario: Kein Farbfallback ohne bekannte Bank — Kontotyp-Farbe als Standard
-    Given ich bin auf der Ansicht "Konten" im Formular "Neues Konto"
-    And das Bankfeld ist leer
-    Then zeigt die Farb-Vorschau die Standardfarbe des aktuell gewählten Kontotyps
+  Scenario: No color fallback without a known bank — Kontotyp color as the default
+    Given I am on the "Konten" view in the "Neues Konto" form
+    And the bank field is empty
+    Then the color preview shows the default color of the currently selected Kontotyp
 
-  Scenario: Fremdwährungs-Hinweis erscheint nur bei abweichender Währung
-    Given die Basiswährung der App ist "EUR"
-    And ich bin im Formular "Neues Konto"
-    When ich als Kontowährung "USD" wähle
-    Then sehe ich den Hinweis, dass Wechselkurse automatisch über die frankfurter.dev API abgerufen und für den
-      Offline-Betrieb zwischengespeichert werden
-    When ich als Kontowährung "EUR" wähle
-    Then verschwindet dieser Hinweis
+  Scenario: The foreign-currency hint only appears for a differing currency
+    Given the app's Basiswährung is "EUR"
+    And I am in the "Neues Konto" form
+    When I choose "USD" as the Konto's currency
+    Then I see the hint that exchange rates are fetched automatically via the frankfurter.dev API and cached
+      for offline use
+    When I choose "EUR" as the Konto's currency
+    Then this hint disappears
 
-  Scenario: Bestehendes Konto bearbeiten
-    Given ein Konto "Tagesgeld Sparkasse" existiert
-    When ich bei diesem Konto auf "Bearbeiten" klicke
-    And ich Name, Bank, Typ oder Währung ändere
-    And ich auf "Speichern" klicke
-    Then werden die Änderungen übernommen
-    And ich sehe eine Speicher-Bestätigung
-    And das Bearbeitungsformular schließt sich wieder
+  Scenario: Edit an existing Konto
+    Given a Konto "Tagesgeld Sparkasse" exists
+    When I click "Bearbeiten" on this Konto
+    And I change the name, bank, Typ, or currency
+    And I click "Speichern"
+    Then the changes are applied
+    And I see a save confirmation
+    And the edit form closes again
 
-  Scenario: Bearbeiten ohne gültigen Namen wird abgelehnt
-    Given ein Konto wird gerade bearbeitet
-    When ich das Namensfeld leere und auf "Speichern" klicke
-    Then wird eine Fehlermeldung "Bitte einen Namen eingeben." angezeigt
-    And das Konto wird nicht gespeichert
+  Scenario: Editing without a valid name is rejected
+    Given a Konto is currently being edited
+    When I clear the name field and click "Speichern"
+    Then an error message "Bitte einen Namen eingeben." is shown
+    And the Konto is not saved
 
-  Scenario: Bearbeiten mit unbekannter Bank wird abgelehnt
-    Given ein Konto wird gerade bearbeitet
-    When ich im Bankfeld einen Text eingebe, der zu keiner bekannten Bank passt
-    And ich auf "Speichern" klicke
-    Then wird eine Fehlermeldung "Bitte eine Bank aus der Liste auswählen." angezeigt
-    And das Konto wird nicht gespeichert
+  Scenario: Editing with an unknown bank is rejected
+    Given a Konto is currently being edited
+    When I enter text in the bank field that matches no known bank
+    And I click "Speichern"
+    Then an error message "Bitte eine Bank aus der Liste auswählen." is shown
+    And the Konto is not saved
 
-  Scenario: Konto archivieren (Soft-Delete)
-    Given ein Konto "Altes Depot" existiert
-    When ich es archiviere und die Sicherheitsabfrage bestätige
-    Then verschwindet das Konto aus der aktiven Kontenliste
-    And es verschwindet aus allen Dashboard-Charts und der Erfassen-Ansicht
-    And bereits erfasste Kontostände dieses Kontos bleiben in der Datenbank erhalten (kein Datenverlust)
+  Scenario: Archive a Konto (soft delete)
+    Given a Konto "Altes Depot" exists
+    When I archive it and confirm the safety prompt
+    Then the Konto disappears from the active Konten list
+    And it disappears from every Dashboard chart and the Einträge view
+    And Kontostände already recorded for this Konto stay preserved in the database (no data loss)
 
-  Scenario: Archivieren erfordert Bestätigung
-    Given ein Konto existiert
-    When ich auf "Archivieren" klicke
-    Then erscheint eine Sicherheitsabfrage mit dem Hinweis, dass das Konto danach komplett aus allen Charts verschwindet
-    And bei "Abbrechen" bleibt das Konto aktiv
+  Scenario: Archiving requires confirmation
+    Given a Konto exists
+    When I click "Archivieren"
+    Then a safety prompt appears noting that the Konto will then disappear completely from every chart
+    And on "Abbrechen" the Konto stays active
 
-  Scenario: Kontostände eines archivierten Kontos wiederherstellen
-    Given ein Konto wurde archiviert und hat Kontostände aus früheren Monaten
-    When ich in der Ansicht "Einträge" im Abschnitt "Archivierte Konten" bei einem seiner Einträge auf
-      "Wiederherstellen" klicke
-    Then wird das zugehörige Konto reaktiviert (nicht mehr archiviert)
-    And es erscheint wieder in der aktiven Kontenliste und allen Charts
+  Scenario: Restore Kontostände of an archived Konto
+    Given a Konto was archived and has Kontostände from earlier months
+    When I click "Wiederherstellen" on one of its entries in the "Einträge" view, section
+      "Archivierte Konten"
+    Then the corresponding Konto is reactivated (no longer archived)
+    And it reappears in the active Konten list and every chart

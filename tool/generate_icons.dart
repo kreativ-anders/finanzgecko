@@ -1,17 +1,16 @@
-// Einziger Einstiegspunkt für die komplette Icon-Pipeline: ruft
-// flutter_launcher_icons für macOS auf, skaliert den Master zusätzlich auf
-// die Linux-Hicolor-Größen (das Package kennt kein Linux-Target) und baut das
-// Windows-.ico selbst (siehe [generateWindowsIcon] unten). Aufruf:
+// Single entry point for the full icon pipeline: runs flutter_launcher_icons
+// for macOS, additionally scales the master to the Linux hicolor sizes (the
+// package has no Linux target), and builds the Windows .ico itself (see
+// [generateWindowsIcon] below). Invocation:
 // dart run tool/generate_icons.dart
 //
-// Die Linux-Skalierung ([generateLinuxIcons]) und die Windows-ICO-Generierung
-// ([generateWindowsIcon]) sind reine Funktionen und werden zusätzlich von
-// `flutter test` ausgeführt (test/tooling_test.dart), damit beide aus dem
-// Master reproduzierbar mitgeneriert werden. Nur der macOS-Schritt bleibt ein
-// Subprozess und damit außerhalb der Tests.
+// The Linux scaling ([generateLinuxIcons]) and Windows ICO generation
+// ([generateWindowsIcon]) are pure functions also run by `flutter test`
+// (test/tooling_test.dart), so both are reproducibly regenerated from the
+// master. Only the macOS step remains a subprocess and stays outside tests.
 
-// Dev-CLI-Skript (kein App-Code): Fortschritt landet bewusst per print auf
-// der Konsole, ein Logging-Framework wäre hier unangemessen.
+// Dev CLI script (not app code): progress is deliberately printed to the
+// console — a logging framework would be overkill here.
 // ignore_for_file: avoid_print
 import 'dart:io';
 

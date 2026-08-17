@@ -1,114 +1,114 @@
-# Quelle: lib/ui/views/entries_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/balance.dart
-# Implementierung: lib/ui/views/entries_view.dart
+# Source: lib/ui/views/entries_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/balance.dart
+# Implementation: lib/ui/views/entries_view.dart
 @balances @entries
-Feature: Monatliche Kontostände erfassen
-  Als Nutzer:in erfasse ich monatlich die Kontostände all meiner Konten an einer Stelle, damit das Dashboard einen
-  vollständigen Vermögensverlauf berechnen kann.
+Feature: Record monthly Kontostände
+  As a user, I record the Kontostände of all my Konten in one place every month, so the Dashboard can
+  compute a complete Verlauf of my net worth.
 
   Background:
-    Given die App ist gestartet und initialisiert
-    And mindestens ein aktives Konto existiert
+    Given the app is started and initialized
+    And at least one active Konto exists
 
-  Scenario: Ohne Konten wird zuerst zur Kontoerstellung geleitet
-    Given noch kein Konto existiert
-    When ich die Ansicht "Einträge" öffne
-    Then sehe ich den Hinweis "Erst ein Konto anlegen"
-    And einen Button, der mich zur Ansicht "Konten" bringt
+  Scenario: Without any Konten, the user is directed to create one first
+    Given no Konto exists yet
+    When I open the "Einträge" view
+    Then I see the hint "Erst ein Konto anlegen"
+    And a button that takes me to the "Konten" view
 
-  Scenario: Standardmäßig ist der aktuelle Monat ausgewählt
-    Given ich öffne die Ansicht "Einträge"
-    Then ist der Zeitraum auf den aktuellen Kalendermonat voreingestellt
+  Scenario: The current month is selected by default
+    Given I open the "Einträge" view
+    Then the Zeitraum defaults to the current calendar month
 
-  Scenario: Rückwirkende Erfassung durch Monatswechsel
-    Given ich bin auf der Ansicht "Einträge"
-    When ich über den Monats-Picker einen anderen (auch vergangenen) Monat wähle
-    Then zeigt die Liste die für diesen Monat bereits gespeicherten Werte je Konto
-    And leere Konten zeigen den Wert des letzten bekannten Monats nur als Platzhalter (Hint), nicht vorausgefüllt
+  Scenario: Retroactive recording via changing the month
+    Given I am on the "Einträge" view
+    When I pick a different (including past) month via the month picker
+    Then the list shows the values already saved for this month, per Konto
+    And empty Konten show the value of the last known month only as a placeholder (hint), not pre-filled
 
-  Scenario: Bestehenden Eintrag überschreiben (Upsert pro Konto+Monat)
-    Given für Konto "Girokonto" existiert bereits ein Kontostand im gewählten Monat
-    When ich für dieses Konto einen neuen Betrag eingebe und speichere
-    Then wird der bestehende Eintrag für Konto+Monat überschrieben (kein Duplikat)
-    And der neue Wechselkurs zum Speicherzeitpunkt wird eingefroren
+  Scenario: Overwrite an existing entry (upsert per Konto+month)
+    Given a Kontostand already exists for the Konto "Girokonto" in the chosen month
+    When I enter a new amount for this Konto and save
+    Then the existing entry for that Konto+month is overwritten (no duplicate)
+    And the new exchange rate at the time of saving is frozen
 
-  Scenario: Leere Felder werden beim Speichern übersprungen
-    Given mehrere Konten sind in der Liste sichtbar
-    When ich nur einen Teil der Beträge ausfülle und auf "Alle speichern" klicke
-    Then werden nur die ausgefüllten Konten gespeichert
-    And die leer gelassenen Konten bleiben unverändert
-    And die Rückmeldung nennt die Anzahl gespeicherter Konten
+  Scenario: Empty fields are skipped on save
+    Given several Konten are visible in the list
+    When I fill in only some of the amounts and click "Alle speichern"
+    Then only the filled-in Konten are saved
+    And the Konten left empty stay unchanged
+    And the feedback states the number of Konten saved
 
-  Scenario: Enter springt zum nächsten Konto, letztes Enter speichert
-    Given ich habe den Fokus im Betragsfeld eines Kontos, das nicht das letzte in der Liste ist
-    When ich Enter drücke
-    Then springt der Fokus zum Betragsfeld des nächsten Kontos
-    Given ich habe den Fokus im Betragsfeld des letzten Kontos in der Liste
-    When ich Enter drücke
-    Then löst das denselben Effekt wie "Alle speichern" aus
+  Scenario: Enter jumps to the next Konto, the last Enter saves
+    Given I have focus in the amount field of a Konto that isn't the last one in the list
+    When I press Enter
+    Then focus jumps to the amount field of the next Konto
+    Given I have focus in the amount field of the last Konto in the list
+    When I press Enter
+    Then this triggers the same effect as "Alle speichern"
 
-  Scenario: Aus dem Dashboard auf ein bestimmtes Konto gesprungen
-    Given ich habe auf dem Dashboard eine Konto-Karte angeklickt
-    When die Ansicht "Einträge" öffnet
-    Then hat das Betragsfeld genau dieses Kontos den Fokus statt des ersten Kontos in der Liste
-    And die Zeile wird in den sichtbaren Bereich gescrollt, falls sie unterhalb liegt
-    And der Monat ist der übliche Standard (aktueller Monat), die Liste bleibt vollständig — es wird nicht gefiltert
-    Given das angeklickte Konto ist in der Liste gar nicht enthalten (z. B. archiviert)
-    Then verhält sich die Ansicht wie bei einem normalen Aufruf: der Fokus liegt auf dem ersten Konto
-    Given ich verlasse "Einträge" und kehre später über die Navigationsleiste zurück
-    Then wirkt der frühere Kartenklick nicht nach — der Fokus liegt wieder auf dem ersten Konto
+  Scenario: Jumped from the Dashboard to a specific Konto
+    Given I clicked a Konto card on the Dashboard
+    When the "Einträge" view opens
+    Then the amount field of exactly that Konto has focus instead of the first Konto in the list
+    And the row is scrolled into view if it sits below the fold
+    And the month is the usual default (current month), the list stays complete — nothing is filtered
+    Given the clicked Konto isn't in the list at all (e.g. archived)
+    Then the view behaves like a normal open: focus sits on the first Konto
+    Given I leave "Einträge" and return later via the nav bar
+    Then the earlier card click has no lasting effect — focus is on the first Konto again
 
-  Scenario: Nur fehlende Konten anzeigen
-    Given im gewählten Monat ist für einen Teil der Konten bereits ein Wert erfasst
-    When ich den Schalter "Nur fehlende anzeigen" aktiviere
-    Then zeigt die Liste ausschließlich Konten ohne Eintrag für diesen Monat
+  Scenario: Show only missing Konten
+    Given a value has already been recorded for some of the Konten in the chosen month
+    When I turn on the "Nur fehlende anzeigen" toggle
+    Then the list shows only Konten without an entry for this month
 
-  Scenario: Live-Zwischensumme während der Eingabe
-    Given ich tippe Beträge in mehrere Betragsfelder, ohne zu speichern
-    Then aktualisiert sich am unteren Bildschirmrand laufend eine Zwischensumme in der Basiswährung
-    And eine Differenz gegenüber der Summe der zuletzt gespeicherten Werte wird angezeigt
-    And diese Vorschau nutzt keinen Netzwerkaufruf, sondern eine Kursschätzung (siehe currency_exchange.feature)
+  Scenario: Live running total while typing
+    Given I type amounts into several amount fields, without saving
+    Then a running total in Basiswährung keeps updating at the bottom of the screen
+    And a difference against the sum of the last saved values is shown
+    And this preview uses no network call, but a rate estimate (see currency_exchange.feature)
 
-  Scenario: Live-Zwischensumme warnt vor fehlender Kursschätzung
-    Given ein Konto in Fremdwährung hat weder einen vorherigen Kontostand noch einen anderen gespeicherten Kurs
-      derselben Währung
-    When ich für dieses Konto einen Betrag eintippe
-    Then wird es in der Live-Zwischensumme nicht mitgerechnet
-    And ein Hinweis nennt die Anzahl der Konten "in Fremdwährung ohne Kursschätzung"
+  Scenario: The live running total warns about a missing rate estimate
+    Given a Konto in a foreign currency has neither a previous Kontostand nor any other saved rate for the
+      same currency
+    When I type an amount for this Konto
+    Then it is not included in the live running total
+    And a hint states the number of Konten "in Fremdwährung ohne Kursschätzung"
 
-  Scenario: Anomalie-Hinweis bei ungewöhnlichem Sprung
-    Given der letzte gespeicherte Kontostand eines Kontos beträgt 1000 in Kontowährung
-    When ich einen neuen Betrag eintippe, der mindestens 10x größer oder kleiner als 1000 ist (und ungleich 0)
-    Then erscheint neben dem Feld ein nicht blockierender Hinweis "Ungewöhnlich: … Tippfehler?"
-    And ich kann den Wert trotzdem unverändert speichern (kein Zwangsstopp)
+  Scenario: Anomaly hint on an unusual jump
+    Given the last saved Kontostand of a Konto is 1000 in the Konto's currency
+    When I type a new amount that's at least 10× bigger or smaller than 1000 (and not 0)
+    Then a non-blocking hint "Ungewöhnlich: … Tippfehler?" appears next to the field
+    And I can still save the value unchanged (no forced stop)
 
-  Scenario: Kein Anomalie-Hinweis ohne Vergleichswert
-    Given für dieses Konto existiert noch kein vorheriger Kontostand
-    When ich einen beliebigen Betrag eintippe
-    Then erscheint kein Anomalie-Hinweis
+  Scenario: No anomaly hint without a comparison value
+    Given no previous Kontostand exists yet for this Konto
+    When I type any amount
+    Then no anomaly hint appears
 
-  Scenario: Bestehenden Eintrag löschen
-    Given ein Kontostand für Konto+Monat existiert
-    When ich in dieser Zeile auf das Lösch-Icon klicke und die Sicherheitsabfrage bestätige
-    Then wird der Eintrag entfernt
-    And das Eingabefeld dieser Zeile wird geleert
-    And ich sehe die Bestätigung "Gelöscht."
+  Scenario: Delete an existing entry
+    Given a Kontostand for a Konto+month exists
+    When I click the delete icon in this row and confirm the safety prompt
+    Then the entry is removed
+    And this row's input field is cleared
+    And I see the confirmation "Gelöscht."
 
-  Scenario: Verwaiste Einträge archivierter Konten bleiben sichtbar
-    Given ein Konto mit erfassten Kontoständen wird archiviert
-    When ich die Ansicht "Einträge" für einen Monat mit einem solchen Eintrag öffne
-    Then erscheint ein separater Abschnitt "Archivierte Konten" mit diesem Eintrag
-    And von dort aus kann das zugehörige Konto wiederhergestellt oder der Eintrag gelöscht werden
+  Scenario: Orphaned entries of archived Konten stay visible
+    Given a Konto with recorded Kontostände gets archived
+    When I open the "Einträge" view for a month that has such an entry
+    Then a separate "Archivierte Konten" section appears with this entry
+    And from there, the corresponding Konto can be restored or the entry deleted
 
-  Scenario: Verwaister Eintrag eines vollständig gelöschten Kontos
-    Given ein Kontostand referenziert eine Konto-ID, die nicht mehr existiert (z. B. nach manuellem Import)
-    Then zeigt die Zeile "Konto gelöscht" anstelle eines Kontonamens
-    And es ist nur die Option "Löschen" verfügbar, keine "Wiederherstellen"-Option
+  Scenario: An orphaned entry of a fully deleted Konto
+    Given a Kontostand references a Konto ID that no longer exists (e.g. after a manual import)
+    Then the row shows "Konto gelöscht" instead of a Konto name
+    And only the "Löschen" option is available, no "Wiederherstellen" option
 
-  Scenario: Datum für den Wechselkurs-Abruf hängt vom Monat ab
-    Given der gewählte Monat ist der aktuelle Kalendermonat
-    When ich speichere
-    Then wird für Fremdwährungskonten der Kurs zum heutigen Datum abgefragt (nicht zum Monatsende, das ggf. in der
-      Zukunft liegt und noch keinen veröffentlichten Kurs hat)
-    Given der gewählte Monat liegt vollständig in der Vergangenheit
-    When ich speichere
-    Then wird der Kurs zum letzten Kalendertag dieses Monats abgefragt
+  Scenario: The date used for the exchange-rate lookup depends on the month
+    Given the chosen month is the current calendar month
+    When I save
+    Then for foreign-currency Konten, the rate is looked up for today's date (not month-end, which may lie
+      in the future and not have a published rate yet)
+    Given the chosen month lies entirely in the past
+    When I save
+    Then the rate is looked up for the last calendar day of that month

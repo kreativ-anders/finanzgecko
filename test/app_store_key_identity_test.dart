@@ -1,11 +1,10 @@
 // Gherkin: gherkin/data_security.feature
 //
-// Deckt die Schlüsselkennung (`keyId`) im Envelope ab und vor allem den Fall,
-// für den sie da ist: eine Datendatei, die zu einer *anderen* Installation
-// gehört. Der gefährliche Teil ist nicht das Erkennen, sondern dass in diesem
-// Fall garantiert nichts geschrieben und nichts verschoben wird — sonst würde
-// eine in die Cloud gelegte Datei beim Öffnen auf dem zweiten Rechner durch
-// eine leere ersetzt.
+// Covers the key fingerprint (`keyId`) in the envelope and, above all, the
+// case it exists for: a data file that belongs to a *different* installation.
+// The dangerous part isn't detecting that — it's guaranteeing that nothing
+// gets written or moved in that case, or a file synced via the cloud would
+// get replaced by an empty one when opened on the second machine.
 import 'dart:convert';
 import 'dart:io';
 
@@ -74,8 +73,8 @@ void main() {
     return store;
   }
 
-  /// Simuliert einen anderen Rechner: derselbe Ordner, aber ein frisch
-  /// erzeugter Schlüssel im (gefälschten) Schlüsselspeicher.
+  /// Simulates a different machine: same folder, but a freshly generated
+  /// key in the (fake) key store.
   void replaceMachineKey() => keychain.remove(_keyName);
 
   group('keyId im Envelope', () {
@@ -90,7 +89,7 @@ void main() {
         1,
         reason: 'Ein Versionsbump würde ältere App-Versionen die Datei nicht mehr lesen lassen',
       );
-      // Genau die Felder, die eine ältere Version kennt, sind unverändert da.
+      // Exactly the fields an older version knows about are still there, unchanged.
       expect(decoded.keys, containsAll(<String>['v', 'nonce', 'cipherText', 'mac']));
     });
 
@@ -118,7 +117,7 @@ void main() {
 
       await expectLater(openStore(), throwsA(isA<ForeignKeyDataException>()));
 
-      // Der eigentliche Punkt des Features: die Datei ist unangetastet.
+      // The actual point of the feature: the file is left untouched.
       expect(await storeFile().readAsBytes(), bytesBefore, reason: 'Die Datei darf nicht überschrieben werden');
       final siblings = tempDir.listSync().map((e) => e.path.split(Platform.pathSeparator).last).toList();
       expect(
@@ -144,8 +143,8 @@ void main() {
 
   group('Rückwärtskompatibilität', () {
     test('Datei ohne keyId (vor diesem Feature geschrieben) wird normal geladen', () async {
-      // Erst einen Schlüssel erzeugen lassen, dann von Hand einen Envelope im
-      // alten Format schreiben — mit demselben Schlüssel, aber ohne keyId.
+      // First let a key be generated, then hand-write an envelope in the old
+      // format — same key, but without keyId.
       final store = await openStore();
       await store.setBaseCurrency('CHF');
       final key = SecretKey(base64Decode(keychain[_keyName]!));

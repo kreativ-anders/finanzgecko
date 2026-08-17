@@ -1,46 +1,46 @@
-# Quelle: lib/constants.dart
-# Implementierung: lib/constants.dart
-# Ausführbar: test/bdd/account_color_bdd_test.dart (Runner: test/support/gherkin_runner.dart)
+# Source: lib/constants.dart
+# Implementation: lib/constants.dart
+# Executable: test/bdd/account_color_bdd_test.dart (Runner: test/support/gherkin_runner.dart)
 @executable @accounts
-Feature: Konto-Akzentfarbe wird aus der Bank abgeleitet
+Feature: Konto accent color is derived from the bank
 
-  Scenario: Bekannte Bank liefert ihre Markenfarbe
-    When ich die Farbe für Bank "DKB" und Kontotyp "Girokonto" auflöse
-    Then ist die Farbe die Markenfarbe der Bank "DKB"
+  Scenario: A known bank returns its brand color
+    When I resolve the color for bank "DKB" and Kontotyp "Girokonto"
+    Then the color is the brand color of bank "DKB"
 
-  Scenario: Bekannte Bank ist case-insensitiv
-    When ich die Farbe für Bank "trade republic" und Kontotyp "Depot" auflöse
-    Then ist die Farbe die Markenfarbe der Bank "Trade Republic"
+  Scenario: A known bank is case-insensitive
+    When I resolve the color for bank "trade republic" and Kontotyp "Depot"
+    Then the color is the brand color of bank "Trade Republic"
 
-  Scenario: Leere Bank fällt auf die Kontotyp-Farbe zurück
-    When ich die Farbe für Bank "" und Kontotyp "Krypto" auflöse
-    Then ist die Farbe die Kontotyp-Farbe von "Krypto"
+  Scenario: An empty bank falls back to the Kontotyp color
+    When I resolve the color for bank "" and Kontotyp "Krypto"
+    Then the color is the Kontotyp color of "Krypto"
 
-  Scenario: Unbekannte Bank wird abgelehnt
-    When ich die Farbe für Bank "Interactive Brokers" und Kontotyp "Depot" auflöse
-    Then wird ein Fehler ausgelöst
+  Scenario: An unknown bank is rejected
+    When I resolve the color for bank "Interactive Brokers" and Kontotyp "Depot"
+    Then an error is thrown
 
-  # Der Kontotyp-Chip auf den Dashboard-Konto-Karten beschriftet sich mit der
-  # Kontofarbe (= Bankfarbe), damit er zu Farbpunkt und Mini-Diagramm derselben
-  # Karte passt. Markenfarben sind aber Logofarben und als 11px-Fettschrift auf
-  # unseren Flächen oft unlesbar — deshalb die Korrektur.
-  Scenario: Ausreichend lesbare Farbe bleibt unverändert
-    When ich die Farbe "#00c878" für den Hintergrund "#101713" lesbar mache
-    Then ist das Ergebnis unverändert "#00c878"
+  # The Kontotyp chip on the Dashboard Konto cards labels itself with the
+  # Konto color (= bank color), so it matches the color dot and mini-chart of
+  # the same card. But brand colors are logo colors and are often unreadable
+  # as 11px bold text on our surfaces — hence the correction.
+  Scenario: A sufficiently readable color stays unchanged
+    When I make the color "#00c878" readable against the background "#101713"
+    Then the result is unchanged "#00c878"
 
-  Scenario: Zu dunkle Markenfarbe wird auf dunklem Grund aufgehellt
-    When ich die Farbe "#000000" für den Hintergrund "#101713" lesbar mache
-    Then erreicht das Ergebnis mindestens 4.5:1 gegen "#101713"
-    And ist das Ergebnis heller als "#000000"
+  Scenario: A brand color that's too dark gets lightened on a dark background
+    When I make the color "#000000" readable against the background "#101713"
+    Then the result reaches at least 4.5:1 against "#101713"
+    And the result is lighter than "#000000"
 
-  Scenario: Zu helle Markenfarbe wird auf hellem Grund abgedunkelt
-    When ich die Farbe "#ffe600" für den Hintergrund "#ffffff" lesbar mache
-    Then erreicht das Ergebnis mindestens 4.5:1 gegen "#ffffff"
-    And ist das Ergebnis dunkler als "#ffe600"
+  Scenario: A brand color that's too light gets darkened on a light background
+    When I make the color "#ffe600" readable against the background "#ffffff"
+    Then the result reaches at least 4.5:1 against "#ffffff"
+    And the result is darker than "#ffe600"
 
-  Scenario: Jede Bank- und Kontotyp-Farbe wird in beiden Themes lesbar
-    When ich jede Farbe aus kBanks und kTagColors gegen beide Flächen lesbar mache
-    Then erreicht jedes Ergebnis mindestens 4.5:1
+  Scenario: Every bank and Kontotyp color is readable in both themes
+    When I make every color from kBanks and kTagColors readable against both surfaces
+    Then every result reaches at least 4.5:1
 
-  Scenario: Kontrastverhältnis folgt WCAG
-    Then beträgt der Kontrast zwischen "#000000" und "#ffffff" 21.0
+  Scenario: Contrast ratio follows WCAG
+    Then the contrast between "#000000" and "#ffffff" is 21.0

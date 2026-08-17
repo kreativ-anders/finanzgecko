@@ -1,65 +1,65 @@
-# Quelle: lib/ui/views/assets_view.dart, lib/state/app_state.dart, lib/models/asset.dart, lib/constants.dart
-# Implementierung: lib/ui/views/assets_view.dart
+# Source: lib/ui/views/assets_view.dart, lib/state/app_state.dart, lib/models/asset.dart, lib/constants.dart
+# Implementation: lib/ui/views/assets_view.dart
 @assets
-Feature: Vermögenswerte (Sachwerte) verwalten
-  Als Nutzer:in erfasse ich Sachwerte wie Elektronik, Möbel oder Fahrzeuge mit ihrem aktuellen Wert, getrennt von den
-  monatlichen Kontoständen, da sie keinen echten Zeitverlauf haben.
+Feature: Manage Vermögenswerte (Sachwerte)
+  As a user, I record Sachwerte like electronics, furniture, or vehicles with their current value, separate
+  from the monthly Kontostände, since they have no real time series.
 
   Background:
-    Given die App ist gestartet und initialisiert
+    Given the app is started and initialized
 
-  Scenario: Neuen Vermögenswert anlegen
-    Given ich bin auf der Ansicht "Vermögenswerte"
-    When ich Bezeichnung und Wert ausfülle und auf "Anlegen" klicke
-    Then wird ein neuer Vermögenswert mit dem heutigen Datum als "zuletzt bewertet" angelegt
-    And ich sehe die Bestätigung "Angelegt."
-    And das Formular wird geleert
+  Scenario: Create a new Vermögenswert
+    Given I am on the "Vermögenswerte" view
+    When I fill in the label and value and click "Anlegen"
+    Then a new Vermögenswert is created with today's date as "zuletzt bewertet"
+    And I see the confirmation "Angelegt."
+    And the form is cleared
 
-  Scenario: Pflichtfelder beim Anlegen
-    Given ich bin im Formular "Neuer Vermögenswert"
-    When ich die Bezeichnung leer lasse oder einen nicht als Zahl interpretierbaren Wert eingebe
-    Then wird der Vermögenswert nicht angelegt
-    And ein Validierungsfehler wird am jeweiligen Feld angezeigt
+  Scenario: Required fields when creating
+    Given I am in the "Neuer Vermögenswert" form
+    When I leave the label empty or enter a value that can't be parsed as a number
+    Then the Vermögenswert is not created
+    And a validation error is shown on the respective field
 
-  Scenario: Wert inline bearbeiten mit Autosave
-    Given ein Vermögenswert existiert bereits
-    When ich seinen Wert in der Liste direkt ändere
-    Then wird nach 600ms Tippstopp automatisch gespeichert (kein expliziter Speichern-Button)
-    And "zuletzt bewertet" wird auf heute aktualisiert
-    And ich sehe eine unaufdringliche Speicher-Bestätigung
+  Scenario: Edit the value inline with autosave
+    Given a Vermögenswert already exists
+    When I change its value directly in the list
+    Then it is saved automatically 600ms after typing stops (no explicit Speichern button)
+    And "zuletzt bewertet" is updated to today
+    And I see an unobtrusive save confirmation
 
-  Scenario: Autosave wird auch bei Fokusverlust oder Enter sofort ausgelöst
-    Given ich habe den Wert eines Vermögenswerts geändert, ohne 600ms zu warten
-    When ich das Feld verlasse (Klick woanders hin) oder Enter drücke
-    Then wird sofort gespeichert, ohne auf den Debounce zu warten
+  Scenario: Autosave also triggers immediately on focus loss or Enter
+    Given I changed a Vermögenswert's value without waiting 600ms
+    When I leave the field (click elsewhere) or press Enter
+    Then it is saved immediately, without waiting for the debounce
 
-  Scenario: Ungültiger Wert beim Inline-Edit wird verworfen
-    Given ich bearbeite den Wert eines bestehenden Vermögenswerts
-    When ich einen nicht interpretierbaren Text eingebe und das Feld verlasse
-    Then wird nichts gespeichert
-    And das Feld springt zurück auf den zuletzt gültigen gespeicherten Wert
+  Scenario: An invalid value during inline edit is discarded
+    Given I am editing the value of an existing Vermögenswert
+    When I enter unparseable text and leave the field
+    Then nothing is saved
+    And the field snaps back to the last valid saved value
 
-  Scenario: Wertänderung zählt automatisch als Neubewertung
-    Given ein Vermögenswert ist überfällig zur Neubewertung
-    When ich seinen Wert ändere (auch wenn unverändert derselbe Betrag erneut eingegeben wird über das Wert-Feld)
-    Then gilt er ab sofort wieder als aktuell bewertet, ohne separaten "Neu bewerten"-Button
+  Scenario: A value change automatically counts as a re-evaluation
+    Given a Vermögenswert is overdue for re-evaluation
+    When I change its value (even entering the same unchanged amount again via the value field)
+    Then it counts as currently evaluated again from now on, without a separate "Neu bewerten" button
 
-  Scenario: Überfälligkeits-Kennzeichnung nach ~6 Monaten
-    Given ein Vermögenswert wurde vor mindestens 182 Tagen zuletzt bewertet, oder noch nie
-    Then zeigt seine Zeile ein Badge "Neu bewerten"
-    Given die letzte Bewertung liegt weniger als 182 Tage zurück
-    Then erscheint kein Badge
+  Scenario: Overdue flag after ~6 months
+    Given a Vermögenswert was last evaluated at least 182 days ago, or never
+    Then its row shows a "Neu bewerten" badge
+    Given the last evaluation was less than 182 days ago
+    Then no badge appears
 
-  Scenario: Vermögenswert löschen
-    Given ein Vermögenswert existiert
-    When ich auf "Löschen" klicke und die Sicherheitsabfrage bestätige
-    Then wird der Vermögenswert entfernt
-    And ich sehe die Bestätigung "Gelöscht."
+  Scenario: Delete a Vermögenswert
+    Given a Vermögenswert exists
+    When I click "Löschen" and confirm the safety prompt
+    Then the Vermögenswert is removed
+    And I see the confirmation "Gelöscht."
 
-  Scenario: Leerzustand
-    Given es existiert kein Vermögenswert
-    Then zeigt die Liste den Hinweis "Noch keine Vermögenswerte angelegt."
+  Scenario: Empty state
+    Given no Vermögenswert exists
+    Then the list shows the hint "Noch keine Vermögenswerte angelegt."
 
-  Scenario: Sortierung der Liste
-    Given mehrere Vermögenswerte existieren
-    Then ist die Liste alphabetisch nach Bezeichnung sortiert
+  Scenario: List sorting
+    Given several Vermögenswerte exist
+    Then the list is sorted alphabetically by label

@@ -1,47 +1,49 @@
-# Gherkin-Spezifikation — FinanzGecko
+# Gherkin specification — FinanzGecko
 
-Dieser Ordner enthält die fachlichen Anforderungen der App als Gherkin-`.feature`-Dateien. Zusammen mit
-[`../AI_MASTER.md`](../AI_MASTER.md) (Architektur, Ordnerstruktur, Konventionen, KI-Regeln) bildet er die vollständige
-Spezifikation, aus der die App **nahezu identisch neu generiert** oder konsistent weiterentwickelt werden kann.
+This folder contains the app's functional requirements as Gherkin `.feature` files. Together with
+[`../AI_MASTER.md`](../AI_MASTER.md) (architecture, folder structure, conventions, AI rules), it forms the
+complete specification from which the app can be **regenerated nearly identically** or extended consistently.
 
-## Konventionen
+## Conventions
 
-- **Sprache:** Alle Feature-/Szenario-Texte sind auf Deutsch geschrieben, in derselben Domänensprache wie die App-UI
-  selbst (siehe Glossar in `AI_MASTER.md` Abschnitt 7). Schritt-Keywords (`Feature`, `Scenario`, `Given`/`Angenommen`,
-  `When`/`Wenn`, `Then`/`Dann`, `And`/`Und`, `But`/`Aber`) werden **englisch** geschrieben, damit Standard-Cucumber-
-  Tooling ohne Sprachkonfiguration funktioniert; der restliche Text ist deutsch.
-- **Eine Datei pro fachlicher Domäne**, nicht pro View — z. B. betreffen Wechselkurs-Fallbacks sowohl Einträge als
-  auch Fixposten, stehen aber gebündelt in `currency_exchange.feature`.
-- **Tags:** jedes Feature trägt einen `@domain`-artigen Tag (z. B. `@accounts`, `@dashboard`) für Rückverfolgbarkeit
-  zu `AI_MASTER.md` Abschnitt 8 (Tests ↔ Gherkin-Zuordnung) und zu den entsprechenden Quelldateien (Kommentar
-  `# Quelle: lib/...` am Kopf jedes Features).
-- **Kein UI-Framework-Detail** (Widget-Namen, Pixel-Werte) in den Szenarien — die beschreiben *Verhalten*, nicht
-  Implementierung. Ausnahme: Wo eine konkrete Zahl eine bewusste fachliche Entscheidung ist (z. B. "182 Tage"), wird
-  sie explizit genannt, weil sie regenerierungsrelevant ist.
-- **Diese Dateien sind keine ausführbaren Tests** (kein Cucumber/Gherkin-Runner ist in diesem Projekt eingebunden) —
-  sie sind die menschen- und KI-lesbare Anforderungsspezifikation. Die tatsächliche automatisierte Prüfung läuft über
-  die Dart-Tests in `test/` (Zuordnung siehe `AI_MASTER.md` Abschnitt 8).
+- **Language:** all feature/scenario text is written in English, describing an app whose UI is German — the
+  binding German domain terms (see the glossary in `AI_MASTER.md` Section 7) stay untranslated inline, exactly
+  like in the rest of the repo's English docs. Step keywords (`Feature`, `Scenario`, `Given`/`Angenommen`,
+  `When`/`Wenn`, `Then`/`Dann`, `And`/`Und`, `But`/`Aber`) are written in **English**, so standard Cucumber
+  tooling works without language configuration; the rest of the text is English too, aside from the domain terms
+  and literally-quoted German UI strings.
+- **One file per functional domain**, not per view — e.g. exchange-rate fallbacks affect both Einträge and
+  Fixposten, but live bundled in `currency_exchange.feature`.
+- **Tags:** every feature carries a `@domain`-style tag (e.g. `@accounts`, `@dashboard`) for traceability to
+  `AI_MASTER.md` Section 8 (tests ↔ Gherkin mapping) and to the corresponding source files (comment
+  `# Source: lib/...` at the top of every feature).
+- **No UI-framework detail** (widget names, pixel values) in the scenarios — they describe *behavior*, not
+  implementation. Exception: where a concrete number is a deliberate functional decision (e.g. "182 days"), it's
+  named explicitly, since it's relevant to regeneration.
+- **These files are not executable tests** (no Cucumber/Gherkin runner is wired into this project) — they're the
+  human- and AI-readable requirement spec. The actual automated check runs via the Dart tests in `test/` (mapping:
+  see `AI_MASTER.md` Section 8).
 
-## Dateien
+## Files
 
-| Datei | Domäne |
+| File | Domain |
 |---|---|
-| `accounts.feature` | Konten anlegen/bearbeiten/archivieren/wiederherstellen |
-| `balances_entries.feature` | Monatliche Kontostände erfassen/korrigieren/löschen |
-| `dashboard.feature` | Übersicht: Zeitfilter, Verlauf+Prognose, Verteilung, Kennzahlen, Reminder-Banner |
-| `assets.feature` | Vermögenswerte (Sachwerte) verwalten |
-| `subscriptions.feature` | Fixposten (wiederkehrende Ein-/Ausgaben) verwalten |
-| `currency_exchange.feature` | Wechselkurs-Abruf, Cache, manueller Fallback |
-| `settings.feature` | Basiswährung, Sicherheits-Info, Reset |
-| `backup_restore.feature` | Export/Import von Backups |
-| `data_security.feature` | Verschlüsselung, Dateiintegrität, Migration |
-| `window.feature` | Fensterverhalten (Größe/Maximiert), Standard-/Mindestgröße, Splash |
-| `navigation.feature` | Top-Navigation, Banner-Sprünge, In-App-Datei-Menü, Tastenkürzel, Textauswahl |
-| `executable/account_color.feature` | (ausführbar) Konto-Akzentfarbe aus der Bank ableiten |
-| `executable/net_worth_projection.feature` | (ausführbar) Trend/Prognose/Kennzahlen/Anomalie |
+| `accounts.feature` | Create/edit/archive/restore Konten |
+| `balances_entries.feature` | Record/correct/delete monthly Kontostände |
+| `dashboard.feature` | Overview: time filter, Verlauf+projection, Verteilung, Kennzahlen, reminder banners |
+| `assets.feature` | Manage Vermögenswerte (Sachwerte) |
+| `subscriptions.feature` | Manage Fixposten (recurring income/expenses) |
+| `currency_exchange.feature` | Exchange-rate fetching, cache, manual fallback |
+| `settings.feature` | Basiswährung, security info, reset |
+| `backup_restore.feature` | Export/import of backups |
+| `data_security.feature` | Encryption, file integrity, migration |
+| `window.feature` | Window behavior (size/maximized), default/minimum size, splash |
+| `navigation.feature` | Top navigation, banner jumps, in-app Datei menu, keyboard shortcuts, text selection |
+| `executable/account_color.feature` | (executable) Derive the Konto accent color from the bank |
+| `executable/net_worth_projection.feature` | (executable) Trend/projection/Kennzahlen/anomaly |
 
-## Pflicht bei Änderungen
+## Required on every change
 
-Siehe `AI_MASTER.md` → "Regeln für KI-Agenten": jede Verhaltensänderung im Code erfordert im selben Schritt ein
-Update des passenden Feature-Files hier (neues Szenario, geändertes Szenario oder — mit Begründung — Entfernen eines
-obsoleten Szenarios).
+See `AI_MASTER.md` → "Rules for AI Agents": every behavior change in the code requires, in the same step, an
+update to the matching feature file here (a new scenario, a changed scenario, or — with justification — the
+removal of an obsolete scenario).

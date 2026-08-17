@@ -1,79 +1,79 @@
-# Quelle: lib/ui/views/subscriptions_view.dart, lib/state/app_state.dart, lib/models/subscription.dart, lib/constants.dart
-# Implementierung: lib/ui/views/subscriptions_view.dart
+# Source: lib/ui/views/subscriptions_view.dart, lib/state/app_state.dart, lib/models/subscription.dart, lib/constants.dart
+# Implementation: lib/ui/views/subscriptions_view.dart
 @subscriptions
-Feature: Fixposten (wiederkehrende Ein-/Ausgaben) verwalten
-  Als Nutzer:in erfasse ich wiederkehrende Ein- und Ausgaben (Gehalt, Miete, Abos, Dividenden), damit die App meinen
-  monatlichen Netto-Cashflow und eine Vermögensprognose berechnen kann.
+Feature: Manage Fixposten (recurring income/expenses)
+  As a user, I record recurring income and expenses (salary, rent, subscriptions, dividends), so the app can
+  compute my monthly net cash flow and a net-worth projection.
 
   Background:
-    Given die App ist gestartet und initialisiert
+    Given the app is started and initialized
 
-  Scenario: Neuen Fixposten anlegen als Ausgabe (Standard)
-    Given ich bin im Formular "Neuer Fixposten"
-    Then ist der Vorzeichen-Umschalter standardmäßig auf Ausgabe (−) gestellt
-    When ich Name, Intervall, Währung und Betrag ausfülle und auf "Anlegen" klicke
-    Then wird ein Fixposten mit negativem Betrag gespeichert
-    And der zum Anlegezeitpunkt gültige Wechselkurs zur Basiswährung wird eingefroren
+  Scenario: Create a new Fixposten as an expense (default)
+    Given I am in the "Neuer Fixposten" form
+    Then the sign toggle defaults to expense (−)
+    When I fill in name, Intervall, currency, and amount and click "Anlegen"
+    Then a Fixposten is saved with a negative amount
+    And the exchange rate to Basiswährung valid at creation time is frozen
 
-  Scenario: Neuen Fixposten als Einnahme anlegen
-    Given ich bin im Formular "Neuer Fixposten"
-    When ich den Vorzeichen-Umschalter auf Einnahme (+) stelle
-    And ich das Formular ausfülle und speichere
-    Then wird ein Fixposten mit positivem Betrag gespeichert
+  Scenario: Create a new Fixposten as income
+    Given I am in the "Neuer Fixposten" form
+    When I set the sign toggle to income (+)
+    And I fill in the form and save
+    Then a Fixposten is saved with a positive amount
 
-  Scenario: Pflichtfelder und Betragsvalidierung
-    Given ich bin im Formular "Neuer Fixposten"
-    When Name leer ist oder der Betrag nicht als positive Zahl interpretierbar ist
-    And ich auf "Anlegen" klicke
-    Then wird ein Fehler "Bitte Name und einen gültigen Betrag eingeben." angezeigt
-    And nichts wird gespeichert
+  Scenario: Required fields and amount validation
+    Given I am in the "Neuer Fixposten" form
+    When the name is empty or the amount can't be parsed as a positive number
+    And I click "Anlegen"
+    Then an error "Bitte Name und einen gültigen Betrag eingeben." is shown
+    And nothing is saved
 
-  Scenario: Kein Wechselkurs verfügbar beim Anlegen
-    Given weder die Wechselkurs-API noch der Cache liefern einen Kurs für die gewählte Fremdwährung
-    When ich das Formular ausfülle und speichere
-    Then werde ich nach einem manuellen Kurs gefragt (siehe currency_exchange.feature)
-    Given ich breche den manuellen Kurs-Dialog ab
-    Then wird der Fixposten nicht gespeichert
-    And ich sehe die Meldung "Kein Wechselkurs verfügbar — Fixposten wurde nicht gespeichert."
+  Scenario: No exchange rate available when creating
+    Given neither the exchange-rate API nor the cache provides a rate for the chosen foreign currency
+    When I fill in the form and save
+    Then I am asked for a manual rate (see currency_exchange.feature)
+    Given I cancel the manual rate dialog
+    Then the Fixposten is not saved
+    And I see the message "Kein Wechselkurs verfügbar — Fixposten wurde nicht gespeichert."
 
-  Scenario: Intervall-Umrechnung auf ein Monatsäquivalent
-    Given ein Fixposten hat ein Intervall ungleich "monatlich"
-    Then wird für Summen und Prognosen intern immer der Monatsäquivalent-Betrag verwendet
-      (täglich ×30,4368; wöchentlich ×4,34524; monatlich ×1; vierteljährlich ÷3; jährlich ÷12)
+  Scenario: Interval conversion to a monthly equivalent
+    Given a Fixposten has an Intervall other than "monatlich"
+    Then totals and projections always use the monthly-equivalent amount internally
+      (täglich ×30.4368; wöchentlich ×4.34524; monatlich ×1; vierteljährlich ÷3; jährlich ÷12)
 
-  Scenario: Bestehenden Fixposten inline bearbeiten mit Autosave
-    Given ein Fixposten existiert
-    When ich Name, Intervall, Währung, Vorzeichen oder Betrag in der Liste direkt ändere
-    Then wird nach 600ms Tippstopp (bzw. sofort bei Intervall-/Vorzeichenwechsel, Fokusverlust oder Enter)
-      automatisch gespeichert
-    And die monatliche Vorschau ("≈ … /Monat") aktualisiert sich schon vor dem eigentlichen Speichern
+  Scenario: Edit an existing Fixposten inline with autosave
+    Given a Fixposten exists
+    When I change name, Intervall, currency, sign, or amount directly in the list
+    Then it is saved automatically 600ms after typing stops (or immediately on an Intervall/sign change,
+      focus loss, or Enter)
+    And the monthly preview ("≈ … /Monat") updates even before the actual save
 
-  Scenario: Ungültige Eingabe beim Inline-Edit wird abgelehnt
-    Given ich bearbeite einen bestehenden Fixposten
-    When Name leer ist oder der Betrag nicht als nicht-negative Zahl interpretierbar ist
-    Then wird eine Fehlermeldung angezeigt
-    And die sichtbaren Felder springen beim nächsten Rendern auf die zuletzt gespeicherten Werte zurück
+  Scenario: Invalid input during inline edit is rejected
+    Given I am editing an existing Fixposten
+    When the name is empty or the amount can't be parsed as a non-negative number
+    Then an error message is shown
+    And the visible fields snap back to the last saved values on the next render
 
-  Scenario: Kein Wechselkurs verfügbar beim Bearbeiten
-    Given ich ändere die Währung eines bestehenden Fixpostens auf eine Währung ohne verfügbaren Kurs
-    And ich breche den manuellen Kurs-Dialog ab
-    Then wird die Änderung nicht gespeichert
-    And ich sehe die Meldung "Kein Wechselkurs verfügbar — Änderung wurde nicht gespeichert."
+  Scenario: No exchange rate available when editing
+    Given I change an existing Fixposten's currency to one with no rate available
+    And I cancel the manual rate dialog
+    Then the change is not saved
+    And I see the message "Kein Wechselkurs verfügbar — Änderung wurde nicht gespeichert."
 
-  Scenario: Fixposten löschen
-    Given ein Fixposten existiert
-    When ich auf "Löschen" klicke und die Sicherheitsabfrage bestätige
-    Then wird der Fixposten entfernt
+  Scenario: Delete a Fixposten
+    Given a Fixposten exists
+    When I click "Löschen" and confirm the safety prompt
+    Then the Fixposten is removed
 
-  Scenario: Liste gruppiert Einnahmen vor Ausgaben
-    Given es existieren sowohl Einnahmen- als auch Ausgaben-Fixposten
-    Then werden zuerst alle Einnahmen (alphabetisch), danach alle Ausgaben (alphabetisch) angezeigt
+  Scenario: The list groups income before expenses
+    Given both income and expense Fixposten exist
+    Then all income items are shown first (alphabetically), then all expense items (alphabetically)
 
-  Scenario: Summen-Übersicht
-    Given mehrere Fixposten existieren
-    Then berechnet die App: Summe der monatlichen Einnahmen, Summe der monatlichen Ausgaben (als positiver Betrag),
-      und die Differenz (Netto) — jeweils zusätzlich als Jahresbetrag (×12) ausgewiesen
+  Scenario: Totals overview
+    Given several Fixposten exist
+    Then the app computes: sum of monthly income, sum of monthly expenses (as a positive amount), and the
+      difference (net) — each also shown as a yearly amount (×12)
 
-  Scenario: Leerzustand
-    Given es existiert kein Fixposten
-    Then zeigt die Liste den Hinweis "Noch keine Fixposten erfasst."
+  Scenario: Empty state
+    Given no Fixposten exists
+    Then the list shows the hint "Noch keine Fixposten erfasst."

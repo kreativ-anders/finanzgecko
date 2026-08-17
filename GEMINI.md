@@ -11,7 +11,7 @@ Claude-specific; read it too.
 
 - **Never translate the German domain terms** (Konto, Fixposten, Vermögenswerte, …) — see AI_MASTER §7.
 - **Don't revert a documented architecture decision** (e.g. macOS keychain/sandbox settings, unencrypted rates
-  cache, no selectable data-file location) without discussing it first — see AI_MASTER "Regeln für KI-Agenten" #5.
+  cache, no selectable data-file location) without discussing it first — see AI_MASTER "Rules for AI Agents" #5.
 - **Keep AI_MASTER.md, CORPORATE_DESIGN.md, and the relevant `gherkin/*.feature` in sync** with any change to
   folder structure, architecture, data models, view behavior, or design tokens.
 - **Run `flutter analyze` and `flutter test` after every change.**
@@ -20,4 +20,4 @@ Claude-specific; read it too.
 
 This file only restates the rules above; everything else lives once in CLAUDE.md. If those rules change, update
 the matching section here and in the other sibling AI-instruction files — see AI_MASTER §3 for the current list and
-"Regeln für KI-Agenten" #1.
+"Rules for AI Agents" #1.

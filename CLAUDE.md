@@ -1,11 +1,11 @@
 # FinanzGecko — Repo Instructions
 
 [AI_MASTER.md](AI_MASTER.md) is the source of truth for architecture, tech stack, data flow, UI conventions, and
-domain language — including the technical implementation of the color tokens (§5 "Farbtoken — technische
-Umsetzung"). [CORPORATE_DESIGN.md](CORPORATE_DESIGN.md) holds the same visual identity — color palette, brand-color
+domain language — including the technical implementation of the color tokens (§5 "Color tokens — technical
+implementation"). [CORPORATE_DESIGN.md](CORPORATE_DESIGN.md) holds the same visual identity — color palette, brand-color
 rules, typography, app icon — but rewritten compact and code-free for a design/marketing audience; keep both in
 sync, not just one. [gherkin/](gherkin/) holds the behavioral spec as Gherkin features. Read all three before
-making any non-trivial change, and follow the "Regeln für KI-Agenten" section at the bottom of AI_MASTER.md — in
+making any non-trivial change, and follow the "Rules for AI Agents" section at the bottom of AI_MASTER.md — in
 particular: keep AI_MASTER.md, CORPORATE_DESIGN.md, and the relevant `gherkin/*.feature` in sync with any change to
 folder structure, architecture, data models, view behavior, or design tokens; never translate the German domain
 terms (Konto, Fixposten, Vermögenswerte, …); don't revert a documented architecture decision (e.g. macOS
@@ -16,16 +16,16 @@ keychain/sandbox settings, unencrypted rates cache) without discussing it first.
 [.github/copilot-instructions.md](.github/copilot-instructions.md) (GitHub Copilot). Each restates only the
 "Non-negotiable rules" paragraph above and points back to this file + AI_MASTER.md for everything else. If you
 change one of those non-negotiable rules here, update the matching section in every sibling file in the same step
-— see AI_MASTER §3 for the current list and "Regeln für KI-Agenten" #1.
+— see AI_MASTER §3 for the current list and "Rules for AI Agents" #1.
 
 ## Working efficiently in this repo (for AI agents)
 
-**Navigate, don't scan.** To change a behavior: find it in AI_MASTER **§8 Feature-Übersicht** → open that feature's
-`# Quelle:` files → find its test via the §8 table or `grep "// Gherkin: <feature>"`. Edit only that narrow set.
+**Navigate, don't scan.** To change a behavior: find it in AI_MASTER **§8 feature overview** → open that feature's
+`# Source:` files → find its test via the §8 table or `grep "// Gherkin: <feature>"`. Edit only that narrow set.
 
-**Regenerate a feature:** rewrite only its `# Implementierung:` file (the primary target named in the feature header)
-against the feature's scenarios + its test; treat the other `# Quelle:` files (shared `app_state`/`app_store` facades)
-as fixed context. See AI_MASTER "Regenerierung eines Features". Pure-logic (`@executable`) features are true 1:1.
+**Regenerate a feature:** rewrite only its `# Implementation:` file (the primary target named in the feature header)
+against the feature's scenarios + its test; treat the other `# Source:` files (shared `app_state`/`app_store` facades)
+as fixed context. See AI_MASTER "Regenerating a feature". Pure-logic (`@executable`) features are true 1:1.
 
 **Keep the layering.** Pure, testable logic lives in `lib/utils/analysis.dart` and `lib/constants.dart`; views stay
 thin. For new pure behavior, add a `Scenario` in `gherkin/executable/*.feature` + one `s.step(...)` in `test/bdd/`.
@@ -41,7 +41,7 @@ the icon pipeline). The guard `test/gherkin_sync_test.dart` fails fast and point
 broke — read its message before hunting.
 
 **Keep docs in sync** (AI_MASTER.md + `gherkin/`) with every change, and don't revert a documented decision (see
-AI_MASTER "Regeln für KI-Agenten") without asking.
+AI_MASTER "Rules for AI Agents") without asking.
 
 ## The website (`docs/`) — things mostly no test covers
 

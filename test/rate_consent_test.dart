@@ -1,10 +1,10 @@
 // Gherkin: gherkin/currency_exchange.feature
 //
-// Deckt das Opt-in zum Kursabruf (Issue #16) ab — bewusst OHNE Netzwerkzugriff:
-// geprüft wird ausschließlich das Gate (`AppStore.mayFetchRates`,
-// `CurrencyService.getExchangeRate`), also die Entscheidung *ob* ein Aufruf
-// stattfinden darf, nicht der Aufruf selbst. Entstanden aus einem Fall, in dem
-// unklar blieb, ob das Gate oder die HTTP-Anfrage die Ursache war.
+// Covers the exchange-rate-fetch opt-in (issue #16) — deliberately WITHOUT
+// network access: only the gate (`AppStore.mayFetchRates`,
+// `CurrencyService.getExchangeRate`) is tested, i.e. the decision *whether*
+// a call may happen, not the call itself. Written after a case where it was
+// unclear whether the gate or the HTTP request was the cause.
 import 'dart:io';
 
 import 'package:finanzgecko/constants.dart';
@@ -78,8 +78,8 @@ void main() {
     test('"granted" öffnet das Gate sofort, ohne Neuladen', () async {
       final store = await openStore();
       await store.setRateFetchConsent(RateFetchConsent.granted);
-      // Der eigentliche Kern: die Sperre muss unmittelbar nach dem Setzen fallen,
-      // nicht erst nach einem Reload oder App-Neustart.
+      // The actual point: the gate must drop immediately after setting it,
+      // not only after a reload or app restart.
       expect(store.mayFetchRates, isTrue);
       expect(CurrencyService(store).mayFetchRates, isTrue);
     });

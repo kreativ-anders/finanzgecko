@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// Ergebnis von [promptNewBackupPassphrase]: leerer String = bewusst ohne
-/// Passwort, null = Dialog abgebrochen. Die beiden auseinanderzuhalten ist
-/// wichtig — "abgebrochen" darf keinen ungeschützten Export auslösen.
+/// Result of [promptNewBackupPassphrase]: empty string = deliberately no
+/// password, null = dialog cancelled. Keeping these distinct matters —
+/// "cancelled" must never trigger an unprotected export.
 typedef BackupPassphraseChoice = String?;
 
-/// Fragt beim Export, ob das Backup mit einem Passwort geschützt werden soll.
+/// Asks on export whether the backup should be password-protected.
 ///
-/// Beide Wege stehen als eigener Knopf da, statt "Feld leer lassen" zu
-/// verlangen: eine Entscheidung über Verschlüsselung sollte man treffen, nicht
-/// versehentlich überspringen. Die Formulierungen kommen ohne Fachbegriffe aus.
+/// Both paths are their own button instead of "leave the field empty":
+/// encryption should be a decision made on purpose, not skipped by accident.
 Future<BackupPassphraseChoice> promptNewBackupPassphrase(BuildContext context) async {
   final pwCtrl = TextEditingController();
   final repeatCtrl = TextEditingController();
@@ -88,9 +87,9 @@ Future<BackupPassphraseChoice> promptNewBackupPassphrase(BuildContext context) a
   }
 }
 
-/// Fragt beim Import nach dem Passwort einer geschützten Backup-Datei.
-/// Null = abgebrochen. [wasWrong] blendet den Hinweis nach einem Fehlversuch
-/// ein, statt den Dialog kommentarlos erneut zu zeigen.
+/// Asks on import for the password of a protected backup file.
+/// Null = cancelled. [wasWrong] shows the hint after a failed attempt,
+/// instead of just re-showing the dialog without comment.
 Future<String?> promptExistingBackupPassphrase(BuildContext context, {bool wasWrong = false}) async {
   final ctrl = TextEditingController();
   try {

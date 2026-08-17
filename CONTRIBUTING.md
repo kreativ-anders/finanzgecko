@@ -3,9 +3,10 @@
 ## Before you start
 
 [AI_MASTER.md](AI_MASTER.md) is the source of truth for architecture, data models, conventions, and domain
-language; [gherkin/](gherkin/) is the behavioral spec. Both are in German (see AI_MASTER §3 "Sprache der Doku") —
-read both before making any non-trivial change, especially the "Regeln für KI-Agenten" section at the end of
-AI_MASTER.md, which applies to human contributions too:
+language; [gherkin/](gherkin/) is the behavioral spec. Both are in English, but keep the binding German domain
+terms untranslated inline throughout (see AI_MASTER §3 "Doc language") — read both before making any non-trivial
+change, especially the "Rules for AI Agents" section at the end of AI_MASTER.md, which applies to human
+contributions too:
 
 - German domain terms (Konto, Fixposten, Vermögenswerte, …) are mandatory, not cosmetic — never translate them,
   including in English prose.
@@ -26,8 +27,8 @@ flutter run -d linux   # or -d macos / -d windows
 ## Workflow
 
 1. **Spec-first:** write a Gherkin scenario for new behavior before or alongside the implementation. Navigate:
-   AI_MASTER §8 Feature-Übersicht → feature file → its `# Implementierung:` file.
-2. Implement, touching only the files that feature actually owns (see AI_MASTER "Regenerierung eines Features").
+   AI_MASTER §8 feature overview → feature file → its `# Implementation:` file.
+2. Implement, touching only the files that feature actually owns (see AI_MASTER "Regenerating a feature").
 3. For new pure logic: add a `Scenario` in `gherkin/executable/*.feature` + an `s.step(...)` in `test/bdd/`.
 
 ## Checks before every commit

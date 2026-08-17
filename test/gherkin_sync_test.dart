@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// `gherkin/` folder can no longer live an isolated life next to the code.
 ///
 /// Three invariants:
-///  1. Every `gherkin/*.feature` has a `# Quelle:` header and every source path
+///  1. Every `gherkin/*.feature` has a `# Source:` header and every source path
 ///     it names still exists — a feature can't reference dead code.
 ///  2. Every test that declares coverage does so with a marker of the form
 ///     `// [G]herkin: gherkin/<x>.feature` that points to a real feature file —
@@ -21,10 +21,9 @@ void main() {
   // test). Adding coverage for one — or adding a new untested feature — must
   // update this set, on purpose.
   const featuresWithoutUnitTest = {
-    // currency_exchange ist seit dem Opt-in (Issue #16) durch
-    // test/rate_consent_test.dart abgedeckt — allerdings nur der Gate-Teil
-    // (darf abgerufen werden?), nicht der HTTP-Aufruf selbst, der weiterhin
-    // UI-/Integrationssache bleibt.
+    // currency_exchange has been covered by test/rate_consent_test.dart since
+    // the opt-in (issue #16) — but only the gate part (is a fetch allowed?),
+    // not the HTTP call itself, which remains UI/integration territory.
     'gherkin/window.feature',
     'gherkin/navigation.feature',
   };
@@ -66,63 +65,63 @@ void main() {
     }
   }
 
-  test('es gibt Feature-Dateien', () {
+  test('there are feature files', () {
     expect(featureFiles, isNotEmpty);
   });
 
-  group('1) "# Quelle:" verweist nur auf existierenden Code', () {
+  group('1) "# Source:" only points at existing code', () {
     for (final f in featureFiles) {
       test(basename(f.path), () {
-        final header = f.readAsLinesSync().firstWhere((l) => l.trimLeft().startsWith('# Quelle:'), orElse: () => '');
-        expect(header, isNotEmpty, reason: '${basename(f.path)} braucht einen "# Quelle:"-Header.');
+        final header = f.readAsLinesSync().firstWhere((l) => l.trimLeft().startsWith('# Source:'), orElse: () => '');
+        expect(header, isNotEmpty, reason: '${basename(f.path)} needs a "# Source:" header.');
         final paths = header
-            .replaceFirst(RegExp(r'^\s*#\s*Quelle:\s*'), '')
+            .replaceFirst(RegExp(r'^\s*#\s*Source:\s*'), '')
             .split(',')
             .map((s) => s.trim())
             .where((s) => s.isNotEmpty);
         for (final path in paths) {
-          expect(File(path).existsSync(), isTrue, reason: '$path (aus ${basename(f.path)}) existiert nicht mehr.');
+          expect(File(path).existsSync(), isTrue, reason: '$path (from ${basename(f.path)}) no longer exists.');
         }
       });
     }
   });
 
-  test('2) jede Test→Feature-Verlinkung zeigt auf eine existierende Feature-Datei', () {
+  test('2) every test→feature link points at an existing feature file', () {
     for (final (testFile, ref) in annotationRefs) {
-      expect(featurePaths, contains(ref), reason: '$testFile verlinkt unbekanntes Feature "$ref".');
+      expect(featurePaths, contains(ref), reason: '$testFile links to an unknown feature "$ref".');
     }
   });
 
-  test('3) genau die erlaubten Features sind ohne Unit-Test', () {
+  test('3) exactly the allowed features have no unit test', () {
     final uncovered = featurePaths.difference(coverage.keys.toSet());
     expect(
       uncovered,
       featuresWithoutUnitTest,
       reason:
-          'Abweichung. Features ohne Test = $uncovered.\n'
-          'Entweder einen Test mit der Zeile "// '
-          'Gherkin: <feature>" ergänzen '
-          'oder featuresWithoutUnitTest in diesem Test bewusst anpassen.',
+          'Mismatch. Features without a test = $uncovered.\n'
+          'Either add a test with the line "// '
+          'Gherkin: <feature>" '
+          'or deliberately adjust featuresWithoutUnitTest in this test.',
     );
     expect(
       featuresWithoutUnitTest.difference(featurePaths),
       isEmpty,
-      reason: 'featuresWithoutUnitTest nennt nicht-existierende Feature-Dateien.',
+      reason: 'featuresWithoutUnitTest names feature files that don\'t exist.',
     );
   });
 
-  test('4) jede Feature-Datei ist in AI_MASTER.md indexiert', () {
+  test('4) every feature file is indexed in AI_MASTER.md', () {
     final master = File('AI_MASTER.md').readAsStringSync();
     for (final f in featureFiles) {
       expect(
         master.contains(basename(f.path)),
         isTrue,
-        reason: '${basename(f.path)} fehlt in AI_MASTER.md (Feature-Übersicht in Abschnitt 8).',
+        reason: '${basename(f.path)} is missing from AI_MASTER.md (feature overview in Section 8).',
       );
     }
   });
 
-  test('5) jede Feature hat ein # Implementierung: (Regenerierungsziel) aus # Quelle:', () {
+  test('5) every feature has a # Implementation: (regeneration target) from # Source:', () {
     for (final f in featureFiles) {
       final lines = f.readAsLinesSync();
       String headerValue(String key) {
@@ -130,16 +129,12 @@ void main() {
         return line.isEmpty ? '' : line.trim().substring(key.length).trim();
       }
 
-      final impl = headerValue('# Implementierung:');
-      final quelle = headerValue('# Quelle:').split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet();
+      final impl = headerValue('# Implementation:');
+      final source = headerValue('# Source:').split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet();
       final where = basename(f.path);
-      expect(
-        impl,
-        isNotEmpty,
-        reason: '$where braucht eine Kopfzeile "# Implementierung: <Datei>" (Regenerierungsziel).',
-      );
-      expect(File(impl).existsSync(), isTrue, reason: '$where: Implementierung "$impl" existiert nicht.');
-      expect(quelle, contains(impl), reason: '$where: "$impl" muss auch in "# Quelle:" stehen.');
+      expect(impl, isNotEmpty, reason: '$where needs a header line "# Implementation: <file>" (regeneration target).');
+      expect(File(impl).existsSync(), isTrue, reason: '$where: implementation "$impl" doesn\'t exist.');
+      expect(source, contains(impl), reason: '$where: "$impl" must also be listed in "# Source:".');
     }
   });
 }

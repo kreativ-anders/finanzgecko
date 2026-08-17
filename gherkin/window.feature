@@ -1,44 +1,45 @@
-# Quelle: lib/main.dart, lib/ui/splash_screen.dart
-# Implementierung: lib/main.dart
+# Source: lib/main.dart, lib/ui/splash_screen.dart
+# Implementation: lib/main.dart
 @window
-Feature: Fensterverhalten und Splash
-  Als Nutzer:in eines nativen Desktop-Programms erwarte ich vertrautes Fensterverhalten (Größe/Maximiert-Status
-  merken) und einen ruhigen Start.
+Feature: Window behavior and splash
+  As a user of a native desktop program, I expect familiar window behavior (remembering size/maximized
+  state) and a calm start.
 
-  Scenario: Fenstergröße und Maximiert-Status werden gemerkt
-    Given ich habe die Fenstergröße geändert oder das Fenster maximiert/wiederhergestellt
-    Then wird dies (debounced) gespeichert
-    When ich die App neu starte
-    Then öffnet sich das Fenster in genau dieser Größe bzw. maximiert
+  Scenario: Window size and maximized state are remembered
+    Given I changed the window size or maximized/restored the window
+    Then this is saved (debounced)
+    When I restart the app
+    Then the window opens at exactly this size, or maximized
 
-  Scenario: Fensterposition wird bewusst nicht gespeichert
-    Given ich habe das Fenster auf einen zweiten Monitor verschoben
-    When ich die App neu starte, ggf. ohne diesen Monitor angeschlossen
-    Then wird nur Größe/Maximiert-Status wiederhergestellt, die Position folgt der Standard-Zentrierung
-    And das Fenster landet dadurch nie außerhalb des sichtbaren Bereichs
+  Scenario: Window position is deliberately not saved
+    Given I moved the window to a second monitor
+    When I restart the app, possibly without that monitor connected
+    Then only size/maximized state is restored, the position follows the default centering
+    And the window therefore never ends up outside the visible area
 
-  Scenario: Mindestgröße und Standardgröße
-    Given es ist die allererste Nutzung (keine gespeicherten Fensterwerte)
-    Then öffnet sich das Fenster mit 1280×860, maximiert
-    And das Fenster kann zu keinem Zeitpunkt kleiner als 960×640 werden
+  Scenario: Minimum size and default size
+    Given this is the very first use (no saved window values)
+    Then the window opens at 1280×860, maximized
+    And the window can never become smaller than 960×640
 
-  Scenario: Splash-Screen beim Start
-    Given die App wird gestartet
-    Then wird für mindestens 1100ms ein Marken-Splash (Logo + "🦎 FinanzGecko") gezeigt — Store und Fenster sind zu
-      diesem Zeitpunkt bereits vollständig initialisiert, der Splash gated also keinen echten Ladevorgang
-    And danach blendet die App über 400ms zur Dashboard-Ansicht über
+  Scenario: Splash screen on startup
+    Given the app is starting
+    Then a brand splash (logo + "🦎 FinanzGecko") is shown for at least 1100ms — the store and window are
+      already fully initialized by this point, so the splash doesn't gate any real loading
+    And after that the app crossfades to the Dashboard view over 400ms
 
-  Scenario: Splash-Logo folgt dem aktiven Theme
-    Given die App startet im dunklen Theme
-    Then zeigt der Splash das helle Logo (weiße Schrift), das dort 13,7:1 erreicht
-    Given die App startet im hellen Theme
-    Then zeigt der Splash das dunkle Logo (schwarze Schrift) mit 6,4:1
-    And beide Dateien haben denselben Zuschnitt (512×333), der Splash sieht in beiden Themes gleich aus
-    And schon das leere Fenster vor dem Splash hat die richtige Hintergrundfarbe — main.dart löst die Helligkeit
-      über primeThemeBrightness auf, bevor die WindowOptions gebaut werden
+  Scenario: The splash logo follows the active theme
+    Given the app starts in the dark theme
+    Then the splash shows the light logo (white text), which reaches 13.7:1 there
+    Given the app starts in the light theme
+    Then the splash shows the dark logo (black text) at 6.4:1
+    And both files share the same crop (512×333), so the splash looks the same in both themes
+    And even the empty window before the splash has the correct background color — main.dart resolves the
+      brightness via primeThemeBrightness before the WindowOptions are built
 
-  Scenario: Splash-Dauer ist eine bewusste Marken-Entscheidung
-    Given main.dart ruft windowManager.show() bereits vor runApp auf
-    Then ist vor dem Splash für die Dauer der Initialisierung ein leeres Fenster in kBackground sichtbar
-    And die 1100ms + 400ms kommen zu dieser Zeit hinzu, der Start wirkt also insgesamt ~1,5s lang gebrandet
-    And genau diese Werte wurden geprüft und bewusst beibehalten — sie sind ohne Rücksprache nicht zu "optimieren"
+  Scenario: Splash duration is a deliberate branding decision
+    Given main.dart already calls windowManager.show() before runApp
+    Then an empty window in kBackground is visible before the splash for the duration of initialization
+    And the 1100ms + 400ms add to that time, so the start feels branded for ~1.5s overall
+    And exactly these values were evaluated and deliberately kept — they are not to be "optimized" without
+      discussing it first

@@ -1,84 +1,83 @@
-# Quelle: lib/services/notification_service.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/views/settings_view.dart
-# Implementierung: lib/services/notification_service.dart
+# Source: lib/services/notification_service.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/views/settings_view.dart
+# Implementation: lib/services/notification_service.dart
 @notifications
-Feature: OS-Benachrichtigungen für Backup- und Vermögenswerte-Reminder
-  Als Nutzer:in möchte ich eine native System-Benachrichtigung bekommen, sobald der Backup- oder der
-  Vermögenswerte-Reminder neu überfällig wird — nicht nur als Banner im Dashboard, das ich nur sehe, wenn die
-  App gerade im Vordergrund ist.
+Feature: OS notifications for backup and Vermögenswerte reminders
+  As a user, I want a native system notification as soon as the backup or Vermögenswerte reminder newly
+  becomes overdue — not only as a Dashboard banner that I only see while the app is in the foreground.
 
   Background:
-    Given die App ist gestartet und initialisiert
-    And Desktop-Benachrichtigungen sind aktiviert (Standard)
+    Given the app is started and initialized
+    And Desktop-Benachrichtigungen are enabled (default)
 
-  Scenario: Benachrichtigungen sind standardmäßig aktiviert
-    Given eine frische Installation ohne bisherige Einstellung
-    Then ist der Schalter "Desktop-Benachrichtigungen" in den Einstellungen aktiv
+  Scenario: Notifications are enabled by default
+    Given a fresh installation with no prior setting
+    Then the "Desktop-Benachrichtigungen" toggle in Einstellungen is on
 
-  Scenario: Deaktivierter Schalter unterdrückt beide Benachrichtigungsarten
-    Given ich habe "Desktop-Benachrichtigungen" in den Einstellungen deaktiviert
-    And sowohl der Backup- als auch der Vermögenswerte-Reminder sind überfällig
-    Then wird keine OS-Benachrichtigung gesendet
+  Scenario: A disabled toggle suppresses both kinds of notifications
+    Given I turned off "Desktop-Benachrichtigungen" in Einstellungen
+    And both the backup and the Vermögenswerte reminder are overdue
+    Then no OS notification is sent
 
-  Rule: Backup-Reminder — einmal pro überfälliger Episode
+  Rule: Backup reminder — once per overdue episode
 
-    Scenario: Keine Benachrichtigung, solange die App komplett leer ist
-      Given es existieren weder Konten noch Kontostände noch Vermögenswerte noch Fixposten
-      Then erscheint keine Backup-Benachrichtigung, unabhängig davon, ob je exportiert wurde
+    Scenario: No notification while the app is completely empty
+      Given neither Konten, Kontostände, Vermögenswerte, nor Fixposten exist
+      Then no backup notification appears, regardless of whether an export ever happened
 
-    Scenario: Benachrichtigung feuert, sobald der Backup-Reminder neu überfällig wird
-      Given es existiert mindestens ein Konto, Kontostand, Vermögenswert oder Fixposten
-      And entweder liegt der letzte Export kBackupReminderRepeatDays (90, ~3 Monate) oder länger zurück, oder es
-        wurde nie exportiert und die früheste erfasste Aktivität liegt kBackupReminderFirstDays (182, ~6 Monate)
-        oder länger zurück
-      And für diese Überfälligkeit wurde noch nicht benachrichtigt
-      When die App startet oder eine Aktion einen Reload auslöst
-      Then erscheint eine OS-Benachrichtigung mit demselben Text wie das Dashboard-Banner
-      And die Episode wird als "benachrichtigt" vermerkt
+    Scenario: A notification fires as soon as the backup reminder newly becomes overdue
+      Given at least one Konto, Kontostand, Vermögenswert, or Fixposten exists
+      And either the last export is kBackupReminderRepeatDays (90, ~3 months) or longer ago, or there was
+        never an export and the earliest recorded activity is kBackupReminderFirstDays (182, ~6 months) or
+        longer ago
+      And no notification has fired for this overdue state yet
+      When the app starts or an action triggers a reload
+      Then an OS notification appears with the same text as the Dashboard banner
+      And the episode is marked as "notified"
 
-    Scenario: Keine erneute Benachrichtigung, solange die Episode ungelöst bleibt
-      Given für die aktuelle Backup-Überfälligkeit wurde bereits benachrichtigt
-      When die App neu gestartet wird oder weitere Zeit vergeht, ohne dass exportiert wird
-      Then erscheint keine weitere Benachrichtigung für diese Episode
+    Scenario: No repeat notification while the episode stays unresolved
+      Given a notification has already fired for the current backup overdue state
+      When the app is restarted, or more time passes without an export
+      Then no further notification appears for this episode
 
-    Scenario: Export löst die Episode auf — die nächste Überfälligkeit benachrichtigt wieder
-      Given für die aktuelle Backup-Überfälligkeit wurde bereits benachrichtigt
-      When ich ein Backup exportiere
-      Then wird die Episode zurückgesetzt
-      And sobald kBackupReminderRepeatDays erneut erreicht sind, erscheint wieder genau eine Benachrichtigung
+    Scenario: An export resolves the episode — the next overdue state notifies again
+      Given a notification has already fired for the current backup overdue state
+      When I export a backup
+      Then the episode is reset
+      And once kBackupReminderRepeatDays is reached again, exactly one notification appears again
 
-  Rule: Vermögenswerte-Reminder — einmal pro Vermögenswert und Episode
+  Rule: Vermögenswerte reminder — once per Vermögenswert and episode
 
-    Scenario: Benachrichtigung feuert für neu überfällige Vermögenswerte, gebündelt
-      Given mindestens ein Vermögenswert ist seit über kAssetReevaluationDays (182) Tagen nicht neu bewertet
-      And für diese Vermögenswerte wurde noch nicht benachrichtigt
-      Then erscheint eine einzelne OS-Benachrichtigung mit allen betroffenen Namen (wie im Dashboard-Banner) —
-        keine Benachrichtigungsflut, eine Meldung pro Prüfzyklus, nicht eine je Vermögenswert
+    Scenario: A notification fires for newly overdue Vermögenswerte, bundled
+      Given at least one Vermögenswert hasn't been re-evaluated for over kAssetReevaluationDays (182) days
+      And no notification has fired for these Vermögenswerte yet
+      Then a single OS notification appears with every affected name (like the Dashboard banner) — no
+        notification flood, one message per check cycle, not one per Vermögenswert
 
-    Scenario: Neubewertung eines Vermögenswerts löst dessen Episode auf
-      Given für einen Vermögenswert wurde bereits benachrichtigt
-      When ich seinen Wert neu bewerte (aktualisiere)
-      Then wird seine Episode zurückgesetzt
-      And er löst frühestens nach erneut kAssetReevaluationDays Tagen wieder eine Benachrichtigung aus
+    Scenario: Re-evaluating a Vermögenswert resolves its episode
+      Given a notification has already fired for a Vermögenswert
+      When I re-evaluate (update) its value
+      Then its episode is reset
+      And it triggers another notification at the earliest after kAssetReevaluationDays days again
 
-    Scenario: Löschen eines Vermögenswerts entfernt seine Episode
-      Given für einen Vermögenswert wurde bereits benachrichtigt
-      When ich ihn lösche
-      Then wird sein Benachrichtigungs-Status verworfen (kein Datenleck über die Lebensdauer des Vermögenswerts hinaus)
+    Scenario: Deleting a Vermögenswert removes its episode
+      Given a notification has already fired for a Vermögenswert
+      When I delete it
+      Then its notification status is discarded (no data leak beyond the Vermögenswert's lifetime)
 
-  Rule: Bewusste Grenzen
+  Rule: Deliberate limits
 
-    Scenario: Klick auf die Benachrichtigung navigiert nicht in der App
-      Given eine Benachrichtigung ist sichtbar
-      When ich darauf klicke
-      Then passiert außer dem OS-typischen Fokussieren/Öffnen des Fensters nichts Zusätzliches (kein Deep-Link)
+    Scenario: Clicking the notification doesn't navigate within the app
+      Given a notification is visible
+      When I click it
+      Then nothing else happens beyond the OS's typical focus/open of the window (no deep link)
 
-    Scenario: Keine Zustellung bei geschlossener App
-      Given die App läuft nicht
-      Then wird auch dann keine Benachrichtigung gesendet, wenn währenddessen ein Reminder überfällig wird
-      And die Prüfung holt das erst beim nächsten Start bzw. während der App danach wieder läuft nach
-        (kein Hintergrunddienst, siehe AI_MASTER.md §2/§6)
+    Scenario: No delivery while the app is closed
+      Given the app isn't running
+      Then no notification is sent even if a reminder becomes overdue in the meantime
+      And the check catches up only at the next start resp. while the app is running again afterward (no
+        background service, see AI_MASTER.md §2/§6)
 
-    Scenario: Ein fehlendes Notification-Backend darf die App nie zum Absturz bringen
-      Given kein Notification-Daemon ist verfügbar (z. B. minimales Linux-Setup) oder die Berechtigung wurde verweigert
-      Then bleibt die Benachrichtigung stumm aus
-      And alle anderen App-Funktionen bleiben unbeeinträchtigt
+    Scenario: A missing notification backend must never crash the app
+      Given no notification daemon is available (e.g. a minimal Linux setup) or permission was denied
+      Then the notification silently doesn't happen
+      And every other app function stays unaffected

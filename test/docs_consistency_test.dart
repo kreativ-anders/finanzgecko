@@ -135,10 +135,10 @@ void main() {
   });
 
   group('Die genannte macOS-Mindestversion stimmt mit dem Build überein', () {
-    // Bis v1.8 stand auf der Seite gar keine Mindestversion — bei einem Ziel von
-    // 10.15 traf sie niemanden. Mit 12 ist das anders: wer auf macOS 11 lädt,
-    // bekommt ein DMG, das sich nicht öffnet, und die Seite erklärt es nicht.
-    // Die Zahl steht damit an zwei Orten und driftet beim nächsten Anheben.
+    // Up to v1.8 the site named no minimum version at all — with a target of
+    // 10.15 that affected nobody. With 12 that's different: downloading on
+    // macOS 11 now gets a DMG that won't open, unexplained on the page. So
+    // the number lives in two places and can drift on the next bump.
     test('docs/download.html nennt das Deployment-Target aus dem Xcode-Projekt', () {
       final pbxproj = read('macos/Runner.xcodeproj/project.pbxproj');
       final targets = RegExp(

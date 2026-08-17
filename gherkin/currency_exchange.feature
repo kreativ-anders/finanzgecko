@@ -1,117 +1,114 @@
-# Quelle: lib/services/currency_service.dart, lib/ui/widgets/manual_rate_dialog.dart,
+# Source: lib/services/currency_service.dart, lib/ui/widgets/manual_rate_dialog.dart,
 #   lib/ui/widgets/rate_consent_dialog.dart, lib/data/app_store.dart
-# Implementierung: lib/services/currency_service.dart
+# Implementation: lib/services/currency_service.dart
 @currency
-Feature: Wechselkurse — Zustimmung, Abruf, Cache und manueller Fallback
-  Als Nutzer:in mit Konten/Fixposten in Fremdwährung möchte ich, dass die App aktuelle Wechselkurse verwendet —
-  aber erst, nachdem ich den Abruf erlaubt habe — und auch offline oder bei einer API-Störung weiterarbeitet.
+Feature: Exchange rates — consent, fetching, cache, and manual fallback
+  As a user with Konten/Fixposten in a foreign currency, I want the app to use current exchange rates — but
+  only after I've allowed fetching — and to keep working offline or during an API outage.
 
-  Rule: Zustimmung zum Abruf (Opt-in)
+  Rule: Consent to fetch (opt-in)
 
-    Scenario: Vor der ersten Entscheidung geht nichts ins Netz
-      Given es wurde noch nie nach der Zustimmung gefragt (Zustand "unset")
-      Then behandelt die App das wie eine Ablehnung und ruft keinen Kurs ab
-      And der lokale Kurs-Cache darf trotzdem gelesen werden — er liegt auf diesem Gerät, dafür wird niemand
-        kontaktiert
+    Scenario: Before the first decision, nothing goes over the network
+      Given consent has never been asked for (state "unset")
+      Then the app treats that as a refusal and fetches no rate
+      And the local rate cache may still be read — it lives on this device, so nobody gets contacted for it
 
-    Scenario: Gefragt wird im Erfassungsmoment, nicht beim Öffnen einer Ansicht
-      Given der Zustand ist "unset"
-      When ich einen Kontostand oder Fixposten in einer Fremdwährung speichere
-      Then erscheint einmalig der Dialog "Wechselkurse online abrufen?" mit den Optionen "Kurse abrufen" und
+    Scenario: Consent is asked for at the moment of recording, not when a view opens
+      Given the state is "unset"
+      When I save a Kontostand or Fixposten in a foreign currency
+      Then the dialog "Wechselkurse online abrufen?" appears once, with the options "Kurse abrufen" and
         "Nicht abrufen"
-      And derselbe Dialog erscheint niemals beim bloßen Öffnen einer Ansicht, insbesondere nicht in den
-        Einstellungen
-      Given Quell- und Zielwährung sind identisch
-      Then wird gar nicht gefragt — ohne Umrechnung gibt es nichts zu entscheiden
+      And this same dialog never appears just from opening a view, in particular not in Einstellungen
+      Given the source and target currency are identical
+      Then no question is asked at all — with no conversion, there's nothing to decide
 
-    Scenario: Dialog wegklicken entscheidet nichts
-      Given der Dialog "Wechselkurse online abrufen?" ist offen
-      When ich ihn schließe, ohne eine der beiden Optionen zu wählen
-      Then bleibt der gespeicherte Zustand "unset"
-      And die aktuelle Aktion läuft auf dem Offline-Pfad weiter (Cache, sonst manueller Kurs)
-      And beim nächsten Kursbedarf wird erneut gefragt
+    Scenario: Dismissing the dialog decides nothing
+      Given the "Wechselkurse online abrufen?" dialog is open
+      When I close it without choosing either option
+      Then the stored state stays "unset"
+      And the current action continues on the offline path (cache, otherwise a manual rate)
+      And the question is asked again the next time a rate is needed
 
-    Scenario: Entscheidung ist in den Einstellungen sichtbar und umkehrbar
-      Given ich öffne Einstellungen → Wechselkurse
-      Then sehe ich den aktuellen Zustand als Auswahl "Noch nicht entschieden" / "Abrufen" / "Nicht abrufen"
-      And dieser Abschnitt ist auch dann schon sichtbar, wenn noch nie gefragt wurde
-      And das Anzeigen löst weder einen Abruf noch einen Dialog aus
-      When ich die Auswahl ändere
-      Then gilt die neue Entscheidung ab dem nächsten Kursbedarf
+    Scenario: The decision is visible and reversible in Einstellungen
+      Given I open Einstellungen → Wechselkurse
+      Then I see the current state as a choice of "Noch nicht entschieden" / "Abrufen" / "Nicht abrufen"
+      And this section is already visible even if consent was never asked for
+      And displaying it triggers neither a fetch nor a dialog
+      When I change the selection
+      Then the new decision applies from the next time a rate is needed
 
-    Scenario: Ablehnung gilt auch für die Diagnose
-      Given der Abruf ist nicht erlaubt ("unset" oder "denied")
-      When ich Einstellungen → Hilfe öffne oder die Debug-Informationen kopiere
-      Then wird die Erreichbarkeit der Kurs-API nicht geprüft, sondern als "Nicht geprüft (Abruf nicht erlaubt)"
-        ausgewiesen
-      Given der Abruf ist erlaubt
-      Then prüft die App die Erreichbarkeit trotzdem erst auf Klick auf "Jetzt prüfen", nicht beim Öffnen
+    Scenario: A refusal also applies to diagnostics
+      Given fetching is not allowed ("unset" or "denied")
+      When I open Einstellungen → Hilfe or copy the debug information
+      Then the rate API's reachability is not checked, but reported as "Nicht geprüft (Abruf nicht erlaubt)"
+      Given fetching is allowed
+      Then the app still only checks reachability on a click on "Jetzt prüfen", not on open
 
-    Scenario: Bestehende Installationen werden nicht stillschweigend übernommen
-      Given eine Datendatei wurde vor diesem Feature geschrieben und kennt den Schlüssel nicht
-      When die App sie lädt
-      Then ergibt sich der Zustand "unset" statt einer angenommenen Zustimmung
-      And beim nächsten Kursbedarf wird einmalig gefragt
+    Scenario: Existing installations are not silently grandfathered in
+      Given a data file was written before this feature existed and doesn't know the key
+      When the app loads it
+      Then the state resolves to "unset" instead of an assumed consent
+      And the question is asked once the next time a rate is needed
 
-  Rule: Abruf, Cache und manueller Fallback
+  Rule: Fetching, cache, and manual fallback
 
-    Scenario: Gleiche Quell- und Zielwährung braucht keinen API-Aufruf
-      Given Quell- und Zielwährung sind identisch
-      Then liefert die App sofort einen Kurs von 1 (Quelle "identity"), ohne Netzwerkaufruf
+    Scenario: The same source and target currency needs no API call
+      Given the source and target currency are identical
+      Then the app immediately returns a rate of 1 (source "identity"), with no network call
 
-    Scenario: Live-Kursabruf bei unterschiedlichen Währungen
-      Given Quell- und Zielwährung unterscheiden sich
-      And der Abruf ist erlaubt
-      And die Frankfurter.dev-API ist erreichbar
-      When ein Kurs für ein Datum ("YYYY-MM-DD") angefragt wird
-      Then liefert die App den Kurs von der API (Quelle "live")
-      And der Kurs wird unter dem Schlüssel "<von>_<nach>_<datum>" im Kurs-Cache gespeichert
+    Scenario: Live rate fetch for differing currencies
+      Given the source and target currency differ
+      And fetching is allowed
+      And the Frankfurter.dev API is reachable
+      When a rate for a date ("YYYY-MM-DD") is requested
+      Then the app returns the rate from the API (source "live")
+      And the rate is saved in the rate cache under the key "<von>_<nach>_<datum>"
 
-    Scenario: Cache-Fallback bei nicht erreichbarer API
-      Given die API ist nicht erreichbar (Timeout nach 10 Sekunden, HTTP-Fehler oder ungültige Antwort)
-      And für dieselbe Kombination aus Währungspaar und Datum existiert bereits ein gecachter Kurs
-      Then liefert die App diesen gecachten Kurs (Quelle "cache")
+    Scenario: Cache fallback when the API is unreachable
+      Given the API is unreachable (timeout after 10 seconds, an HTTP error, or an invalid response)
+      And a cached rate already exists for the same currency-pair-and-date combination
+      Then the app returns that cached rate (source "cache")
 
-    Scenario: Weder API noch Cache verfügbar
-      Given die API ist nicht erreichbar
-      And für dieses Währungspaar+Datum existiert kein gecachter Kurs
-      Then liefert der Service keinen Kurs (null)
-      And die aufrufende Ansicht fragt den Nutzer nach einem manuellen Kurs
+    Scenario: Neither API nor cache available
+      Given the API is unreachable
+      And no cached rate exists for this currency pair+date
+      Then the service returns no rate (null)
+      And the calling view asks the user for a manual rate
 
-    Scenario: Der Dialog nennt den tatsächlichen Grund
-      Given kein Kurs konnte ermittelt werden
-      Then nennt der Dialog den konkreten Grund statt pauschal "(offline?)"
-      And bei fehlender Zustimmung lautet er "Der Online-Abruf … ist nicht erlaubt (Einstellungen → Wechselkurse)"
-      And bei erteilter Zustimmung mit gescheitertem Abruf "… konnte nicht abgerufen werden (keine Verbindung
-        oder Störung der API)"
-      And der technische Grund (HTTP-Status, Timeout, Parse-Fehler, Zustimmungszustand) steht zusätzlich als
-        debugPrint im Log
+    Scenario: The dialog states the actual reason
+      Given no rate could be determined
+      Then the dialog states the specific reason instead of a blanket "(offline?)"
+      And without consent it reads "Der Online-Abruf … ist nicht erlaubt (Einstellungen → Wechselkurse)"
+      And with consent given but the fetch failed, "… konnte nicht abgerufen werden (keine Verbindung oder
+        Störung der API)"
+      And the technical reason (HTTP status, timeout, parse error, consent state) is additionally logged
+        via debugPrint
 
-    Scenario: Ein fehlgeschlagener Cache-Schreibvorgang kostet keinen Kurs
-      Given ein Kurs wurde erfolgreich von der API abgerufen
-      When das Schreiben der Kursdatei fehlschlägt (z. B. Datenträger voll, Verzeichnis schreibgeschützt)
-      Then wird der abgerufene Kurs trotzdem verwendet
-      And der Fehlschlag wird nur geloggt, nicht in "kein Wechselkurs verfügbar" umgedeutet
+    Scenario: A failed cache write doesn't cost a rate
+      Given a rate was successfully fetched from the API
+      When writing the rates file fails (e.g. disk full, directory read-only)
+      Then the fetched rate is still used
+      And the failure is only logged, not reinterpreted as "no exchange rate available"
 
-    Scenario: Manuellen Kurs eingeben
-      Given ein Dialog "Kein Wechselkurs verfügbar" wird angezeigt für "1 <von> = ? <nach>"
-      When ich eine positive Zahl eingebe und auf "Übernehmen" klicke
-      Then wird dieser Kurs für die aktuelle Aktion (Kontostand oder Fixposten speichern) verwendet
-      And er wird NICHT automatisch in den persistenten Kurs-Cache übernommen (nur einmalige Verwendung)
+    Scenario: Enter a manual rate
+      Given a "Kein Wechselkurs verfügbar" dialog is shown for "1 <von> = ? <nach>"
+      When I enter a positive number and click "Übernehmen"
+      Then this rate is used for the current action (saving a Kontostand or Fixposten)
+      And it is NOT automatically stored in the persistent rate cache (one-time use only)
 
-    Scenario: Manuellen Kurs-Dialog abbrechen oder ungültig ausfüllen
-      Given der Dialog "Kein Wechselkurs verfügbar" ist offen
-      When ich auf "Abbrechen" klicke, das Feld leer lasse, oder eine Zahl ≤0 eingebe
-      Then liefert der Dialog null
-      And die aufrufende Aktion (Speichern des Kontostands/Fixpostens) wird abgebrochen bzw. schlägt fehl
+    Scenario: Cancel the manual rate dialog or fill it in invalidly
+      Given the "Kein Wechselkurs verfügbar" dialog is open
+      When I click "Abbrechen", leave the field empty, or enter a number ≤0
+      Then the dialog returns null
+      And the calling action (saving the Kontostand/Fixposten) is cancelled resp. fails
 
-    Scenario: Kurs-Cache liegt getrennt von der verschlüsselten Datenbank
-      Given ein Kurs wurde frisch von der API abgerufen und gecacht
-      Then wird ausschließlich die kleine Klartextdatei "finanzgecko-rates.json" geschrieben
-      And die verschlüsselte Hauptdatenbank-Datei wird dafür NICHT neu geschrieben
+    Scenario: The rate cache lives separately from the encrypted database
+      Given a rate was freshly fetched from the API and cached
+      Then only the small plaintext file "finanzgecko-rates.json" is written
+      And the encrypted main database file is NOT rewritten for this
 
-    Scenario: Migration alter Kurs-Caches aus der Datenbank
-      Given eine ältere Installation hat Kurse noch innerhalb der verschlüsselten Datenbank gespeichert
-      When die App zum ersten Mal mit der neuen Version startet
-      Then werden diese Kurse einmalig in die separate Klartext-Kursdatei übernommen
-      And anschließend aus der verschlüsselten Datenbank entfernt
+    Scenario: Migration of old rate caches out of the database
+      Given an older installation still has rates stored inside the encrypted database
+      When the app starts for the first time with the new version
+      Then these rates are moved once into the separate plaintext rates file
+      And then removed from the encrypted database

@@ -16,7 +16,7 @@ import 'widgets/backup_passphrase_dialog.dart';
 
 /// Export/import flow for backups. Pure UI orchestration — persistence, schema
 /// checking, bank→colour derivation and encryption live in [AppState]/AppStore
-/// (see `# Quelle:` in gherkin/backup_restore.feature).
+/// (see `# Source:` in gherkin/backup_restore.feature).
 ///
 /// Free functions rather than methods in `navigation_shell.dart`, so the
 /// navigation shell and the backup flow each have their own primary file.

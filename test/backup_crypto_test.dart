@@ -1,9 +1,9 @@
 // Gherkin: gherkin/backup_restore.feature
 //
-// Passwortgeschützte Backups. Der wichtigste Test ist nicht "Verschlüsseln
-// funktioniert", sondern dass die Verschlüsselung **optional** bleibt: alte
-// Klartext-Backups müssen unverändert erkannt und eingelesen werden, sonst
-// wäre das ein Breaking Change für jedes bereits exportierte Backup.
+// Password-protected backups. The most important test isn't "encryption
+// works" but that encryption stays **optional**: old plaintext backups must
+// still be recognized and read unchanged, or it would be a breaking change
+// for every backup already exported.
 import 'dart:convert';
 
 import 'package:finanzgecko/data/backup_crypto.dart';

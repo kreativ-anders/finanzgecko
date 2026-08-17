@@ -1,102 +1,102 @@
 # FinanzGecko — Corporate Design
 
-**Zweck dieses Dokuments:** Die visuelle Identität von FinanzGecko — Farbpalette, Markenfarben-Regeln, Typografie
-und App-Icon — kompakt und ohne Code-Bezug, für Marketingmaterial, Präsentationen oder externe Gestaltung. Für die
-technische Umsetzung dieser Werte im Code siehe [`AI_MASTER.md`](AI_MASTER.md) §5 "Farbtoken — technische
-Umsetzung"; beide Dokumente sind bei jeder Farb-/Typografie-Änderung gemeinsam zu pflegen.
+**Purpose of this document:** FinanzGecko's visual identity — color palette, brand-color rules, typography, and app
+icon — kept compact and code-free, for marketing material, presentations, or external design work. For the technical
+implementation of these values in code, see [`AI_MASTER.md`](AI_MASTER.md) §5 "Color tokens — technical
+implementation"; keep both documents in sync whenever a color/typography change is made.
 
-## Marke
+## Brand
 
-FinanzGecko ist ein privater, lokaler Vermögenstracker — kein Cloud-Dienst, kein Abo, kein Tracking der eigenen
-Finanzdaten. Die visuelle Sprache spiegelt das: ruhig, reduziert, dunkel als Grundton, mit einem einzigen klaren
-Akzent (Mint-Grün) statt einer bunten Palette. Der Name kombiniert "Finanzen" mit einem Gecko — wachsam, wendig,
-unauffällig — als Maskottchen, nicht als Spielerei.
+FinanzGecko is a private, local net-worth tracker — no cloud service, no subscription, no tracking of your own
+financial data. The visual language reflects that: calm, reduced, dark as the base tone, with a single clear accent
+(mint green) instead of a colorful palette. The name combines the German word for "finance" ("Finanzen") with a
+gecko — watchful, agile, unobtrusive — as a mascot, not a gimmick.
 
-## App-Icon
+## App Icon
 
-![FinanzGecko App-Icon](assets/icon/icon.png)
+![FinanzGecko App Icon](assets/icon/icon.png)
 
-Ein Balkendiagramm, dessen rechter, höchster Balken in eine Gecko-Kopf-Silhouette übergeht — Mint-Grün auf
-fast-schwarzem Grund. Ein einziger 1024×1024-Master speist alle Plattform-Icon-Formate (macOS/Windows/Linux,
-Taskleiste, Dock, Startmenü).
+A bar chart whose rightmost, tallest bar transitions into a gecko-head silhouette — mint green on a near-black
+background. A single 1024×1024 master feeds all platform icon formats (macOS/Windows/Linux, taskbar, dock, start
+menu).
 
-## Farben
+## Colors
 
-Dunkel ist das Standard-Erscheinungsbild der App; Hell ist wählbar. Die drei Markenfarben (Mint, Koralle, Amber)
-bleiben in beiden Varianten identisch — sie sind Markenidentität, keine themenabhängige Gestaltung.
+Dark is the app's default appearance; Light is selectable. The three brand colors (mint, coral, amber) stay
+identical in both variants — they are brand identity, not theme-dependent styling.
 
-### Akzentfarben
+### Accent colors
 
 <table style="width:100%; border-collapse:collapse; margin:0.5em 0 1.5em;">
 <tr>
 <td style="width:64px; padding:6px 0;"><div style="width:48px; height:48px; border-radius:10px; background:#00C878; border:1px solid rgba(0,0,0,0.12);"></div></td>
-<td style="padding:6px 12px; vertical-align:middle;"><strong>Primary — Mint-Grün</strong> · <code>#00C878</code><br/><span style="color:#555;">Buttons, aktive Zustände, App-Icon, Schriftzug „🦎 FinanzGecko", positive Trends</span></td>
+<td style="padding:6px 12px; vertical-align:middle;"><strong>Primary — Mint Green</strong> · <code>#00C878</code><br/><span style="color:#555;">Buttons, active states, app icon, the „🦎 FinanzGecko" wordmark, positive trends</span></td>
 </tr>
 <tr>
 <td style="width:64px; padding:6px 0;"><div style="width:48px; height:48px; border-radius:10px; background:#FF6B6B; border:1px solid rgba(0,0,0,0.12);"></div></td>
-<td style="padding:6px 12px; vertical-align:middle;"><strong>Danger — Koralle</strong> · <code>#FF6B6B</code><br/><span style="color:#555;">Fehler, Verluste, destruktive Aktionen (z. B. Löschen)</span></td>
+<td style="padding:6px 12px; vertical-align:middle;"><strong>Danger — Coral</strong> · <code>#FF6B6B</code><br/><span style="color:#555;">Errors, losses, destructive actions (e.g. deleting)</span></td>
 </tr>
 <tr>
 <td style="width:64px; padding:6px 0;"><div style="width:48px; height:48px; border-radius:10px; background:#E0A030; border:1px solid rgba(0,0,0,0.12);"></div></td>
-<td style="padding:6px 12px; vertical-align:middle;"><strong>Warning — Amber</strong> · <code>#E0A030</code><br/><span style="color:#555;">unkritische Warnungen, z. B. ein unvollständig erfasster Monat — bewusst milder als Koralle</span></td>
+<td style="padding:6px 12px; vertical-align:middle;"><strong>Warning — Amber</strong> · <code>#E0A030</code><br/><span style="color:#555;">non-critical warnings, e.g. an incompletely recorded month — deliberately milder than coral</span></td>
 </tr>
 </table>
 
-**Als Fließtext oder Icon-Glyph** (statt als Fläche) wirken alle drei Farben im hellen Theme zu blass, um zuverlässig
-lesbar zu sein. Dafür gibt es je eine leicht abgedunkelte Text-Variante, die im dunklen Theme unverändert bleibt:
+**As body text or an icon glyph** (rather than as a fill), all three colors are too pale in the light theme to stay
+reliably readable. For that there is a slightly darkened text variant of each, which stays unchanged in the dark
+theme:
 
 <table style="width:100%; border-collapse:collapse; margin:0.5em 0 1.5em;">
 <tr>
 <td style="width:64px; padding:6px 0;"><div style="width:48px; height:48px; border-radius:10px; background:#00814D; border:1px solid rgba(0,0,0,0.12);"></div></td>
-<td style="padding:6px 12px; vertical-align:middle;"><strong>Primary-Text (nur Hell)</strong> · <code>#00814D</code></td>
+<td style="padding:6px 12px; vertical-align:middle;"><strong>Primary-Text (light only)</strong> · <code>#00814D</code></td>
 </tr>
 <tr>
 <td style="width:64px; padding:6px 0;"><div style="width:48px; height:48px; border-radius:10px; background:#BA4E4E; border:1px solid rgba(0,0,0,0.12);"></div></td>
-<td style="padding:6px 12px; vertical-align:middle;"><strong>Danger-Text (nur Hell)</strong> · <code>#BA4E4E</code></td>
+<td style="padding:6px 12px; vertical-align:middle;"><strong>Danger-Text (light only)</strong> · <code>#BA4E4E</code></td>
 </tr>
 <tr>
 <td style="width:64px; padding:6px 0;"><div style="width:48px; height:48px; border-radius:10px; background:#936920; border:1px solid rgba(0,0,0,0.12);"></div></td>
-<td style="padding:6px 12px; vertical-align:middle;"><strong>Warning-Text (nur Hell)</strong> · <code>#936920</code></td>
+<td style="padding:6px 12px; vertical-align:middle;"><strong>Warning-Text (light only)</strong> · <code>#936920</code></td>
 </tr>
 </table>
 
-**Regel:** Mint/Koralle/Amber als Fläche (Button, Badge-Hintergrund, Chart-Linie) — die Text-Variante als Schrift,
-Icon-Glyph oder Rahmen/Fokusring auf hellem Grund. Ausnahme: der Schriftzug „🦎 FinanzGecko" bleibt immer im
-Original-Mint, Markennamen sind von der Kontrastregel ausgenommen.
+**Rule:** Mint/Coral/Amber as a fill (button, badge background, chart line) — the text variant as type, an icon
+glyph, or a border/focus ring on a light background. Exception: the „🦎 FinanzGecko" wordmark always stays the
+original mint; brand names are exempt from the contrast rule.
 
-### Oberflächen (theme-abhängig)
+### Surfaces (theme-dependent)
 
-| Bezeichnung | Dunkel (Standard) | Hell | Verwendung |
+| Label | Dark (default) | Light | Used for |
 |---|---|---|---|
-| Hintergrund | `#0A0F0C` | `#F4F7F5` | App-Fenster |
-| Fläche | `#101713` | `#FFFFFF` | Karten, Dialoge |
-| Rahmen | `#1C2721` | `#DCE3DE` | Trennlinien, Card-Border |
-| Gedämpfter Text | `#7C8A83` | `#5B6B62` | sekundäre Beschriftung, Icons |
-| Text (volltonig) | `#FFFFFF` | `#10160F` | Lesetext |
+| Background | `#0A0F0C` | `#F4F7F5` | App window |
+| Surface | `#101713` | `#FFFFFF` | Cards, dialogs |
+| Border | `#1C2721` | `#DCE3DE` | Dividers, card borders |
+| Muted text | `#7C8A83` | `#5B6B62` | secondary labels, icons |
+| Text (solid) | `#FFFFFF` | `#10160F` | body text |
 
-### Trend- und Kontotyp-Farben
+### Trend and Kontotyp colors
 
-**Prognose-Linie** (bewusst blasser als die Akzentfarben, in beiden Themes gleich): Aufwärts `#8FE3B3` ·
-Abwärts `#FFC98A` · Neutral `#A6B0A9`.
+**Forecast line** (deliberately paler than the accent colors, identical in both themes): Up `#8FE3B3` ·
+Down `#FFC98A` · Neutral `#A6B0A9`.
 
-**Kontotyp-Farben** (Fallback, wenn kein Bankname hinterlegt ist, z. B. Bargeld/Krypto): Girokonto `#00C878` ·
+**Kontotyp colors** (fallback when no bank name is set, e.g. cash/crypto): Girokonto `#00C878` ·
 Tagesgeld `#2FD0A0` · Depot `#7EE6C0` · Bargeld `#C9D6CF` · Krypto `#F5A623`.
 
-### Bankfarben
+### Bank colors
 
-Jedes hinterlegte Konto kann seine **offizielle Markenfarbe** der jeweiligen Bank tragen (von Hand recherchiert aus
-Logo/Brand-Kit, keine geratenen Werte) — als kleine Fläche oder Punkt neben dem Kontonamen. Manche Bankfarben sind
-sehr dunkel oder sehr hell (z. B. reines Schwarz oder ein grelles Gelb) und wären als Schriftfarbe unlesbar; dort
-wird automatisch eine kontrastsichere, aber farbtongleiche Variante eingesetzt, sobald die Farbe Text statt Fläche
-einfärbt.
+Every recorded Konto can carry its bank's **official brand color** (hand-researched from the logo/brand kit, never a
+guessed value) — as a small fill or dot next to the Konto's name. Some bank colors are very dark or very light
+(e.g. pure black or a bright yellow) and would be unreadable as a text color; in that case a contrast-safe but
+hue-matched variant is used automatically whenever the color tints text rather than a fill.
 
-## Typografie
+## Typography
 
-Kein eigenes Markenfont — die App nutzt konsequent die native Systemschrift der jeweiligen Plattform:
+No custom brand font — the app consistently uses each platform's native system font:
 
 - **macOS** — SF Pro (San Francisco)
 - **Windows** — Segoe UI
-- **Linux** — je nach Desktop-Umgebung, i. d. R. Ubuntu oder Cantarell
+- **Linux** — depends on the desktop environment, typically Ubuntu or Cantarell
 
-Zahlen erscheinen durchgehend im deutschen Format — Komma als Dezimaltrennzeichen, Punkt als Tausendertrennzeichen,
-z. B. `24.180,42 €`.
+Numbers always appear in German format — comma as the decimal separator, period as the thousands separator, e.g.
+`24.180,42 €`.

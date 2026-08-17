@@ -1,154 +1,154 @@
-# Quelle: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_schema.dart, lib/constants.dart, lib/data/sandbox_migration.dart
-# Implementierung: lib/data/app_store.dart
+# Source: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_schema.dart, lib/constants.dart, lib/data/sandbox_migration.dart
+# Implementation: lib/data/app_store.dart
 @security @persistence
-Feature: Datenspeicherung, Verschlüsselung und Integrität
-  Als Nutzer:in erwarte ich, dass meine Vermögensdaten ausschließlich lokal, verschlüsselt und robust gegenüber
-  Abstürzen oder beschädigten Dateien gespeichert werden — ohne jemals stillschweigend Daten zu verlieren.
+Feature: Data storage, encryption, and integrity
+  As a user, I expect my financial data to be stored exclusively locally, encrypted, and robust against
+  crashes or corrupted files — without ever silently losing data.
 
-  Scenario: Erste Nutzung erzeugt einen neuen Verschlüsselungsschlüssel
-    Given die App startet zum ersten Mal auf diesem Gerät
-    Then wird ein neuer 256-Bit-AES-Schlüssel erzeugt
-    And er wird im OS-Credential-Speicher abgelegt (Windows Credential Locker, macOS Schlüsselbund, Linux
-      libsecret/kwallet je nach Plattform) — niemals in der Datendatei selbst
+  Scenario: First use generates a new encryption key
+    Given the app starts for the first time on this device
+    Then a new 256-bit AES key is generated
+    And it is stored in the OS credential store (Windows Credential Locker, macOS Schlüsselbund, Linux
+      libsecret/kwallet depending on the platform) — never in the data file itself
 
-  Scenario: Wiederverwendung des Schlüssels bei jedem weiteren Start
-    Given ein Schlüssel wurde bereits einmal erzeugt
-    Then wird bei jedem weiteren Start derselbe Schlüssel aus dem Credential-Speicher gelesen, kein neuer erzeugt
+  Scenario: The key is reused on every subsequent start
+    Given a key has already been generated once
+    Then every subsequent start reads the same key from the credential store, none is regenerated
 
-  Scenario: Die Datenbank-Datei ist ohne den Schlüssel unlesbar
-    Given die Datendatei wird außerhalb der App geöffnet
-    Then enthält sie nur eine "Envelope"-Struktur aus Version, Nonce, Chiffretext und MAC (AES-256-GCM)
-    And ohne den zugehörigen Schlüssel im OS-Credential-Speicher ist der Inhalt nicht entschlüsselbar
+  Scenario: The database file is unreadable without the key
+    Given the data file is opened outside the app
+    Then it contains only an "envelope" structure of version, nonce, ciphertext, and MAC (AES-256-GCM)
+    And without the matching key in the OS credential store, the content can't be decrypted
 
-  Scenario: Schreibvorgänge sind atomar
-    Given eine Änderung wird gespeichert
-    Then wird zunächst in eine temporäre Datei geschrieben und diese anschließend über die alte umbenannt
-    And ein Absturz mitten im Schreibvorgang darf niemals eine halb geschriebene Hauptdatei hinterlassen
+  Scenario: Writes are atomic
+    Given a change is saved
+    Then it is first written to a temporary file, which is then renamed over the old one
+    And a crash mid-write must never leave behind a half-written main file
 
-  Scenario: Unter Linux und macOS wird die Datendatei nie vorher gelöscht
-    Given eine Änderung wird auf einem POSIX-System gespeichert
-    Then ersetzt das Umbenennen die bestehende Datei direkt, ohne sie vorher zu löschen
-    And es gibt zu keinem Zeitpunkt einen Moment, in dem gar keine Datendatei existiert
-    But unter Windows wird die alte Datei zuvor gelöscht, weil das Umbenennen dort sonst fehlschlägt
+  Scenario: On Linux and macOS, the data file is never deleted beforehand
+    Given a change is saved on a POSIX system
+    Then the rename replaces the existing file directly, without deleting it first
+    And there is never a moment where no data file exists at all
+    But on Windows, the old file is deleted first, since the rename would otherwise fail there
 
-  Scenario: Die Zugriffsrechte werden je Datei einmal pro Sitzung gesetzt
-    Given dieselbe Datei wird innerhalb einer Sitzung mehrfach gespeichert
-    Then wird der Rechte-Befehl des Betriebssystems nur beim ersten Mal ausgeführt
-    And er wird über seinen absoluten Pfad aufgerufen, nicht über die PATH-Suche
+  Scenario: Permissions are set once per file per session
+    Given the same file is saved multiple times within one session
+    Then the OS's permission command only runs the first time
+    And it is invoked via its absolute path, not via a PATH lookup
 
-  Scenario: Parallele Schreibvorgänge werden serialisiert
-    Given zwei Speicheraktionen werden nahezu gleichzeitig ausgelöst
-    Then läuft die zweite erst vollständig, nachdem die erste ihre temporäre Datei bereits umbenannt hat
-    And ein Fehler in einem Schreibvorgang blockiert nicht die nachfolgenden
+  Scenario: Parallel writes are serialized
+    Given two save actions are triggered nearly simultaneously
+    Then the second one only runs fully after the first has already renamed its temp file
+    And a failure in one write doesn't block the ones that follow
 
-  Scenario: Unlesbare oder fremde Dateien werden nie stillschweigend überschrieben
-    Given am erwarteten Dateipfad liegt eine Datei, die kein gültiges Envelope-JSON ist (falsches Format, kaputtes
-      JSON, fehlgeschlagene Entschlüsselung)
-    When die App startet
-    Then wird diese Datei zuerst als Kopie unter "<dateiname>.unreadable-<Zeitstempel>" gesichert
-    And erst danach startet die App mit Standardwerten und schreibt eine neue Datei
+  Scenario: Unreadable or foreign files are never silently overwritten
+    Given a file sits at the expected path that isn't valid envelope JSON (wrong format, broken JSON,
+      failed decryption)
+    When the app starts
+    Then this file is first backed up as a copy under "<dateiname>.unreadable-<Zeitstempel>"
+    And only then does the app start with defaults and write a new file
 
-  Scenario: Fehlende Datei beim ersten Start
-    Given am erwarteten Pfad existiert noch keine Datei
-    Then startet die App mit Standardwerten, ohne eine Quarantäne-Kopie anzulegen (nichts zu verlieren)
+  Scenario: Missing file on first start
+    Given no file exists yet at the expected path
+    Then the app starts with defaults, without creating a quarantine copy (nothing to lose)
 
-  Scenario: Der Speicherort ist bewusst nicht wählbar
-    Given ich öffne Einstellungen → Sicherheit
-    Then sehe ich den Speicherort, aber keine Möglichkeit, ihn zu ändern
-    And ein Hinweis erklärt in Alltagssprache, dass die Datei zu diesem Computer gehört, dass eine Kopie in einem
-      Cloud-Ordner bei einem Plattenschaden hilft, aber nicht bei einem neuen Computer oder nach einer
-      Neuinstallation, und dass ein wiederherstellbares Backup nur der Export liefert
-    And der Hinweis steht dauerhaft dort, nicht als einmalig wegklickbarer Dialog
+  Scenario: The storage location is deliberately not selectable
+    Given I open Einstellungen → Sicherheit
+    Then I see the storage location, but no way to change it
+    And a hint explains in plain language that the file belongs to this computer, that a copy in a cloud
+      folder helps in case of a disk failure but not on a new computer or after a reinstall, and that only
+      export provides a recoverable backup
+    And the hint sits there permanently, not as a one-time dismissible dialog
 
-  Scenario: Datei von einem anderen Rechner wird erkannt, nicht in Quarantäne geschoben
-    Given die Datei enthält eine Schlüsselkennung (keyId), die nicht zum Schlüssel dieses Rechners passt
-    When die App startet
-    Then bricht der Start mit einer Erklärung ab ("Diese Datei gehört zu einem anderen Computer")
-    And die Datei bleibt byte-identisch liegen — keine Quarantäne-Kopie, kein Schreibvorgang
-    And die Erklärung verweist auf den Weg über "Backup exportieren" und "Backup importieren"
-    Given derselbe Rechner erhält seinen ursprünglichen Schlüssel zurück
-    Then öffnet die Datei wieder normal
+  Scenario: A file from a different machine is detected, not quarantined
+    Given the file contains a key fingerprint (keyId) that doesn't match this machine's key
+    When the app starts
+    Then startup aborts with an explanation ("Diese Datei gehört zu einem anderen Computer")
+    And the file stays byte-identical — no quarantine copy, no write
+    And the explanation points to the path via "Backup exportieren" and "Backup importieren"
+    Given the same machine gets its original key back
+    Then the file opens normally again
 
-  Scenario: Schlüsselkennung ist additiv und bricht ältere App-Versionen nicht
-    Given eine neu geschriebene Datendatei
-    Then enthält der Envelope zusätzlich das Klartextfeld "keyId" (8 Byte SHA-256 des Schlüssels)
-    And die Envelope-Version bleibt bei 1, weil die Prüfung nur die vier bekannten Felder betrachtet
-    And eine ältere App-Version liest diese Datei unverändert weiter
-    Given eine Datei aus der Zeit vor diesem Feld (ohne "keyId")
-    Then wird sie wie bisher geladen, ohne Prüfung der Kennung
+  Scenario: The key fingerprint is additive and doesn't break older app versions
+    Given a newly written data file
+    Then the envelope additionally contains the plaintext field "keyId" (8-byte SHA-256 of the key)
+    And the envelope version stays at 1, since the check only looks at the four known fields
+    And an older app version keeps reading this file unchanged
+    Given a file from before this field existed (without "keyId")
+    Then it is loaded as before, with no fingerprint check
 
-  Scenario: Datendatei aus einer neueren Schema-Version wird bewahrt, nicht überschrieben
-    Given die Datendatei trägt eine "schemaVersion" größer als die von diesem Build unterstützte Version
-      (z. B. weil eine neuere App-Version lief und die App danach herabgestuft wurde)
-    When die App startet
-    Then wird die Datei NICHT fehlertolerant eingelesen (das würde unbekannte Felder stillschweigend verwerfen)
-    And sie wird zuerst unverändert als Kopie unter "<dateiname>.newer-version-<Zeitstempel>" gesichert
-    And erst danach startet die App mit Standardwerten — die neuere Datei bleibt vollständig erhalten, sodass
-      ein Update der App die Daten wieder lesbar macht
+  Scenario: A data file from a newer schema version is preserved, not overwritten
+    Given the data file carries a "schemaVersion" greater than the version this build supports (e.g.
+      because a newer app version ran and the app was downgraded afterward)
+    When the app starts
+    Then the file is NOT read leniently (that would silently drop unknown fields)
+    And it is first backed up unchanged as a copy under "<dateiname>.newer-version-<Zeitstempel>"
+    And only then does the app start with defaults — the newer file stays fully intact, so an app update
+      makes the data readable again
 
-  Scenario: Datendatei aus einer älteren Schema-Version wird migriert — mit vorheriger Sicherung
-    Given die Datendatei trägt eine "schemaVersion" kleiner als die aktuell unterstützte Version
-    When die App startet
-    Then wird zuerst eine unveränderte, verschlüsselte Kopie der bisherigen Datei als
-      "pre-migrate-backup-<Zeitstempel>.json" im Datenverzeichnis abgelegt
-    And erst danach wird die Datei im aktuellen Format neu geschrieben und mit der aktuellen Schema-Version gestempelt
-    And ein Fehler bei dieser Sicherung darf den Start nicht verhindern (best effort)
+  Scenario: A data file from an older schema version gets migrated — with a prior backup
+    Given the data file carries a "schemaVersion" less than the currently supported version
+    When the app starts
+    Then an unchanged, encrypted copy of the previous file is first saved as
+      "pre-migrate-backup-<Zeitstempel>.json" in the data directory
+    And only then is the file rewritten in the current format and stamped with the current schema version
+    And a failure in this backup must not prevent startup (best effort)
 
-  Scenario: Einzelne fehlerhafte Datensätze gefährden nicht die ganze Datei
-    Given die Datenbank enthält eine Liste (Konten/Kontostände/Vermögenswerte/Fixposten) mit einem einzelnen
-      fehlerhaften Eintrag
-    Then wird beim Laden nur dieser Eintrag übersprungen
-    And alle anderen Einträge und Bereiche der Datei bleiben nutzbar
+  Scenario: Individual faulty records don't endanger the whole file
+    Given the database contains a list (Konten/Kontostände/Vermögenswerte/Fixposten) with a single faulty
+      entry
+    Then only this entry is skipped on load
+    And every other entry and section of the file stays usable
 
-  Scenario: Dateiberechtigungen als zusätzliche Verteidigungsebene
-    Given die App hat das Datenverzeichnis und die Datendatei angelegt
-    Then sind unter Linux/macOS die Zugriffsrechte auf 700 (Verzeichnis) bzw. 600 (Datei) gesetzt
-    And unter Windows ist eine ACL gesetzt, die nur dem aktuellen Benutzer Zugriff erlaubt
-    And dies gilt als Ergänzung zur Verschlüsselung, nicht als deren Ersatz
+  Scenario: File permissions as an additional layer of defense
+    Given the app created the data directory and the data file
+    Then on Linux/macOS the permissions are set to 700 (directory) resp. 600 (file)
+    And on Windows an ACL is set that allows access only to the current user
+    And this counts as a supplement to the encryption, not a substitute for it
 
-  Scenario: Wechselkurs-Cache ist bewusst unverschlüsselt und getrennt
-    Then liegt der Wechselkurs-Cache in einer eigenen Datei "finanzgecko-rates.json" neben der Hauptdatenbank
-    And ein Parse-Fehler dieser Datei wird stillschweigend ignoriert (Kurse sind jederzeit neu abrufbar, kein
-      Datenverlustrisiko)
+  Scenario: The exchange-rate cache is deliberately unencrypted and separate
+    Then the exchange-rate cache lives in its own file "finanzgecko-rates.json" next to the main database
+    And a parse error in this file is silently ignored (rates can be fetched again anytime, no risk of
+      data loss)
 
-  Scenario: macOS — die Schlüsselbund-Variante hängt an der Auslieferungsform
-    Given die App wurde als DMG ausgeliefert (Developer-ID-Build, der Standardfall)
-    Then wird die klassische (nicht Data-Protection-) Keychain-Variante verwendet
-    And der erste Schlüssel-Zugriff schlägt NICHT mit "A required entitlement isn't present." fehl
-    And das gilt unverändert für lokal gebaute, ad-hoc-signierte Builds ohne Apple-Developer-Team
-    Given die App wurde für den Mac App Store gebaut (kIsMacAppStore)
-    Then wird die Data-Protection-Keychain-Variante verwendet — eine sandboxed App hat auf die klassische
-      Keychain keinen Zugriff, hier ist die Variante also erzwungen und nicht bevorzugt
-    And das setzt das Entitlement "keychain-access-groups" mit Team-ID-Präfix voraus
-      (macos/Runner/AppStore.entitlements, eingesetzt von packaging/macos/build_appstore.sh)
-    And beide Varianten legen ihre Schlüssel getrennt ab: keine der beiden findet den Schlüssel der anderen
+  Scenario: macOS — the keychain variant depends on the delivery form
+    Given the app was shipped as a DMG (Developer ID build, the default case)
+    Then the classic (non-data-protection) keychain variant is used
+    And the first key access does NOT fail with "A required entitlement isn't present."
+    And this holds unchanged for locally built, ad-hoc-signed builds without an Apple Developer team
+    Given the app was built for the Mac App Store (kIsMacAppStore)
+    Then the data-protection keychain variant is used — a sandboxed app has no access to the classic
+      keychain, so here the variant is forced, not preferred
+    And this requires the "keychain-access-groups" entitlement with a team-ID prefix
+      (macos/Runner/AppStore.entitlements, deployed by packaging/macos/build_appstore.sh)
+    And both variants store their keys separately: neither can find the other's key
 
-  Scenario: macOS — App-Sandbox ist in allen Builds aktiv
-    Given die App läuft auf macOS
-    Then läuft sie mit aktiver App-Sandbox, unabhängig von der Auslieferungsform
-    And "$HOME" zeigt dadurch auf "~/Library/Containers/de.finanzgecko.app/Data", worunter derselbe relative
-      Pfad erneut entsteht: resolveDataDirectory() bleibt unverändert, nur der Wurzelpfad ist ein anderer
-    And die Dateiberechtigungs-Härtung (chmod) entfällt im App-Store-Build, weil der Container bereits pro App
-      und Benutzer abgeschottet ist
+  Scenario: macOS — the app sandbox is active in every build
+    Given the app runs on macOS
+    Then it runs with the app sandbox active, regardless of the delivery form
+    And "$HOME" therefore points at "~/Library/Containers/de.finanzgecko.app/Data", under which the same
+      relative path results again: resolveDataDirectory() stays unchanged, only the root path differs
+    And the file-permission hardening (chmod) is skipped in the App Store build, since the container is
+      already isolated per app and user
 
-  Scenario: macOS — Bestandsdaten werden einmalig in den Container übernommen
-    Given eine Installation aus einer Version vor der Sandbox hat Daten unter
-      "~/Library/Application Support/de.finanzgecko.app/" liegen
-    And der Container ist leer (erster Start des sandboxed Builds)
-    When die App startet
-    Then werden Datendatei und Wechselkurs-Cache in den Container KOPIERT, bevor zum ersten Mal gelesen wird
-    And der Zielordner heißt dabei "FinanzGecko" statt wie die Application-ID: ein auf ".app" endender
-      Ordnername gilt dem Finder als Programmbündel. Die Umbenennung reist auf derselben einmaligen Kopie mit,
-      statt später eine eigene Migration zu brauchen
-    And die Originaldateien bleiben unverändert liegen und werden NICHT gelöscht — sie sind die Rückfalloption,
-      falls die Kopie fehlerhaft war
-    And im Container liegt anschließend eine Notiz "migrated-from-unsandboxed.txt", die den alten Pfad nennt
-    Given im Container liegt bereits eine Datendatei
-    Then findet keine Migration statt — der Container gewinnt immer, damit ein zweiter Start oder ein bereits
-      importiertes Backup nicht überschrieben wird
-    Given es gibt weder im Container noch am alten Pfad Daten
-    Then ist dies eine echte Neuinstallation und die App startet regulär leer
-    Given der alte Pfad existiert, ist aber nicht lesbar (fehlendes oder falsch zugeschnittenes
-      temporary-exception-Entitlement)
-    Then wird dies als Fehlschlag festgehalten und NICHT als Neuinstallation behandelt — die beiden Fälle sehen
-      für Nutzer:innen gleich aus (leere App), bedeuten aber das Gegenteil
+  Scenario: macOS — existing data is moved into the container once
+    Given an installation from a version before the sandbox has data sitting under
+      "~/Library/Application Support/de.finanzgecko.app/"
+    And the container is empty (first start of the sandboxed build)
+    When the app starts
+    Then the data file and exchange-rate cache are COPIED into the container before anything is read for
+      the first time
+    And the target folder is named "FinanzGecko" rather than after the application ID: a folder name
+      ending in ".app" reads to Finder as an app bundle. The rename rides along on this same one-time copy,
+      instead of needing its own migration later
+    And the original files stay unchanged and are NOT deleted — they're the fallback in case the copy was
+      faulty
+    And afterward a note "migrated-from-unsandboxed.txt" sits in the container, naming the old path
+    Given a data file already sits in the container
+    Then no migration happens — the container always wins, so a second start or an already-imported
+      backup doesn't get overwritten
+    Given there's no data in the container nor at the old path
+    Then this is a genuine fresh install and the app starts normally empty
+    Given the old path exists but isn't readable (a missing or mis-scoped temporary-exception entitlement)
+    Then this is recorded as a failure and NOT treated as a fresh install — the two cases look the same to
+      users (an empty app), but mean the opposite

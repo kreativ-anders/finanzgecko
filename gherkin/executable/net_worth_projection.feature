@@ -1,21 +1,21 @@
-# Quelle: lib/utils/analysis.dart
-# Implementierung: lib/utils/analysis.dart
-# Ausführbar: test/bdd/analysis_bdd_test.dart (Runner: test/support/gherkin_runner.dart)
+# Source: lib/utils/analysis.dart
+# Implementation: lib/utils/analysis.dart
+# Executable: test/bdd/analysis_bdd_test.dart (Runner: test/support/gherkin_runner.dart)
 @executable @dashboard
-Feature: Vermögensprognose und Kennzahlen (reine Logik)
+Feature: Net-worth projection and Kennzahlen (pure logic)
 
-  Scenario: Trendsteigung einer linearen Reihe
-    Given die Monatswerte 100, 200, 300, 400
-    Then ist die Trendsteigung 100
+  Scenario: Trend slope of a linear series
+    Given the monthly values 100, 200, 300, 400
+    Then the trend slope is 100
 
-  Scenario: Prognoserate mischt Trend und Fixposten-Prior je zur Hälfte
-    When ich die Prognoserate mit Trend 300, Plan 100, 3 Punkten und Prior 3 berechne
-    Then ist die Prognoserate 200
+  Scenario: Projection rate blends trend and Fixposten prior evenly
+    When I compute the projection rate with trend 300, plan 100, 3 points, and prior 3
+    Then the projection rate is 200
 
-  Scenario: Prognosehorizont reicht bis Jahresende
-    Then sind es von "2026-06" 6 Monate bis Jahresende
-    And sind es von "2026-12" 12 Monate bis Jahresende
+  Scenario: Projection horizon reaches to year end
+    Then it is 6 months from "2026-06" to year end
+    And it is 12 months from "2026-12" to year end
 
-  Scenario: Anomalie erkennt einen Zehnersprung
-    Then ist 22000 gegenüber 2200 eine Anomalie
-    And ist 2400 gegenüber 2200 keine Anomalie
+  Scenario: Anomaly detects a tenfold jump
+    Then 22000 against 2200 is an anomaly
+    And 2400 against 2200 is not an anomaly

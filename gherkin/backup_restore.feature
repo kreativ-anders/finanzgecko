@@ -1,136 +1,138 @@
-# Quelle: lib/ui/backup_actions.dart, lib/ui/navigation_shell.dart, lib/data/app_store.dart, lib/data/app_schema.dart,
+# Source: lib/ui/backup_actions.dart, lib/ui/navigation_shell.dart, lib/data/app_store.dart, lib/data/app_schema.dart,
 #   lib/data/backup_crypto.dart, lib/ui/widgets/backup_passphrase_dialog.dart
-# Implementierung: lib/ui/backup_actions.dart
+# Implementation: lib/ui/backup_actions.dart
 @backup
-Feature: Backup exportieren und importieren
-  Als Nutzer:in kann ich meine gesamten Daten als JSON exportieren — wahlweise im Klartext oder mit einem Passwort
-  geschützt — und wieder importieren. Der Export ist der einzige Weg, der auf einem anderen Rechner funktioniert:
-  die Datendatei selbst ist an ihr Gerät gebunden (siehe gherkin/data_security.feature).
+Feature: Export and import a backup
+  As a user, I can export all my data as JSON — either in plaintext or password-protected — and import it
+  back. Export is the only path that works on a different machine: the data file itself is bound to its
+  device (see gherkin/data_security.feature).
 
   Background:
-    Given die App ist gestartet und initialisiert
+    Given the app is started and initialized
 
-  Scenario: Export über Menü oder Tastenkürzel
-    When ich "Backup exportieren…" über das Datei-Menü oder Strg/⌘+E auslöse
-    Then öffnet sich ein nativer Speichern-Dialog mit Vorschlagsnamen "finanzgecko-backup-<YYYY-MM-DD>.json"
-    And nur die Dateiendung ".json" ist als Typ akzeptiert
+  Scenario: Export via menu or keyboard shortcut
+    When I trigger "Backup exportieren…" via the Datei menu or Strg/⌘+E
+    Then a native save dialog opens with the suggested name "finanzgecko-backup-<YYYY-MM-DD>.json"
+    And only the ".json" extension is accepted as the type
 
-  Scenario: Erfolgreicher Export
-    Given ich habe im Dialog einen Speicherort bestätigt
-    Then wird eine unverschlüsselte, eingerückte JSON-Datei mit allen Konten, Kontoständen, Vermögenswerten,
-      Fixposten, der Basiswährung und der Schemaversion geschrieben
-    And "zuletzt exportiert am" wird auf jetzt aktualisiert
-    And ich sehe die Bestätigung "Backup exportiert."
-    But der Export enthält NICHT den Wechselkurs-Cache, interne Zähler (meta), die Fenstergeometrie
-      oder die Konto-Akzentfarbe (color) — Letztere wird beim Import aus der Bank abgeleitet
+  Scenario: Successful export
+    Given I confirmed a save location in the dialog
+    Then an unencrypted, indented JSON file is written with all Konten, Kontostände, Vermögenswerte,
+      Fixposten, the Basiswährung, and the schema version
+    And "zuletzt exportiert am" is updated to now
+    And I see the confirmation "Backup exportiert."
+    But the export does NOT include the exchange-rate cache, internal counters (meta), the window
+      geometry, or the Konto accent color (color) — the latter is re-derived from the bank on import
 
-  Scenario: Export-Dialog abgebrochen
-    Given ich breche den Speichern-Dialog ab
-    Then passiert nichts — kein Fehler, kein Zeitstempel-Update
+  Scenario: Export dialog cancelled
+    Given I cancel the save dialog
+    Then nothing happens — no error, no timestamp update
 
-  Scenario: Vor dem Speicherort wird nach einem Passwort gefragt
-    Given ich starte einen Export
-    Then erscheint zuerst die Frage, ob das Backup mit einem Passwort geschützt werden soll
-    And es gibt dafür zwei eigene Knöpfe, "Ohne Passwort" und "Mit Passwort schützen" — kein leeres Feld als
-      stille Voreinstellung, damit ein weggeklickter Dialog keinen ungeschützten Export erzeugt
-    And ein Hinweis nennt die Folge: ohne dieses Passwort lässt sich das Backup später nicht mehr öffnen, die
-      Daten in der App bleiben davon aber unberührt
-    When ich den Dialog abbreche
-    Then wird gar nichts exportiert
+  Scenario: A password is asked for before the save location
+    Given I start an export
+    Then the question of whether to protect the backup with a password appears first
+    And there are two dedicated buttons for this, "Ohne Passwort" and "Mit Passwort schützen" — no empty
+      field as a silent default, so a dismissed dialog never produces an unprotected export
+    And a hint states the consequence: without this password the backup can no longer be opened later, but
+      the data in the app stays unaffected by it
+    When I cancel the dialog
+    Then nothing is exported at all
 
-  Scenario: Export ohne Passwort bleibt exakt wie bisher
-    Given ich wähle "Ohne Passwort"
-    Then wird dieselbe unverschlüsselte, eingerückte JSON-Datei geschrieben wie vor diesem Feature
-    And bereits vorhandene Backups bleiben dadurch gültig
+  Scenario: Export without a password stays exactly as before
+    Given I choose "Ohne Passwort"
+    Then the same unencrypted, indented JSON file is written as before this feature existed
+    And existing backups stay valid because of this
 
-  Scenario: Export mit Passwort
-    Given ich vergebe ein Passwort und wiederhole es
-    Then wird eine verschlüsselte Datei geschrieben (AES-256-GCM, Schlüssel per PBKDF2-HMAC-SHA256 aus dem Passwort)
-    And die Datei enthält weder Klartextdaten noch das Passwort selbst
-    And Verfahren, Salt und Iterationszahl stehen in der Datei, damit sie später verschärft werden können, ohne
-      alte Backups unlesbar zu machen
-    And zwei Exporte desselben Standes ergeben unterschiedliche Dateien (eigenes Salt, eigene Nonce)
-    But solange die beiden Passwortfelder nicht übereinstimmen, ist "Mit Passwort schützen" nicht auswählbar
+  Scenario: Export with a password
+    Given I set a password and repeat it
+    Then an encrypted file is written (AES-256-GCM, key derived via PBKDF2-HMAC-SHA256 from the password)
+    And the file contains neither plaintext data nor the password itself
+    And the method, salt, and iteration count are stored in the file, so they can be strengthened later
+      without making old backups unreadable
+    And two exports of the same state produce different files (own salt, own nonce)
+    But "Mit Passwort schützen" isn't selectable while the two password fields don't match
 
-  Scenario: Import erkennt das Format selbst
-    Given ich wähle eine Backup-Datei zum Import
-    Then erkennt die App an der Struktur der Datei, ob sie geschützt ist — nicht an Dateiendung oder Name
-    And ein unverschlüsseltes Backup wird ohne jede Rückfrage eingelesen wie bisher
+  Scenario: Import detects the format itself
+    Given I choose a backup file to import
+    Then the app detects whether it's protected from the file's structure — not from its extension or name
+    And an unencrypted backup is read in without any confirmation, as before
 
-  Scenario: Import einer passwortgeschützten Datei
-    Given die gewählte Datei ist passwortgeschützt
-    Then werde ich nach dem Passwort gefragt
-    When ich ein falsches Passwort eingebe
-    Then werde ich mit dem Hinweis "Das Passwort stimmt nicht." erneut gefragt, statt den Vorgang abzubrechen
-    When ich den Dialog abbreche
-    Then bleiben meine aktuellen Daten unverändert
-    Given die Datei wurde nachträglich verändert
-    Then schlägt das Entschlüsseln ebenso fehl wie bei einem falschen Passwort (der MAC schlägt an)
+  Scenario: Import of a password-protected file
+    Given the chosen file is password-protected
+    Then I am asked for the password
+    When I enter a wrong password
+    Then I am asked again with the hint "Das Passwort stimmt nicht.", instead of the process being
+      cancelled
+    When I cancel the dialog
+    Then my current data stays unchanged
+    Given the file was modified afterward
+    Then decryption fails just as it would with a wrong password (the MAC check trips)
 
-  Scenario: Export schlägt fehl (z. B. Schreibrechte)
-    Given das Schreiben der Datei am gewählten Ort schlägt fehl
-    Then sehe ich eine Fehlermeldung "Export fehlgeschlagen: …"
-    And "zuletzt exportiert am" wird NICHT aktualisiert
+  Scenario: Export fails (e.g. write permissions)
+    Given writing the file at the chosen location fails
+    Then I see an error message "Export fehlgeschlagen: …"
+    And "zuletzt exportiert am" is NOT updated
 
-  Scenario: Import über Menü oder Tastenkürzel mit Bestätigung
-    When ich "Backup importieren…" über das Datei-Menü oder Strg/⌘+I auslöse
-    And ich im nativen Öffnen-Dialog eine JSON-Datei auswähle
-    Then erscheint eine Sicherheitsabfrage "Import ersetzt ALLE aktuellen Daten. Fortfahren?"
-    Given ich breche diese Abfrage ab
-    Then bleiben alle aktuellen Daten unverändert
+  Scenario: Import via menu or keyboard shortcut, with confirmation
+    When I trigger "Backup importieren…" via the Datei menu or Strg/⌘+I
+    And I choose a JSON file in the native open dialog
+    Then a safety prompt "Import ersetzt ALLE aktuellen Daten. Fortfahren?" appears
+    Given I cancel this prompt
+    Then all current data stays unchanged
 
-  Scenario: Erfolgreicher Import
-    Given ich habe eine gültige Backup-Datei ausgewählt und den Import bestätigt
-    Then werden ALLE aktuellen Konten, Kontostände, Vermögenswerte und Fixposten durch den Inhalt der Datei ersetzt
-    And die Basiswährung wird übernommen, falls in der Datei vorhanden
-    And die Auto-Increment-Zähler werden so gesetzt, dass künftige neue Datensätze nicht mit importierten IDs kollidieren
-    And die Ansicht springt automatisch zum Dashboard
-    And ich sehe die Bestätigung "Import abgeschlossen."
+  Scenario: Successful import
+    Given I chose a valid backup file and confirmed the import
+    Then ALL current Konten, Kontostände, Vermögenswerte, and Fixposten are replaced by the file's content
+    And the Basiswährung is adopted if present in the file
+    And the auto-increment counters are set so future new records don't collide with imported IDs
+    And the view automatically jumps to the Dashboard
+    And I see the confirmation "Import abgeschlossen."
 
-  Scenario: Vor jedem Import wird automatisch eine Sicherung des vorherigen Stands angelegt
-    Given ein Import wird durchgeführt (unabhängig vom Ergebnis der anschließenden Prüfung)
-    Then wird zuvor der bisherige Datenstand als eigene, verschlüsselte Datei
-      "pre-import-backup-<Zeitstempel>.json" im Datenverzeichnis abgelegt
-    And ein Fehler bei dieser Sicherung darf den eigentlichen Import nicht verhindern (best effort)
+  Scenario: Before every import, a backup of the previous state is created automatically
+    Given an import is performed (regardless of the outcome of the subsequent check)
+    Then the previous data state is first saved as its own encrypted file
+      "pre-import-backup-<Zeitstempel>.json" in the data directory
+    And a failure in this backup must not prevent the actual import (best effort)
 
-  Scenario: Import einer beschädigten oder ungültigen Datei
-    Given die gewählte Datei ist kein gültiges JSON oder hat nicht die erwartete Struktur
-    Then wird der Import abgebrochen
-    And ich sehe "Import fehlgeschlagen: Datei ist kein gültiges Backup." mit technischem Detail
-    And die aktuellen Daten bleiben unangetastet
+  Scenario: Import of a corrupted or invalid file
+    Given the chosen file isn't valid JSON or doesn't have the expected structure
+    Then the import is aborted
+    And I see "Import fehlgeschlagen: Datei ist kein gültiges Backup." with a technical detail
+    And the current data stays untouched
 
-  Scenario: Import einer Datei aus einer neueren Schema-Version wird abgelehnt
-    Given die Backup-Datei hat eine "schemaVersion" größer als die von dieser App unterstützte Version
-    Then wird der Import mit einer klaren Fehlermeldung abgelehnt, die zum Aktualisieren der App auffordert
-    And die aktuellen Daten bleiben unverändert
+  Scenario: Import of a file from a newer schema version is rejected
+    Given the backup file has a "schemaVersion" greater than the version this app supports
+    Then the import is rejected with a clear error message asking to update the app
+    And the current data stays unchanged
 
-  Scenario: Import einer Datei aus einer älteren oder gleichen Schema-Version wird akzeptiert
-    Given die Backup-Datei hat eine "schemaVersion" kleiner oder gleich der unterstützten Version
-    Then wird der Import durchgeführt
-    And fehlende Felder in älteren Einträgen werden mit sinnvollen Standardwerten aufgefüllt
+  Scenario: Import of a file from an older or equal schema version is accepted
+    Given the backup file has a "schemaVersion" less than or equal to the supported version
+    Then the import is performed
+    And missing fields in older entries are filled with sensible default values
 
-  Scenario: Einzelne fehlerhafte Einträge blockieren nicht den gesamten Import
-    Given eine ansonsten gültige Backup-Datei enthält einen einzelnen fehlerhaften Eintrag in einer Liste
-    Then wird nur dieser Eintrag übersprungen
-    And alle anderen Einträge werden importiert
+  Scenario: Individual faulty entries don't block the whole import
+    Given an otherwise valid backup file contains a single faulty entry in a list
+    Then only this entry is skipped
+    And every other entry is imported
 
-  Scenario: Import erzwingt die Bank→Farbe-Regel und lehnt unbekannte Banken ab
-    Given eine Backup-/Migrationsdatei enthält Konten
-    When der Import läuft
-    Then wird die Akzentfarbe jedes Kontos aus seiner Bank neu abgeleitet (die Farbe aus der Datei wird ignoriert):
-      bekannte Bank → Markenfarbe der Bank, leere Bank (z. B. Bargeld/Krypto) → Kontotyp-Farbe
-    But enthält ein Konto eine nicht-leere, unbekannte Bank, wird der GESAMTE Import mit einer klaren
-      Fehlermeldung ("Import abgebrochen bei Konto …") abgebrochen und die aktuellen Daten bleiben unverändert
+  Scenario: Import enforces the bank→color rule and rejects unknown banks
+    Given a backup/migration file contains Konten
+    When the import runs
+    Then every Konto's accent color is re-derived from its bank (the color from the file is ignored): a
+      known bank → the bank's brand color, an empty bank (e.g. Bargeld/Krypto) → the Kontotyp color
+    But if a Konto has a non-empty, unknown bank, the ENTIRE import is aborted with a clear error message
+      ("Import abgebrochen bei Konto …") and the current data stays unchanged
 
-  Scenario: Migration von einer früheren App-Version
-    Given eine ältere Version der App wurde über "Backup exportieren" gesichert
-    When diese Datei in die aktuelle Version importiert wird
-    Then werden auch Fixposten und das damalige Standard-Fixposten-Intervall korrekt wiederhergestellt
-      (symmetrisch zum Export — keine stillschweigend verworfenen Felder)
+  Scenario: Migration from an earlier app version
+    Given an older version of the app was backed up via "Backup exportieren"
+    When this file is imported into the current version
+    Then Fixposten and the Intervall default in effect back then are restored correctly too (symmetric to
+      export — no silently dropped fields)
 
-  Scenario: Migration aus einem Fremdtool über die Import-Vorlage
-    Given ich habe meine Daten aus einem anderen Tool in das Format von "templates/import-template.json" überführt
-      (Felder, Typen und Wertebereiche wie in "templates/README.md" beschrieben, notfalls per KI-Konvertierung)
-    When ich diese Datei über "Backup importieren…" einlese
-    Then wird sie wie ein reguläres Backup behandelt (dieselben Prüfungen: Schemaversion, Sicherheitsabfrage,
-      Fehlertoleranz pro Eintrag, Auto-Increment-Zähler)
+  Scenario: Migration from a third-party tool via the import template
+    Given I converted my data from another tool into the format of "templates/import-template.json"
+      (fields, types, and value ranges as described in "templates/README.md", using AI-assisted conversion
+      if needed)
+    When I read this file in via "Backup importieren…"
+    Then it's treated like a regular backup (the same checks: schema version, safety prompt, per-entry
+      fault tolerance, auto-increment counters)

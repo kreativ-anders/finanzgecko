@@ -46,9 +46,9 @@ packaging, and the icon pipeline: [dev/building.md](dev/building.md).
 | `lib/utils/analysis.dart` | Pure, testable computation logic (trend, projection, KPIs) |
 | `gherkin/` | Behavioral specification (Gherkin) |
 
-Full reference (data flow, domain glossary, feature↔test mapping): [AI_MASTER.md](AI_MASTER.md) (German — see
-"Sprache der Doku" in §3 for why). Architecture decisions in detail (encryption, why no DB engine, window
-behavior): [dev/architecture.md](dev/architecture.md).
+Full reference (data flow, domain glossary, feature↔test mapping): [AI_MASTER.md](AI_MASTER.md) — keeps the
+binding German domain terms untranslated inline (see "Doc language" in §3 for why). Architecture decisions in
+detail (encryption, why no DB engine, window behavior): [dev/architecture.md](dev/architecture.md).
 
 ## Contributing
 

@@ -1,7 +1,7 @@
 # Architecture decisions
 
-For the full architecture/data-flow/domain reference see [AI_MASTER.md](../AI_MASTER.md) (German). This file only
-covers the decisions that tend to raise questions.
+For the full architecture/data-flow/domain reference see [AI_MASTER.md](../AI_MASTER.md). This file only covers
+the decisions that tend to raise questions.
 
 ## Why no database engine
 
@@ -31,7 +31,7 @@ code simple.
   active, macOS virtualizes `$HOME` for the process to a container path, so `resolveDataDirectory()` would miss the
   documented path and any data already stored there would become unreachable.
 
-Neither setting should be reverted without discussion first (see AI_MASTER "Regeln für KI-Agenten").
+Neither setting should be reverted without discussion first (see AI_MASTER "Rules for AI Agents").
 
 ## Schema migration on startup
 
