@@ -432,7 +432,7 @@ Future<void> _openInFileManager(BuildContext context, String path) async {
 /// release rather than a hardcoded string. The API reachability check is a
 /// live probe rather than the cached state, because it doubles as the privacy
 /// answer — for the app's two network occasions and why both are user
-/// triggered, see AI_MASTER §2.
+/// triggered, see dev/ai/stack.md.
 ///
 /// In the App Store build ([kIsMacAppStore]) the update entry is absent
 /// altogether: the App Store does the updating, and shipping a second

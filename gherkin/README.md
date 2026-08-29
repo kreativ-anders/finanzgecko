@@ -1,13 +1,13 @@
 # Gherkin specification — FinanzGecko
 
 This folder contains the app's functional requirements as Gherkin `.feature` files. Together with
-[`../AI_MASTER.md`](../AI_MASTER.md) (architecture, folder structure, conventions, AI rules), it forms the
+the AI reference set in [`../dev/ai/`](../dev/ai/) (architecture, folder structure, conventions, AI rules), it forms the
 complete specification from which the app can be **regenerated nearly identically** or extended consistently.
 
 ## Conventions
 
 - **Language:** all feature/scenario text is written in English, describing an app whose UI is German — the
-  binding German domain terms (see the glossary in `AI_MASTER.md` Section 7) stay untranslated inline, exactly
+  binding German domain terms (see `dev/ai/glossary.md`) stay untranslated inline, exactly
   like in the rest of the repo's English docs. Step keywords (`Feature`, `Scenario`, `Given`/`Angenommen`,
   `When`/`Wenn`, `Then`/`Dann`, `And`/`Und`, `But`/`Aber`) are written in **English**, so standard Cucumber
   tooling works without language configuration; the rest of the text is English too, aside from the domain terms
@@ -15,14 +15,14 @@ complete specification from which the app can be **regenerated nearly identicall
 - **One file per functional domain**, not per view — e.g. exchange-rate fallbacks affect both Einträge and
   Fixposten, but live bundled in `currency_exchange.feature`.
 - **Tags:** every feature carries a `@domain`-style tag (e.g. `@accounts`, `@dashboard`) for traceability to
-  `AI_MASTER.md` Section 8 (tests ↔ Gherkin mapping) and to the corresponding source files (comment
+  `dev/ai/testing.md` (tests ↔ Gherkin mapping) and to the corresponding source files (comment
   `# Source: lib/...` at the top of every feature).
 - **No UI-framework detail** (widget names, pixel values) in the scenarios — they describe *behavior*, not
   implementation. Exception: where a concrete number is a deliberate functional decision (e.g. "182 days"), it's
   named explicitly, since it's relevant to regeneration.
 - **These files are not executable tests** (no Cucumber/Gherkin runner is wired into this project) — they're the
   human- and AI-readable requirement spec. The actual automated check runs via the Dart tests in `test/` (mapping:
-  see `AI_MASTER.md` Section 8).
+  see `dev/ai/testing.md`).
 
 ## Files
 
@@ -44,6 +44,6 @@ complete specification from which the app can be **regenerated nearly identicall
 
 ## Required on every change
 
-See `AI_MASTER.md` → "Rules for AI Agents": every behavior change in the code requires, in the same step, an
+See `dev/ai/rules.md`: every behavior change in the code requires, in the same step, an
 update to the matching feature file here (a new scenario, a changed scenario, or — with justification — the
 removal of an obsolete scenario).

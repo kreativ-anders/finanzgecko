@@ -984,7 +984,7 @@ class _AccountCard extends StatelessWidget {
     // `noSelect` is what makes the hand cursor appear: the app-wide
     // SelectionArea's text cursor sits *deeper* in the tree than the InkWell
     // and would otherwise win. Same rule for any clickable surface with text,
-    // see AI_MASTER §5.
+    // see dev/ai/ui-conventions.md.
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(

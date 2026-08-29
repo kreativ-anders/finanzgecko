@@ -20,7 +20,7 @@ class SecureKeyStore {
   // places, so a build that switches sides can no longer read a key the other
   // one wrote. Flipping this for the DMG build would make every existing
   // user's data file undecryptable. Which build gets which, and why:
-  // AI_MASTER §4.1 "macOS-Spezifika".
+  // dev/ai/persistence.md "macOS-Spezifika".
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     mOptions: MacOsOptions(usesDataProtectionKeychain: kIsMacAppStore),
   );

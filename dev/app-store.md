@@ -4,7 +4,7 @@ Step-by-step checklist for the paid (one-time purchase) Mac App Store release. T
 finanzgecko.app stays free and unchanged — the store version buys convenience and automatic updates, not features.
 
 Everything code-side is already in place: `kIsMacAppStore` (`lib/constants.dart`), `macos/Runner/AppStore.entitlements`,
-`packaging/macos/build_appstore.sh`, and the sandbox itself (see AI_MASTER §4.1). What follows is the part that
+`packaging/macos/build_appstore.sh`, and the sandbox itself (see dev/ai/persistence.md). What follows is the part that
 happens in Apple's web UIs and cannot be scripted or tested from this repo.
 
 > **Order matters more than usual here.** Certificates depend on the App ID, the provisioning profile depends on
@@ -115,7 +115,7 @@ e.g. `finanzgecko-macos`).
 Apple derives the rest.
 
 **Screenshots** — you already have these at native Retina resolution in `docs/assets/screenshots/`, produced by
-`tool/capture_screenshots.sh` (see CLAUDE.md). Apple requires 1280×800, 1440×900, 2560×1600 or 2880×1800; the
+`tool/capture_screenshots.sh` (see [ai/screenshots.md](ai/screenshots.md)). Apple requires 1280×800, 1440×900, 2560×1600 or 2880×1800; the
 existing crops will likely need re-exporting to an accepted size. Use the **demo data** shots
 (`demo/finanzgecko-demo.json`) — never real finances.
 

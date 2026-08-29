@@ -11,7 +11,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 /// [init]: `UNUserNotificationCenter` needs explicit user authorization, and
 /// asking for it at startup would put a system dialog in front of an app that
 /// otherwise asks for nothing. So the toggle in Einstellungen is opt-in and
-/// owns the prompt. See AI_MASTER §5 "Desktop notifications" and
+/// owns the prompt. See dev/ai/ui-conventions.md "Desktop notifications" and
 /// gherkin/notifications.feature.
 class NotificationService {
   NotificationService({FlutterLocalNotificationsPlugin? plugin}) : _injectedPlugin = plugin;

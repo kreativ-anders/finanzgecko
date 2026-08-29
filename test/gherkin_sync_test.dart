@@ -110,13 +110,13 @@ void main() {
     );
   });
 
-  test('4) every feature file is indexed in AI_MASTER.md', () {
-    final master = File('AI_MASTER.md').readAsStringSync();
+  test('4) every feature file is indexed in dev/ai/testing.md', () {
+    final master = File('dev/ai/testing.md').readAsStringSync();
     for (final f in featureFiles) {
       expect(
         master.contains(basename(f.path)),
         isTrue,
-        reason: '${basename(f.path)} is missing from AI_MASTER.md (feature overview in Section 8).',
+        reason: '${basename(f.path)} is missing from dev/ai/testing.md (feature overview table).',
       );
     }
   });

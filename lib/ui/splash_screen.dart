@@ -12,7 +12,7 @@ import 'theme.dart';
 /// a brand decision, not a placeholder. They land *on top of* the time the
 /// window is already visible ([main] shows it before `runApp`), so startup is
 /// ~1.5s total. That trade-off was considered and declined — don't "optimize"
-/// these values without asking (see AI_MASTER §5 and `gherkin/window.feature`).
+/// these values without asking (see dev/ai/ui-conventions.md and `gherkin/window.feature`).
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.child, this.minDuration = const Duration(milliseconds: 1100)});
 

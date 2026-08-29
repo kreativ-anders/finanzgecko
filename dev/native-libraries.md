@@ -5,7 +5,7 @@ implementation — and what that means for the Mac App Store's export-compliance
 
 Written when the App Store submission was blocked on exactly this. The short version: as of v1.10 every
 cryptographic algorithm the app *performs* runs in Apple's implementation, with one honest residue documented at
-the bottom. Implementation details live in AI_MASTER §4.1 "Export compliance"; this file is the audit behind it.
+the bottom. Implementation details live in dev/ai/persistence.md "Export compliance"; this file is the audit behind it.
 
 ---
 
@@ -92,7 +92,7 @@ existing backup tests exercise it for free.
 | `package_info_plus` | bundle metadata | native |
 | `path_provider` | Foundation directories | native (transitive) |
 | `window_manager`, `screen_retriever` | AppKit | native |
-| `flutter_local_notifications` | `UNUserNotificationCenter` | native, current. Replaced `local_notifier` (`NSUserNotification`, deprecated since macOS 11, ~20 build warnings, no SwiftPM support). Not a compliance issue either way — no crypto. The modern API needs user authorization, which is why the Einstellungen toggle is opt-in and owns the prompt; see AI_MASTER §5 |
+| `flutter_local_notifications` | `UNUserNotificationCenter` | native, current. Replaced `local_notifier` (`NSUserNotification`, deprecated since macOS 11, ~20 build warnings, no SwiftPM support). Not a compliance issue either way — no crypto. The modern API needs user authorization, which is why the Einstellungen toggle is opt-in and owns the prompt; see dev/ai/ui-conventions.md |
 | `http` → `dart:io` | **no** — TLS is BoringSSL, linked into the Flutter engine | the residue; see below |
 | `fl_chart`, `provider`, `intl`, `path` | no OS API involved | pure Dart by nature, no crypto, nothing to migrate |
 | `ffi` | binding layer only | pure Dart, no implementation of its own |

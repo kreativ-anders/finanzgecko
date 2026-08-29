@@ -5,7 +5,7 @@ import 'package:flutter/services.dart' show LogicalKeyboardKey;
 /// True only in the Mac-App-Store build
 /// (`--dart-define=FINANZGECKO_MAS=true`). Default **false**, so the
 /// Developer-ID/DMG build every existing user runs is unaffected. See
-/// AI_MASTER §4.1 "macOS-Spezifika".
+/// dev/ai/persistence.md "macOS-Spezifika".
 ///
 /// Must stay a `const` from `bool.fromEnvironment` rather than a runtime
 /// lookup: the tree-shaker then strips the update-download path out of the App
@@ -86,7 +86,7 @@ double intervalMonthFactor(String value) {
 /// Hand-maintained and deliberately incomplete. `colorHex` is each bank's
 /// official brand color, researched by hand rather than derived algorithmically.
 /// New entries arrive through the channels linked in the Konto form — see
-/// AI_MASTER.md §4.1 and `gherkin/accounts.feature`.
+/// dev/ai/persistence.md and `gherkin/accounts.feature`.
 class Bank {
   final String name;
   final String colorHex;
@@ -278,7 +278,7 @@ const int kBackupNotificationId = 1;
 const int kAssetNotificationId = 2;
 
 /// Debounce before an inline-edited field (Vermögenswerte, Fixposten) is
-/// auto-saved — see AI_MASTER.md §5 "Inline-Edit mit Debounce".
+/// auto-saved — see dev/ai/ui-conventions.md "Inline-Edit mit Debounce".
 const Duration kInlineEditDebounce = Duration(milliseconds: 600);
 
 /// Share (of positive Kontotyp totals) above which the dashboard flags a

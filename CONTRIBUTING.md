@@ -2,18 +2,18 @@
 
 ## Before you start
 
-[AI_MASTER.md](AI_MASTER.md) is the source of truth for architecture, data models, conventions, and domain
-language; [gherkin/](gherkin/) is the behavioral spec. Both are in English, but keep the binding German domain
-terms untranslated inline throughout (see AI_MASTER §3 "Doc language") — read both before making any non-trivial
-change, especially the "Rules for AI Agents" section at the end of AI_MASTER.md, which applies to human
-contributions too:
+The AI reference set in [dev/ai/](dev/ai/) is the source of truth for architecture, data models, conventions, and
+domain language; [gherkin/](gherkin/) is the behavioral spec. [CLAUDE.md](CLAUDE.md) maps which file covers what.
+Both are in English, but keep the binding German domain terms untranslated inline throughout (see "Doc language"
+in [dev/ai/structure.md](dev/ai/structure.md)) — read them before making any non-trivial change, especially
+[dev/ai/rules.md](dev/ai/rules.md), which applies to human contributions too:
 
 - German domain terms (Konto, Fixposten, Vermögenswerte, …) are mandatory, not cosmetic — never translate them,
   including in English prose.
 - Documented architecture decisions (e.g. macOS keychain/sandbox settings, unencrypted rates cache) don't get
   reverted without discussion first — see [dev/architecture.md](dev/architecture.md).
-- Any change to folder structure, architecture, data models, or view behavior updates AI_MASTER.md and the
-  relevant `gherkin/*.feature` **in the same step**.
+- Any change to folder structure, architecture, data models, or view behavior updates the matching `dev/ai/`
+  file and the relevant `gherkin/*.feature` **in the same step**.
 
 ## Set up a dev environment
 
@@ -27,8 +27,9 @@ flutter run -d linux   # or -d macos / -d windows
 ## Workflow
 
 1. **Spec-first:** write a Gherkin scenario for new behavior before or alongside the implementation. Navigate:
-   AI_MASTER §8 feature overview → feature file → its `# Implementation:` file.
-2. Implement, touching only the files that feature actually owns (see AI_MASTER "Regenerating a feature").
+   feature overview in [dev/ai/testing.md](dev/ai/testing.md) → feature file → its `# Implementation:` file.
+2. Implement, touching only the files that feature actually owns (see "Regenerating a feature" in
+   [dev/ai/testing.md](dev/ai/testing.md)).
 3. For new pure logic: add a `Scenario` in `gherkin/executable/*.feature` + an `s.step(...)` in `test/bdd/`.
 
 ## Checks before every commit
@@ -46,7 +47,7 @@ drift apart.
 
 - Small, focused changes.
 - Explain the *why*, not just the *what* — commit messages get folded into `CHANGELOG.md` automatically.
-- If the PR changes behavior, the updated `gherkin/*.feature` (and `AI_MASTER.md` where relevant) is part of the
+- If the PR changes behavior, the updated `gherkin/*.feature` (and the matching `dev/ai/` file where relevant) is part of the
   diff, not a follow-up.
 
 ## License

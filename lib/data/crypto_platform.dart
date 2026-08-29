@@ -5,7 +5,7 @@
 /// it performs is the operating system's own. `cryptography_flutter` is what
 /// makes that true for AES-GCM — but it is built to fall back to the bundled
 /// Dart implementation silently, and a silent fallback here turns a filed
-/// declaration into a false one. See AI_MASTER §4.1 "Export compliance".
+/// declaration into a false one. See dev/ai/persistence.md "Export compliance".
 library;
 
 import 'dart:io' show Platform;

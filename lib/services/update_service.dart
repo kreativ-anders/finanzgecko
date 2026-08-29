@@ -65,7 +65,7 @@ class UpdateDownloadResult {
 ///
 /// Still **no** silent or automatic updater: every network call here happens
 /// because the user clicked, never on launch and never periodically (see
-/// AI_MASTER.md §6). What the user gets after confirming is a *download*, not
+/// dev/ai/platform.md). What the user gets after confirming is a *download*, not
 /// an install: the file is fetched, checked against the release's published
 /// `SHA256SUMS`, and only then saved where they chose. The app never replaces
 /// itself and never executes the downloaded file on its own.

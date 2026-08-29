@@ -103,7 +103,7 @@ class AccountImportRejectedException implements Exception {
 /// shared temp file. Pre-sandbox macOS installations have their file one level
 /// up and are copied across once by [SandboxMigration].
 ///
-/// Per-platform paths and layout rationale: AI_MASTER §4.
+/// Per-platform paths and layout rationale: dev/ai/state-and-models.md.
 class AppStore {
   /// [dataDirectory] points the store at a temp folder for tests; production
   /// code always uses the default constructor.
@@ -230,7 +230,7 @@ class AppStore {
   /// promise a safety that does not exist. Anyone wanting a restorable backup
   /// uses the export (optionally with a password, see
   /// `data/backup_crypto.dart`) — that one is device-independent.
-  /// See AI_MASTER §4.1.
+  /// See dev/ai/persistence.md.
   static Directory resolveDataDirectory() {
     if (Platform.isLinux) {
       final xdg = Platform.environment['XDG_DATA_HOME'];

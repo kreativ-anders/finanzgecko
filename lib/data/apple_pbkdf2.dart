@@ -8,7 +8,7 @@
 /// rules out, so the one algorithm the plugin cannot cover is bound here
 /// directly. `CCKeyDerivationPBKDF` lives in libSystem, so this needs no
 /// plugin, no CocoaPods entry and no Podfile change — which also keeps it
-/// working past the CocoaPods registry going read-only. See AI_MASTER §4.1
+/// working past the CocoaPods registry going read-only. See dev/ai/persistence.md
 /// "Export compliance".
 library;
 

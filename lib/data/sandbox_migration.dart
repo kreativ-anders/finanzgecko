@@ -17,7 +17,7 @@ import 'package:path/path.dart' as p;
 /// user's old files is a separate, later step.
 ///
 /// Full rationale, the keychain assumption that cannot be verified in CI, and
-/// the removal conditions: AI_MASTER §4.1 and ROADMAP "Q3 2027".
+/// the removal conditions: dev/ai/persistence.md and ROADMAP "Q3 2027".
 class SandboxMigration {
   const SandboxMigration._();
 

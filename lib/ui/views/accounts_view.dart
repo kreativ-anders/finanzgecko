@@ -93,7 +93,7 @@ class _BankFieldState extends State<_BankField> {
                           height: 12,
                           decoration: BoxDecoration(color: colorFromHex(hex), shape: BoxShape.circle),
                         ),
-                        // noSelect: see AI_MASTER §5 — otherwise the
+                        // noSelect: see dev/ai/ui-conventions.md — otherwise the
                         // SelectionArea's text cursor overrides the ListTile's
                         // click cursor.
                         title: noSelect(Text(name)),

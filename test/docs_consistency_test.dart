@@ -18,10 +18,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// **What belongs here — and what does not.** Only claims that are
 /// *mechanically decidable*: a value stated in two files, a hostname the app
 /// can reach, a phrase that became false on a known date. Anything needing
-/// judgement stays a human rule in CLAUDE.md. A doc linter that cries wolf
+/// judgement stays a human rule in dev/ai/website.md. A doc linter that cries wolf
 /// gets muted, and then it protects nothing.
 ///
-/// **How to extend it.** Every prose "keep these in sync" warning in CLAUDE.md
+/// **How to extend it.** Every prose "keep these in sync" warning in dev/ai/website.md
 /// is a candidate. When one of them bites again, convert it into a test here
 /// instead of only fixing the text — that is the whole point.
 void main() {
@@ -66,7 +66,7 @@ void main() {
 
     // Tripwire, deliberately exact. It is not "two is the right number"; it is
     // "if this number changes, four documents and a privacy claim need a human
-    // decision". CLAUDE.md lists them.
+    // decision". dev/ai/website.md lists them.
     test('die Anzahl externer Endpunkte ist unverändert (sonst: vier Dokumente prüfen)', () {
       expect(
         endpointsInCode(),
@@ -74,7 +74,7 @@ void main() {
         reason:
             'Die Menge der externen Hosts hat sich geändert.\n'
             'Bei jeder Änderung müssen mitgezogen werden: docs/datenschutz.html, docs/llms.txt, '
-            'docs/index.html und AI_MASTER.md — dort steht jeweils die Aussage, welche '
+            'docs/index.html und dev/ai/stack.md — dort steht jeweils die Aussage, welche '
             'Verbindungen die App überhaupt aufbauen kann.',
       );
     });
@@ -117,12 +117,12 @@ void main() {
   });
 
   group('Der dokumentierte Datenpfad stimmt mit dem Code überein', () {
-    test('AI_MASTER.md und dev/setup.md nennen den aktuellen macOS-Pfad', () {
+    test('dev/ai/persistence.md und dev/setup.md nennen den aktuellen macOS-Pfad', () {
       final source = read('lib/data/app_store.dart');
       final macDirName = RegExp(r"_macOsDirectoryName = '([^']+)'").firstMatch(source)?.group(1);
       expect(macDirName, isNotNull, reason: '_macOsDirectoryName nicht mehr in app_store.dart gefunden.');
 
-      for (final doc in ['AI_MASTER.md', 'dev/setup.md']) {
+      for (final doc in ['dev/ai/persistence.md', 'dev/setup.md']) {
         expect(
           read(doc).contains('Application Support/$macDirName'),
           isTrue,
@@ -398,7 +398,7 @@ void main() {
       const because =
           'macos/Runner/Info.plist meldet ITSAppUsesNonExemptEncryption = false. '
           'Das behauptet gegenüber Apple, dass ausschließlich die Verschlüsselung des '
-          'Betriebssystems benutzt wird — siehe AI_MASTER §4.1 und dev/native-libraries.md.';
+          'Betriebssystems benutzt wird — siehe dev/ai/persistence.md und dev/native-libraries.md.';
 
       expect(
         read('pubspec.yaml').contains('cryptography_flutter:'),

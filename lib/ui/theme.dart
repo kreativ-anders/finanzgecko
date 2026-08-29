@@ -26,7 +26,7 @@ const Color _kTextPrimaryLight = Color(0xFF10160F);
 Brightness _activeBrightness = Brightness.dark;
 
 /// Background/surface/border/text switch with the active theme; brand colors
-/// deliberately stay identical in both — see AI_MASTER.md §5.
+/// deliberately stay identical in both — see dev/ai/design-tokens.md.
 Color get kBackground => _activeBrightness == Brightness.dark ? _kBackgroundDark : _kBackgroundLight;
 Color get kSurface => _activeBrightness == Brightness.dark ? _kSurfaceDark : _kSurfaceLight;
 Color get kBorder => _activeBrightness == Brightness.dark ? _kBorderDark : _kBorderLight;
@@ -56,7 +56,7 @@ const Color kWarning = Color(0xFFE0A030);
 
 // ---------- WCAG-AA-safe text/icon variants of the brand colors ----------
 // kPrimary/kDanger/kWarning stay pixel-identical between themes (see
-// AI_MASTER.md §5) and are correct as fills. Used directly *as* text/icon
+// dev/ai/design-tokens.md) and are correct as fills. Used directly *as* text/icon
 // color on the light theme's near-white background, all three fall short of
 // WCAG 2.1 AA's 4.5:1 (kPrimary ~2.0:1, kDanger ~2.6:1, kWarning ~2.1:1),
 // verified against kBackground and kSurface. These getters are darkened,

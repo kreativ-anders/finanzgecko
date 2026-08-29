@@ -73,7 +73,7 @@ class AppSchema {
   // `notificationsOptIn` rather than the older `notificationsEnabled`
   // precisely so files written before the opt-in switch do NOT carry their
   // always-on default into a build that would then prompt. Those users find
-  // the toggle off once and turn it on themselves. See AI_MASTER §5.
+  // the toggle off once and turn it on themselves. See dev/ai/ui-conventions.md.
   bool notificationsEnabled;
   bool backupOverdueNotified;
   List<int> assetOverdueNotifiedIds;

@@ -128,7 +128,7 @@ Feature: Einstellungen
     Then the app queries the project's public GitHub releases API (kreativ-anders/finanzgecko) for the
       latest release tag and compares it against the installed version
     And this query happens only on this click — no automatic background check at app start or periodically
-      while running (see AI_MASTER.md Section 6)
+      while running (see dev/ai/platform.md)
     Given a newer version is available
     Then a dialog "Update verfügbar" opens with the new version number and the currently installed version,
       plus the buttons "Später" (closes the dialog with no action) and "Herunterladen"

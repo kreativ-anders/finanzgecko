@@ -2,8 +2,7 @@
 
 **Purpose of this document:** FinanzGecko's visual identity — color palette, brand-color rules, typography, and app
 icon — kept compact and code-free, for marketing material, presentations, or external design work. For the technical
-implementation of these values in code, see [`AI_MASTER.md`](AI_MASTER.md) §5 "Color tokens — technical
-implementation"; keep both documents in sync whenever a color/typography change is made.
+implementation of these values in code, see [`dev/ai/design-tokens.md`](dev/ai/design-tokens.md); keep both documents in sync whenever a color/typography change is made.
 
 ## Brand
 

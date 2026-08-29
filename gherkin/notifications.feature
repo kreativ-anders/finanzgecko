@@ -110,7 +110,7 @@ Feature: OS notifications for backup and Vermögenswerte reminders
       Given the app isn't running
       Then no notification is sent even if a reminder becomes overdue in the meantime
       And the check catches up only at the next start resp. while the app is running again afterward (no
-        background service, see AI_MASTER.md §2/§6)
+        background service, see dev/ai/stack.md/§6)
 
     Scenario: A missing notification backend must never crash the app
       Given no notification daemon is available (e.g. a minimal Linux setup) or permission was denied

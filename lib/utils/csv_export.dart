@@ -21,7 +21,7 @@ typedef CsvExportFile = ({String fileName, String content});
 /// Everything the receiving spreadsheet can do itself (monthly equivalents,
 /// sums, currency conversion) stays out, so each table reads like the view it
 /// comes from. Also lossy and read-only — there is no CSV re-import, the JSON
-/// backup is the only round-trip. See AI_MASTER §4.
+/// backup is the only round-trip. See dev/ai/state-and-models.md.
 ///
 /// Pass [accounts] including archived ones so historical rows keep their names.
 List<CsvExportFile> buildCsvExports({
