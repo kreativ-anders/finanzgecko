@@ -177,12 +177,32 @@ class SettingsView extends StatelessWidget {
                   'benachrichtigt, während sie geschlossen ist.',
                   style: TextStyle(color: kMuted),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  // Only macOS has an authorization prompt to warn about.
+                  Platform.isMacOS
+                      ? 'Standardmäßig aus. Beim Einschalten fragt macOS einmalig um Erlaubnis.'
+                      : 'Standardmäßig aus.',
+                  style: TextStyle(color: kMuted, fontSize: 12),
+                ),
                 const SizedBox(height: 12),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: noSelect(const Text('Desktop-Benachrichtigungen')),
                   value: app.notificationsEnabled,
-                  onChanged: (v) => context.read<AppState>().setNotificationsEnabled(v),
+                  // Awaited because macOS can refuse: the toggle then stays off
+                  // and the user needs to be told why, since the app cannot ask
+                  // a second time — see AppState.setNotificationsEnabled.
+                  onChanged: (v) async {
+                    final enabled = await context.read<AppState>().setNotificationsEnabled(v);
+                    if (!v || enabled) return;
+                    if (!context.mounted) return;
+                    showErrorSnackBar(
+                      context,
+                      'Das Betriebssystem erlaubt keine Benachrichtigungen für FinanzGecko. '
+                      'Ändern lässt sich das in den Systemeinstellungen unter "Mitteilungen".',
+                    );
+                  },
                 ),
               ],
             ),
@@ -845,7 +865,9 @@ class _ApiReachabilityRowState extends State<_ApiReachabilityRow> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: _SecurityMetaRow(label: 'Wechselkurs-API', value: value)),
+        Expanded(
+          child: _SecurityMetaRow(label: 'Wechselkurs-API', value: value),
+        ),
         if (app.mayFetchRates && !_checking)
           InkWell(
             onTap: () => _check(app),

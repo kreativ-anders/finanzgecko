@@ -211,8 +211,10 @@ void main() {
 
   group('reminder notification bookkeeping', () {
     // Gherkin: gherkin/notifications.feature
-    test('notificationsEnabled defaults to true and is persisted', () async {
+    test('notificationsEnabled defaults to false (opt-in) and is persisted', () async {
       final store = await bootStore();
+      expect(store.notificationsEnabled, isFalse);
+      await store.setNotificationsEnabled(true);
       expect(store.notificationsEnabled, isTrue);
       await store.setNotificationsEnabled(false);
       expect(store.notificationsEnabled, isFalse);
@@ -251,13 +253,13 @@ void main() {
     test('resetAll clears notification settings back to defaults', () async {
       final store = await bootStore();
       final asset = await store.addAsset(name: 'Auto', value: 1000);
-      await store.setNotificationsEnabled(false);
+      await store.setNotificationsEnabled(true);
       await store.markBackupOverdueNotified();
       await store.markAssetOverdueNotified(asset.id);
 
       await store.resetAll();
 
-      expect(store.notificationsEnabled, isTrue);
+      expect(store.notificationsEnabled, isFalse, reason: 'back to the opt-in default, not to the last choice');
       expect(store.backupOverdueNotified, isFalse);
       expect(store.assetOverdueNotifiedIds, isEmpty);
     });

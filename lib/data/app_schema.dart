@@ -66,6 +66,14 @@ class AppSchema {
   // state has already been notified. The action resolving that state (export,
   // or re-valuing a Vermögenswert) resets the respective entry. See
   // gherkin/notifications.feature.
+  //
+  // Opt-in, default off: macOS asks the user for authorization the moment this
+  // is switched on, and an app that otherwise asks for nothing must not spring
+  // that on anyone who never chose the feature. It is persisted under the key
+  // `notificationsOptIn` rather than the older `notificationsEnabled`
+  // precisely so files written before the opt-in switch do NOT carry their
+  // always-on default into a build that would then prompt. Those users find
+  // the toggle off once and turn it on themselves. See AI_MASTER §5.
   bool notificationsEnabled;
   bool backupOverdueNotified;
   List<int> assetOverdueNotifiedIds;
@@ -92,7 +100,7 @@ class AppSchema {
     required this.nextSubscriptionId,
     required this.lastExportAt,
     required this.window,
-    this.notificationsEnabled = true,
+    this.notificationsEnabled = false,
     this.backupOverdueNotified = false,
     List<int>? assetOverdueNotifiedIds,
     this.themeMode = AppThemeMode.system,
@@ -153,7 +161,7 @@ class AppSchema {
       nextSubscriptionId: (meta['nextSubscriptionId'] as num?)?.toInt() ?? 1,
       lastExportAt: lastExportAtRaw is String ? DateTime.tryParse(lastExportAtRaw) : null,
       window: windowRaw != null ? WindowPrefs.fromJson(windowRaw) : WindowPrefs.defaults(),
-      notificationsEnabled: meta['notificationsEnabled'] is bool ? meta['notificationsEnabled'] as bool : true,
+      notificationsEnabled: meta['notificationsOptIn'] is bool ? meta['notificationsOptIn'] as bool : false,
       backupOverdueNotified: meta['backupOverdueNotified'] is bool ? meta['backupOverdueNotified'] as bool : false,
       assetOverdueNotifiedIds: meta['assetOverdueNotifiedIds'] is List
           ? [
@@ -179,7 +187,7 @@ class AppSchema {
       'nextAssetId': nextAssetId,
       'nextSubscriptionId': nextSubscriptionId,
       'lastExportAt': lastExportAt?.toIso8601String(),
-      'notificationsEnabled': notificationsEnabled,
+      'notificationsOptIn': notificationsEnabled,
       'backupOverdueNotified': backupOverdueNotified,
       'assetOverdueNotifiedIds': assetOverdueNotifiedIds,
       'themeMode': appThemeModeToJson(themeMode),

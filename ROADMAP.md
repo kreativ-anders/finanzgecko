@@ -20,13 +20,6 @@ What's planned for FinanzGecko. Quarters are intent, not promises.
 
 **Q4 2026**
 
-- **Replace `local_notifier` with `flutter_local_notifications`.** The current plugin was last published in April
-  2024: no Swift Package Manager support, and on macOS it calls `NSUserNotification`, deprecated since macOS 11.
-  Flutter still falls back to CocoaPods, but that registry goes read-only on 2026-12-02, and if Apple drops the old
-  API the reminders stop firing silently. The replacement is maintained and covers all three platforms. **Decide
-  first:** the modern macOS API needs user authorization, so this adds a permission prompt where there is none —
-  a real change for an app that otherwise asks for nothing. Touches `notification_service.dart` and
-  `gherkin/notifications.feature`.
 - Drawdown from peak (how far below all-time high).
 - Currency exposure (EUR vs. foreign share).
 - **winget** — manifests + release automation already in repo; first submission to `microsoft/winget-pkgs` still
@@ -54,5 +47,11 @@ What's planned for FinanzGecko. Quarters are intent, not promises.
 - **Assisted update** — "Nach Updates suchen" downloads the right file, verifies checksum, hands off ready to
   install. Only on request, never in the background.
 - **Website** — install instructions and privacy page match the signed builds.
+- **Desktop notifications on a maintained plugin.** `local_notifier` (last published April 2024, macOS
+  `NSUserNotification`, deprecated since macOS 11) replaced by `flutter_local_notifications`. Gone with it: ~20
+  macOS deprecation build warnings and the Windows start-menu-shortcut registration that used to leave the
+  taskbar icon blank. The modern macOS API needs user authorization, so the reminders became **opt-in**: the
+  toggle in Einstellungen is off by default and owns the prompt — nothing is asked of anyone who never switched
+  it on, including existing installations. The Dashboard banners are unchanged and remain the primary channel.
 
 Ideas and feedback: [open an issue](https://github.com/kreativ-anders/finanzgecko/issues).

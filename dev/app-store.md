@@ -25,8 +25,8 @@ terms to different channels. Two things to verify before submitting:
 
 - No third-party dependency is GPL/AGPL. Current direct dependencies (Flutter, `provider`, `http`, `fl_chart`,
   `file_selector`, `window_manager`, `intl`, `url_launcher`, `flutter_secure_storage`, `cryptography`,
-  `local_notifier`, `package_info_plus`, `path`) are BSD/MIT/Apache — confirm with `flutter pub deps` before each
-  submission, not just once.
+  `cryptography_flutter`, `ffi`, `flutter_local_notifications`, `package_info_plus`, `path`) are BSD/MIT/Apache — confirm with
+  `flutter pub deps` before each submission, not just once.
 - Decide how the store listing describes licensing. Simplest honest framing: the source stays GPL on GitHub, the
   App Store binary is distributed by you under Apple's standard EULA.
 
@@ -126,12 +126,69 @@ compiled out of this build), sends no identifiers, and has no analytics. Link th
 
 **Category** — Finance. Already declared in `Info.plist` as `public.app-category.finance`.
 
-**Export compliance** — the app encrypts local data with AES-256 via the `cryptography` package (not the OS).
-Whether that qualifies for the standard exemption is a legal call, which is exactly why `Info.plist` deliberately
-carries **no** `ITSAppUsesNonExemptEncryption` key. Answer the question in App Store Connect consciously; a wrong
-`false` here is a compliance problem, not a formality.
+**Export compliance** — answered in `macos/Runner/Info.plist`, so App Store Connect does not ask. The key is
+`ITSAppUsesNonExemptEncryption = false`, claimed on Apple's first case: *encryption limited to that within the
+Apple operating system*. Since v1.10 that is what the app does — AES-256-GCM through `cryptography_flutter`
+(CryptoKit/CommonCrypto) and PBKDF2-HMAC-SHA256 through CommonCrypto (`lib/data/apple_pbkdf2.dart`).
+
+This reverses the earlier position in this file, which was that the app used the `cryptography` package's own
+implementation and that the exemption was therefore an open legal call. It was — that is why the work was done
+rather than the question answered optimistically. The full reasoning, the per-dependency audit, and the one
+residue that is *not* solved (the Flutter engine links BoringSSL for `dart:io` TLS) are in
+[native-libraries.md](native-libraries.md).
+
+**The declaration is only true while the OS implementations are the ones actually running.** `cryptography_flutter`
+falls back to a bundled Dart implementation silently, and no automated test can catch that: `flutter test` runs
+without a plugin registrant and always sees the fallback. The check is therefore manual, and it is the reason for
+the smoke test below. If it ever fails, change the `Info.plist` key back before submitting — a wrong `false` is a
+compliance problem, not a formality.
 
 ---
+
+## 4a. Crypto smoke test — run before every submission
+
+Not optional and not automatable. `flutter test` covers that both implementations produce the same bytes; it
+cannot cover which one runs, because it runs without a plugin registrant. Everything below is done on a real
+build, in this order. Any step failing means the `ITSAppUsesNonExemptEncryption` key in `macos/Runner/Info.plist`
+does not currently describe the app.
+
+**Before you start:** make a copy of your real data file and of one encrypted backup written by the *previous*
+version. Steps 3 and 4 are the ones that would otherwise cost you data.
+
+1. **The implementations in use.** Launch the build, then in Console.app filter on `FinanzGecko crypto`. Expected,
+   exactly:
+
+   ```
+   FinanzGecko crypto: AES-256-GCM = OS (cryptography_flutter), PBKDF2-HMAC-SHA256 = OS (CommonCrypto)
+   ```
+
+   `= Dart` on either side means the fallback is live. Do not submit. This is the single most important line on
+   this page.
+
+2. **Run it for both delivery forms.** The DMG build (`build_dmg.sh`) and the App Store build
+   (`build_appstore.sh`) register plugins the same way, but the sandbox and the App Store signing identity differ,
+   and this has surprised us before with the keychain. Check the log line in both.
+
+3. **An existing data file still opens.** Start the new build against your real (copied) data file. All accounts,
+   Kontostände, Vermögenswerte and Fixposten present, no "Diese Datei gehört zu einem anderen Computer", no
+   `.unreadable-*` file appearing next to it. This proves the key fingerprint and the envelope are unchanged.
+
+4. **An old encrypted backup still imports.** *Backup importieren…* with a password-protected backup written by
+   the previous version. It must open with its original password. This is the PBKDF2 change under test: if
+   CommonCrypto and the Dart implementation disagreed by a single byte, this is where it shows.
+
+5. **A new backup still opens elsewhere.** Export a password-protected backup from the new macOS build and import
+   it on Windows or Linux, where the Dart implementation runs. Then the reverse. Both must succeed — one file
+   format, regardless of which machine wrote it.
+
+6. **A wrong password still says so.** Import an encrypted backup with a deliberately wrong password. The message
+   must be the ordinary wrong-password one, not an internal error. `decryptBackup` reports every decryption
+   failure as a wrong password, so a broken platform path would hide here wearing the wrong label.
+
+7. **Plaintext backups are untouched.** Export without a password, reimport. Still plain JSON, still lossless.
+
+8. **The update path is still absent from the App Store build.** Unchanged by this work, but it shares the build
+   script and it is the rejection most likely to happen twice — see §6.1.
 
 ## 5. Build and upload
 

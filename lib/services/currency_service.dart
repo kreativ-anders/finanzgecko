@@ -27,14 +27,14 @@ enum RateFailure {
   /// Rate lookups aren't allowed (opt-in `unset`/`denied`) and nothing cached.
   notAllowed(
     'Der Online-Abruf von Wechselkursen ist nicht erlaubt (Einstellungen → Wechselkurse), '
-        'und für dieses Währungspaar liegt kein gespeicherter Kurs vor.',
+    'und für dieses Währungspaar liegt kein gespeicherter Kurs vor.',
   ),
 
   /// Allowed, but the request failed (no connection, timeout, HTTP error,
   /// unparsable answer) and nothing cached.
   requestFailed(
     'Der Wechselkurs konnte nicht abgerufen werden (keine Verbindung oder Störung der API), '
-        'und für dieses Währungspaar liegt kein gespeicherter Kurs vor.',
+    'und für dieses Währungspaar liegt kein gespeicherter Kurs vor.',
   );
 
   const RateFailure(this.message);

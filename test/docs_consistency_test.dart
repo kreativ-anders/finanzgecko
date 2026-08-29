@@ -373,6 +373,62 @@ void main() {
       }
     });
   });
+
+  group('Export-Compliance-Erklärung deckt sich mit dem Code', () {
+    // Why this is mechanical: `ITSAppUsesNonExemptEncryption = false` is a
+    // legal statement about which implementation performs the encryption, and
+    // the code it rests on sits three directories away from the file that
+    // states it. Removing the native path is a one-line change; noticing that
+    // the change invalidated a filed declaration is not.
+    //
+    // What it can and cannot decide: it checks that the native paths are still
+    // wired in. Whether they are actually *reached* is unanswerable here —
+    // `flutter test` runs without a plugin registrant, so cryptography_flutter
+    // always reports its Dart fallback — and is covered by the smoke test in
+    // dev/app-store.md §4a.
+    test('ohne native Krypto-Pfade darf die Info.plist keine Ausnahme behaupten', () {
+      final plist = read('macos/Runner/Info.plist');
+      final declaresExempt = RegExp(r'<key>ITSAppUsesNonExemptEncryption</key>\s*<false\s*/>').hasMatch(plist);
+      if (!declaresExempt) {
+        // No key, no committed claim: App Store Connect then asks the question
+        // interactively and there is nothing here to keep honest.
+        return;
+      }
+
+      const because =
+          'macos/Runner/Info.plist meldet ITSAppUsesNonExemptEncryption = false. '
+          'Das behauptet gegenüber Apple, dass ausschließlich die Verschlüsselung des '
+          'Betriebssystems benutzt wird — siehe AI_MASTER §4.1 und dev/native-libraries.md.';
+
+      expect(
+        read('pubspec.yaml').contains('cryptography_flutter:'),
+        isTrue,
+        reason: '$because\nOhne cryptography_flutter läuft AES-GCM wieder in Dart.',
+      );
+      expect(
+        exists('lib/data/apple_pbkdf2.dart'),
+        isTrue,
+        reason: '$because\nOhne lib/data/apple_pbkdf2.dart läuft PBKDF2 auf Apple-Plattformen wieder in Dart.',
+      );
+      expect(
+        read('lib/data/backup_crypto.dart').contains('ApplePbkdf2.deriveKey'),
+        isTrue,
+        reason: '$because\nDie Backup-Schlüsselableitung benutzt den nativen Pfad nicht mehr.',
+      );
+      expect(
+        read('lib/data/crypto_platform.dart').contains('CryptographyChannelPolicy'),
+        isTrue,
+        reason:
+            '$because\nOhne die ausdrückliche CryptographyChannelPolicy verschlüsselt FlutterAesGcm '
+            'kleine Datenbanken wieder in Dart — genau der Fall, den die Erklärung ausschließt.',
+      );
+      expect(
+        exists('dev/native-libraries.md'),
+        isTrue,
+        reason: '$because\nDie Begründung dazu ist nirgends mehr dokumentiert.',
+      );
+    });
+  });
 }
 
 /// Strips everything that is markup or machinery rather than prose, so the

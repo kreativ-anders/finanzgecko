@@ -46,6 +46,8 @@ Feature: Export and import a backup
   Scenario: Export with a password
     Given I set a password and repeat it
     Then an encrypted file is written (AES-256-GCM, key derived via PBKDF2-HMAC-SHA256 from the password)
+    And both are computed by the operating system's own implementation where it offers one (see
+      gherkin/data_security.feature) — which implementation runs changes nothing about the file
     And the file contains neither plaintext data nor the password itself
     And the method, salt, and iteration count are stored in the file, so they can be strengthened later
       without making old backups unreadable

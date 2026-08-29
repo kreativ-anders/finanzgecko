@@ -17,6 +17,9 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 
+import 'apple_pbkdf2.dart';
+import 'crypto_platform.dart';
+
 /// Plaintext marker by which the import recognises an encrypted backup without
 /// having to decrypt it.
 const String _magic = 'finanzgecko-backup';
@@ -24,8 +27,11 @@ const int _formatVersion = 1;
 
 /// PBKDF2-HMAC-SHA256. The number is stored **in the file**, not only here —
 /// so it can be raised later without making older backups unreadable. 200,000
-/// is a compromise: the pure-Dart implementation runs on the UI isolate, and
-/// an export must not feel like it hangs.
+/// was a compromise against the pure-Dart implementation, which runs on the UI
+/// isolate and must not make an export feel like it hangs. On Apple platforms
+/// that constraint is gone (see [ApplePbkdf2]); the number stays where it is
+/// until Windows and Linux can follow, so that one file format does not depend
+/// on which machine wrote it.
 const int _defaultIterations = 200000;
 
 /// Wrong password (or a file altered afterwards — the failed MAC cannot tell
@@ -61,7 +67,7 @@ Future<String> encryptBackup(Map<String, dynamic> data, String passphrase) async
   }
   final salt = _randomBytes(16);
   final key = await _deriveKey(passphrase, salt, _defaultIterations);
-  final box = await AesGcm.with256bits().encrypt(utf8.encode(jsonEncode(data)), secretKey: key);
+  final box = await buildAesGcm256().encrypt(utf8.encode(jsonEncode(data)), secretKey: key);
 
   return const JsonEncoder.withIndent('  ').convert({
     'format': _magic,
@@ -103,9 +109,18 @@ Future<Map<String, dynamic>> decryptBackup(Map decoded, String passphrase) async
 
   final List<int> clear;
   try {
-    clear = await AesGcm.with256bits().decrypt(box, secretKey: key);
+    clear = await buildAesGcm256().decrypt(box, secretKey: key);
   } catch (_) {
     // AES-GCM verifies the MAC — a wrong password fails exactly here.
+    //
+    // The catch stays deliberately broad. Narrowing it to the Dart
+    // implementation's `SecretBoxAuthenticationError` would be more precise on
+    // paper, but the OS-backed implementation may report a failed MAC as some
+    // other error, and someone with a genuinely wrong password would then get
+    // an internal message instead of the one that names the cause. What this
+    // costs is that a broken platform path also reads as "wrong password" —
+    // which is why the smoke test in dev/app-store.md checks that case
+    // explicitly on a real macOS build.
     throw const WrongBackupPassphraseException();
   }
 
@@ -116,7 +131,15 @@ Future<Map<String, dynamic>> decryptBackup(Map decoded, String passphrase) async
   return parsed;
 }
 
+/// PBKDF2 is fully specified by RFC 2898, so both branches derive the same key
+/// from the same password, salt and iteration count. Which one runs therefore
+/// changes nothing about the file — only who computes it.
 Future<SecretKey> _deriveKey(String passphrase, List<int> salt, int iterations) async {
+  if (ApplePbkdf2.isAvailable) {
+    return SecretKey(
+      ApplePbkdf2.deriveKey(password: utf8.encode(passphrase), salt: salt, iterations: iterations, bits: 256),
+    );
+  }
   final pbkdf2 = Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: iterations, bits: 256);
   return pbkdf2.deriveKeyFromPassword(password: passphrase, nonce: salt);
 }

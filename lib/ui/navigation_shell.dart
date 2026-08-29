@@ -160,9 +160,7 @@ class _NavButton extends StatelessWidget {
         // the hover with a text cursor, which sits deeper than the button's
         // own clickable cursor and therefore wins — the pointer would never
         // turn into a hand over the main navigation. See AI_MASTER §5.
-        child: noSelect(
-          Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
-        ),
+        child: noSelect(Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal))),
       ),
     );
   }

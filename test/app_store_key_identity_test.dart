@@ -84,11 +84,7 @@ void main() {
 
       final decoded = jsonDecode(await storeFile().readAsString()) as Map<String, dynamic>;
       expect(decoded['keyId'], isA<String>());
-      expect(
-        decoded['v'],
-        1,
-        reason: 'Ein Versionsbump würde ältere App-Versionen die Datei nicht mehr lesen lassen',
-      );
+      expect(decoded['v'], 1, reason: 'Ein Versionsbump würde ältere App-Versionen die Datei nicht mehr lesen lassen');
       // Exactly the fields an older version knows about are still there, unchanged.
       expect(decoded.keys, containsAll(<String>['v', 'nonce', 'cipherText', 'mac']));
     });

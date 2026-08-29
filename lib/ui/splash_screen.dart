@@ -58,9 +58,7 @@ class _SplashScreenState extends State<SplashScreen> {
           // Before this mapping the light logo was used in both themes and was
           // practically invisible on light at 1.3:1. Do not "straighten out".
           Image.asset(
-            kIsDarkTheme
-                ? 'assets/logo/kreativ-anders-light-512.png'
-                : 'assets/logo/kreativ-anders-dark-512.png',
+            kIsDarkTheme ? 'assets/logo/kreativ-anders-light-512.png' : 'assets/logo/kreativ-anders-dark-512.png',
             width: 160,
             height: 160,
           ),

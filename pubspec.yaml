@@ -44,7 +44,22 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_secure_storage: ^10.3.1
   cryptography: ^2.7.0
-  local_notifier: ^0.1.6
+  # Routes AES-GCM to the OS implementation (CryptoKit/CommonCrypto on Apple,
+  # javax.crypto on Android) instead of the bundled Dart one. On Windows and
+  # Linux it changes nothing but the isolate the work runs on. Reason it is
+  # here at all: Apple's export-compliance exemption for encryption "limited to
+  # that within the operating system" — AI_MASTER §4.1 "Export compliance".
+  cryptography_flutter: ^2.3.4
+  # Direct because lib/data/apple_pbkdf2.dart imports it — the one algorithm
+  # cryptography_flutter does not cover natively on Apple platforms.
+  ffi: ^2.2.0
+  # Desktop OS notifications. Replaced local_notifier (last published April
+  # 2024, NSUserNotification — deprecated since macOS 11 — and no SwiftPM
+  # support). Pulls in flutter_local_notifications_windows for the Windows
+  # side; on macOS it uses UNUserNotificationCenter, which needs the user
+  # authorization the Einstellungen toggle now asks for. AI_MASTER §5
+  # "Desktop notifications".
+  flutter_local_notifications: ^22.3.0
   package_info_plus: ^10.2.1
 
 dev_dependencies:

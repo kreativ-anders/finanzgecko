@@ -27,8 +27,10 @@ Feature: Einstellungen
       setting
 
   Scenario: Turn desktop notifications on/off
-    Then the "Benachrichtigungen" section shows a "Desktop-Benachrichtigungen" toggle, on by default
-    When I turn the toggle off
+    Then the "Benachrichtigungen" section shows a "Desktop-Benachrichtigungen" toggle, off by default
+    When I turn the toggle on
+    Then macOS asks once for permission, and only with permission granted does the toggle stay on
+    When I turn the toggle off again
     Then no more OS notifications are sent from now on (detail behavior: see gherkin/notifications.feature)
 
   Scenario: Security information is viewable, but not sensitive

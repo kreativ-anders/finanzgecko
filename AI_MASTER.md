@@ -47,7 +47,7 @@ voluntary "pay what you want" support via Stripe on the website (section "Entwic
 | Encryption | `cryptography` (AES-256-GCM) + `flutter_secure_storage` (key in OS keychain) | ^2.7.0 / ^10.3.1 |
 | Charts | `fl_chart` (line, donut, stacked area — own wrappers in `lib/ui/widgets/`) | ^1.2.0 |
 | Exchange rates | `http` against the free Frankfurter.app API (ECB reference rates) | ^1.6.0 |
-| OS notifications | `local_notifier` (native desktop notifications Linux/macOS/Windows) | ^0.1.6 |
+| OS notifications | `flutter_local_notifications` (native desktop notifications Linux/macOS/Windows; on macOS `UNUserNotificationCenter`, which requires user authorization — hence the opt-in toggle, see §5) | ^22.3.0 |
 | App metadata | `package_info_plus` (reads version/build number from the installation at runtime, for Einstellungen → "Hilfe") | ^10.2.1 |
 | Window | `window_manager` (remembers size/maximized state) | ^0.5.2 |
 | File dialogs | `file_selector` (native save/open, no browser download) | ^1.1.0 |
@@ -113,6 +113,8 @@ finanzgecko/
 │   ├── setup.md                  #   Platform toolchain setup (Linux/macOS/Windows)
 │   ├── building.md               #   Dev run, release builds, packaging, CI/release process, icon pipeline
 │   ├── architecture.md           #   Architecture decisions: no DB engine, encryption, window/menu
+│   ├── native-libraries.md       #   Which dependencies use an OS API and which ship their own implementation —
+│   │                             #   the audit behind the App Store export-compliance answer (§4.1)
 │   └── troubleshooting.md        #   Troubleshooting, known limitations, migration from old versions
 ├── pubspec.yaml                  # Package name, version, dependencies, flutter_launcher_icons config
 ├── analysis_options.yaml         # Lint rules (flutter_lints)
@@ -123,12 +125,15 @@ finanzgecko/
 │   │   ├── app_store.dart        # Persistence layer: encryption, atomic writes, write queue, export/import
 │   │   ├── app_schema.dart       # In-memory schema of the JSON file (class AppSchema: schemaVersion, lists, meta, window)
 │   │   ├── secure_key_store.dart # AES key in the OS keychain (flutter_secure_storage)
+│   │   ├── crypto_platform.dart  # Which AES-GCM implementation is used (OS vs. Dart) and how to tell — see §4.1
+│   │   ├── apple_pbkdf2.dart     # PBKDF2-HMAC-SHA256 via CommonCrypto (dart:ffi); the one algorithm
+│   │   │                         #   cryptography_flutter does not cover natively on macOS/iOS
 │   │   └── backup_crypto.dart    # Password-protected backups (PBKDF2 → AES-GCM) — own format, device-independent,
 │   │                             #   password optional; without a password it stays the previous plaintext JSON
 │   ├── models/                   # Data classes with fromJson/toJson: Account, Balance, Asset, Subscription
 │   ├── services/
 │   │   ├── currency_service.dart # Frankfurter.app integration incl. cache fallback
-│   │   ├── notification_service.dart # Thin `local_notifier` wrapper for native OS notifications
+│   │   ├── notification_service.dart # Thin `flutter_local_notifications` wrapper; owns the macOS authorization request
 │   │   └── update_service.dart   # Manual update check against the GitHub releases API (no auto-updater)
 │   ├── state/
 │   │   └── app_state.dart        # Central ChangeNotifier: CRUD facade + computed values (reminders, totals) for the UI
@@ -298,6 +303,38 @@ via `Provider`.
   files. The KDF parameters (method, salt, iterations) live **in the file**, so they can be raised later without
   breaking old backups. In the export dialog, "without a password" is its own button rather than "leave the field
   empty" — a dismissed dialog must never produce an unprotected export (`null` = cancelled vs. `''` = deliberately none).
+- **Export compliance: every algorithm runs in the operating system's implementation, not a bundled one.**
+  This is a distribution requirement, not a security one — the algorithms and every byte of both file formats are
+  unchanged. Apple's App Store Connect help distinguishes three cases: encryption *limited to that within the
+  Apple operating system* needs no documentation, an *industry-standard algorithm not provided by the OS* needs a
+  French encryption declaration, and proprietary algorithms need a CCATS on top. Until v1.9 the app was the second
+  case: `package:cryptography` ships its own Dart AES-GCM and PBKDF2.
+  - **AES-GCM** comes from `cryptography_flutter` (CryptoKit/CommonCrypto on Apple, `javax.crypto` on Android),
+    via `buildAesGcm256()` (`lib/data/crypto_platform.dart`) — the two call sites (`app_store.dart`,
+    `backup_crypto.dart`) were changed from `AesGcm.with256bits()` to this factory, deliberately **not** via
+    `FlutterCryptography.enable()` (deprecated, and would break clean `flutter analyze`). The factory checks
+    `FlutterCryptography.isPluginPresent` itself and returns the plain Dart cipher when no plugin is registered
+    (Windows, Linux, `flutter test`) — otherwise `FlutterAesGcm`.
+  - **`buildAesGcm256()` is not decoration beyond that.** `FlutterAesGcm` only hands work to the OS above a size
+    threshold by default, because a platform-channel round trip costs more than encrypting a few bytes. That
+    default would leave a new user's small database on the Dart implementation — the exact case the declaration
+    denies. The explicit `CryptographyChannelPolicy(minLength: 0, maxLength: null)` removes the threshold.
+  - **PBKDF2** is bound directly to CommonCrypto in `lib/data/apple_pbkdf2.dart`, because `FlutterPbkdf2` is
+    native on **Android only**. `dart:ffi` against libSystem, so no plugin, no CocoaPods entry, no Podfile change.
+    A failed symbol lookup throws rather than falling back — a silent fallback here would make a filed declaration
+    false.
+  - **Windows and Linux are unchanged in substance.** No OS implementation is used there; the work merely moves to
+    a background isolate. Both formats stay byte-compatible in every direction, so a backup written on macOS opens
+    on Windows and the reverse.
+  - **`main()` logs which implementation is live** (`describeCryptoPlatform()`), not debug-gated and free of paths or
+    key material. `flutter test` cannot answer this question at all — it runs without a plugin registrant and
+    always reports the Dart fallback — so the check is a manual one against the OS log, scripted as the smoke test
+    in `dev/app-store.md`.
+  - **The residue that is not solved:** the Flutter engine links BoringSSL for `dart:io` TLS, so the exchange-rate
+    request does not use the OS TLS stack. Accepted deliberately; reasoning, the `cupertino_http` alternative, and
+    the full per-dependency audit are in [`dev/native-libraries.md`](dev/native-libraries.md).
+  - `macos/Runner/Info.plist` carries `ITSAppUsesNonExemptEncryption = false` on this basis. **If any of the above
+    stops being true, that key is the first thing to change.**
 - **The exchange-rate cache deliberately lives OUTSIDE the encrypted file**, in its own plaintext file
   `finanzgecko-rates.json` next to it — public ECB reference rates aren't a secret, and this way a newly cached
   rate never triggers a full re-encrypt of the whole DB. Migration: old stores with `ratesCache` in the DB get it
@@ -410,7 +447,14 @@ via `Provider`.
 `gherkin/currency_exchange.feature`) — all additive `meta` fields, no `schemaVersion` bump needed.
 For `rateFetchConsent` this is explicitly intentional: a missing key (every file written before the feature
 existed) yields `unset`, i.e. **no** assumed consent — existing installations are asked once instead of being
-silently grandfathered in. `fromDynamic()` is **fault-tolerant per entry**: a broken line in a list gets skipped
+silently grandfathered in. `notificationsEnabled` follows the same principle for the same reason, and goes one
+step further: it is persisted under the key **`notificationsOptIn`**, not under its own field name. Files
+written before the switch to opt-in carry `notificationsEnabled: true` — the default of the day — and reading
+that key would hand a macOS authorization prompt to users who never chose the feature. Ignoring it lets every
+existing file start from the opt-in default `false`, and whoever wants notifications switches the toggle on
+once, by hand. Renaming the key rather than bumping `schemaVersion` costs nothing on the backup side: `meta` is
+not part of the export format at all (see `toExportJson()`).
+`fromDynamic()` is **fault-tolerant per entry**: a broken line in a list gets skipped
 instead of making the whole file unreadable. `toExportJson()` is deliberately slimmer than `toJson()` (no
 `ratesCache`/`meta`/`window` — internal implementation detail, not part of a backup) **and without
 `account.color`** (`Account.toExportJson`): the color is derivable from the bank and gets reset on import via
@@ -450,7 +494,11 @@ Central facade for the UI. Two categories of methods:
 `_checkReminderNotifications()` (called after `init()` and after every mutation via `_reloadAndNotify()`)
 additionally checks the backup and Vermögenswerte reminders and, if warranted, fires a native OS notification via
 `NotificationService` — **episode-based** (once per newly-entered overdue state, not on every check), see §5
-"Desktop notifications" and `gherkin/notifications.feature`. Deliberately no `Timer.periodic` fallback for a
+"Desktop notifications" and `gherkin/notifications.feature`. It returns immediately unless
+`store.notificationsEnabled`, so an installation that never opted in never reaches the plugin at all. The two
+message kinds carry distinct notification ids (`kBackupNotificationId`/`kAssetNotificationId`): the platforms
+replace an existing notification when a new one reuses its id, which would drop the backup message the moment
+the Vermögenswerte message fires in the same cycle. Deliberately no `Timer.periodic` fallback for a
 days-long, continuously open, unused app session — that would be speculative behavior for an edge case nobody
 asked for, and a periodic timer that's never cancelled violates `flutter_test`'s "no timer may outlive the test"
 invariant in widget tests. The check instead runs on every mutation/reload that already happens anyway, plus on
@@ -555,8 +603,10 @@ test, once they drift apart even once.
 | ⚙ macOS is signed and notarized — only Windows warns | `README.md`, `ROADMAP.md`, `docs/index.html` (FAQ), `docs/download.html` (cards) |
 | ⚙ File-name suffixes of the release assets | `utils/update_assets.dart`, `.github/workflows/release.yml`, `docs/download.html` |
 | ⚙ The data file's storage location per OS | `data/app_store.dart`, here §4.1, `dev/setup.md`, `docs/datenschutz.html` |
+| Which crypto implementation the app uses, and the export-compliance answer that rests on it | `macos/Runner/Info.plist`, here §4.1, `dev/app-store.md` §4, `dev/native-libraries.md`, `data/crypto_platform.dart`, `data/apple_pbkdf2.dart`, `gherkin/data_security.feature` |
 | ⚙ The list of Kennzahlen | `ui/views/dashboard_view.dart`, `docs/index.html`, `docs/documentation.html`, §7 glossary |
 | ⚙ The sections of Einstellungen | `ui/views/settings_view.dart`, `docs/documentation.html`, `gherkin/settings.feature` |
+| Desktop notifications are opt-in (off by default) and macOS asks for authorization exactly once, when the toggle is switched on | `ui/views/settings_view.dart`, `state/app_state.dart`, `services/notification_service.dart`, `data/app_schema.dart`, here §4.2 + §5, `docs/documentation.html`, `gherkin/settings.feature`, `gherkin/notifications.feature` |
 | The page's opening stays free of jargon | `docs/index.html` (`<h1>` + `.pitch`) — `<title>`/meta are deliberately allowed to keep the platform keywords |
 
 ## 5. UI Conventions
@@ -640,10 +690,19 @@ splash).
   needed, saves automatically on typing pause/focus loss/Enter.
 - **Reminder/banner order on the Dashboard** (`dashboard_view.dart`): update reminder → overspend banner (only if
   the Fixposten net is negative) → backup reminder → asset reminder. This order is deliberate (urgency).
-- **Desktop notifications** (Einstellungen → "Benachrichtigungen", on by default): mirror the backup and asset
-  reminders additionally as a native OS notification, so they're seen even when the Dashboard isn't currently
-  open. Fires **episode-based, exactly once** per newly-entered overdue state (not on every app start) and
-  **only while the app is running** — no background service, see §6 and `gherkin/notifications.feature`.
+- **Desktop notifications** (Einstellungen → "Benachrichtigungen", **off by default, opt-in**): mirror the
+  backup and asset reminders additionally as a native OS notification, so they're seen even when the Dashboard
+  isn't currently open. Fires **episode-based, exactly once** per newly-entered overdue state (not on every app
+  start) and **only while the app is running** — no background service, see §6 and
+  `gherkin/notifications.feature`. The Dashboard banners are the primary channel and are unaffected by the
+  toggle; the notification only duplicates them outside the window.
+  **Why opt-in.** macOS needs `UNUserNotificationCenter` authorization, and the app asks the user for nothing
+  else. So `NotificationService.init()` runs at startup with all `request*Permission` flags false and never
+  prompts; the prompt belongs to `requestPermission()`, which only the toggle calls. A refusal is not hidden:
+  `AppState.setNotificationsEnabled()` stores `true` only if authorization was granted and returns what it
+  stored, and the Einstellungen switch shows a Snackbar pointing at Systemeinstellungen → "Mitteilungen" when
+  the OS said no — macOS asks a given user only once, so the app cannot re-prompt. Linux and Windows have no
+  such authorization and always grant it.
 - **Mouse hover on all three Dashboard charts** (`AppLineChart`, `AppDonutChart`, `AppStackedAreaChart`, all in
   `lib/ui/widgets/`): Verlauf and Zusammensetzung über Zeit show a vertical guide line + tooltip (period, per
   series a color dot/name/amount, for the composition chart additionally the share in %), hand-built via
@@ -853,7 +912,7 @@ feature file names its `# Source:`). `test/gherkin_sync_test.dart` enforces that
 | `gherkin/subscriptions.feature` | Fixposten CRUD, monthly equivalent | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/assets.feature` | Vermögenswerte CRUD, 6-month reminder | Unit (`app_store_ops_test`) |
 | `gherkin/settings.feature` | Basiswährung, security, backup export/import, CSV export, help (version/system info/support), reset | Unit (`csv_export_test`) |
-| `gherkin/notifications.feature` | OS notifications for backup/asset reminders, episode-based, on/off | Unit (`app_state_test`, `app_store_ops_test`) |
+| `gherkin/notifications.feature` | OS notifications for backup/asset reminders, episode-based, opt-in + denied authorization, distinct ids | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/backup_restore.feature` | Export/import (JSON), schema check, bank→color on import, fault tolerance | Unit (`app_store_ops_test`, `backup_hardening_test`) |
 | `gherkin/data_security.feature` | AES-256-GCM, OS keychain, quarantine, schema parsing | Unit (`app_schema_test`, `app_store_encryption_test`) |
 | `gherkin/currency_exchange.feature` | Opt-in for rate fetching (`RateFetchConsent`), exchange rates (frankfurter.dev), cache, offline fallback, manual rate | `test/rate_consent_test.dart` (only the gate + cache path, no network); the HTTP call itself stays UI/integration |
@@ -908,7 +967,7 @@ is listed in `# Source:`.
 | `test/tooling_test.dart` | **Regenerates** the demo data (`buildDemoBackup` → `demo/…json`) and the Linux Hicolor icons (`generateLinuxIcons`) on test run and validates them (schema, references, domain values, icon sizes) | Dev tooling (no feature) |
 | `test/entries_view_orphan_test.dart` | Orphaned balances of archived Konten | `gherkin/balances_entries.feature` |
 | `test/formatting_test.dart` | Number/money formatting, parsing | cross-cutting across all features (non-functional) |
-| `test/docs_consistency_test.dart` | **Checks the prose against the code**: disclosed network hosts, asset suffixes, documented data path, banned signing jargon, once-false claims (incl. "no auto-updater", "plaintext JSON"), macOS without a warning, jargon-free landing copy, Kennzahlen and settings parity between the app and `docs/documentation.html` | Meta (README, `docs/`) |
+| `test/docs_consistency_test.dart` | **Checks the prose against the code**: disclosed network hosts, asset suffixes, documented data path, banned signing jargon, once-false claims (incl. "no auto-updater", "plaintext JSON"), macOS without a warning, jargon-free landing copy, Kennzahlen and settings parity between the app and `docs/documentation.html`, and that the App Store export-compliance declaration in `macos/Runner/Info.plist` still has the native crypto paths behind it | Meta (README, `docs/`, `macos/Runner/Info.plist`) |
 | `test/gherkin_sync_test.dart` | **Wires Gherkin ↔ code/tests** (see below): `# Source:` paths exist, `// Gherkin:` markers point at real features, coverage allow-list | all `gherkin/**/*.feature` (meta) |
 | `test/bdd/account_color_bdd_test.dart` | **Runs** `gherkin/executable/account_color.feature` (via the runner) against `resolveAccountColor` | `gherkin/executable/account_color.feature` |
 | `test/bdd/analysis_bdd_test.dart` | **Runs** `gherkin/executable/net_worth_projection.feature` against `analysis.dart` | `gherkin/executable/net_worth_projection.feature` |

@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'data/app_schema.dart';
 import 'data/app_store.dart';
+import 'data/crypto_platform.dart';
 import 'services/notification_service.dart';
 import 'state/app_state.dart';
 import 'ui/navigation_shell.dart';
@@ -47,6 +48,15 @@ class _WindowPrefsSaver with WindowListener {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Names the cryptographic implementations actually in use, once per start.
+  // Not diagnostics for their own sake: `cryptography_flutter` falls back to a
+  // bundled Dart implementation silently, and the App Store build's
+  // `ITSAppUsesNonExemptEncryption = false` says it does not. This line is the
+  // only way to check that on a signed, sandboxed build — `flutter test` runs
+  // without a plugin registrant and always reports the fallback. Deliberately
+  // not debug-gated, and deliberately free of any path or key material.
+  debugPrint(describeCryptoPlatform());
 
   try {
     final store = AppStore();

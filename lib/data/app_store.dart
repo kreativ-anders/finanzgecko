@@ -10,6 +10,7 @@ import '../models/asset.dart';
 import '../models/balance.dart';
 import '../models/subscription.dart';
 import 'app_schema.dart';
+import 'crypto_platform.dart';
 import 'sandbox_migration.dart';
 import 'secure_key_store.dart';
 
@@ -120,7 +121,7 @@ class AppStore {
   String? _ratesFilePath;
   final Map<String, double> _ratesCache = {};
   bool _initialized = false;
-  final AesGcm _cipher = AesGcm.with256bits();
+  final AesGcm _cipher = buildAesGcm256();
   SecretKey? _key;
 
   /// Result of the one-time pre-sandbox migration attempted during

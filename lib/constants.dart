@@ -235,8 +235,7 @@ List<int> _rgb(String hex) {
   return [(v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff];
 }
 
-String _hex(List<int> rgb) =>
-    '#${rgb.map((c) => c.clamp(0, 255).toRadixString(16).padLeft(2, '0')).join()}';
+String _hex(List<int> rgb) => '#${rgb.map((c) => c.clamp(0, 255).toRadixString(16).padLeft(2, '0')).join()}';
 
 String _normalizeHex(String hex) => _hex(_rgb(hex));
 
@@ -269,6 +268,14 @@ const int kBackupReminderFirstDays = 182; // ~6 months
 /// export.
 const int kBackupReminderRepeatDays = 90; // ~3 months
 const int kAssetReevaluationDays = 182; // ~6 months
+
+/// Stable OS-notification ids for the two reminder kinds. They must stay
+/// distinct: the platform replaces an existing notification when a new one
+/// reuses its id, which would drop the backup message the moment the
+/// Vermögenswerte message fires in the same check cycle. See
+/// `NotificationService.show` and gherkin/notifications.feature.
+const int kBackupNotificationId = 1;
+const int kAssetNotificationId = 2;
 
 /// Debounce before an inline-edited field (Vermögenswerte, Fixposten) is
 /// auto-saved — see AI_MASTER.md §5 "Inline-Edit mit Debounce".

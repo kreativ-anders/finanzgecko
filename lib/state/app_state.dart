@@ -115,7 +115,7 @@ class AppState extends ChangeNotifier {
 
     final backup = getBackupReminder();
     if (backup.overdue && !store.backupOverdueNotified) {
-      await notificationService.show(title: 'FinanzGecko', body: backup.message);
+      await notificationService.show(id: kBackupNotificationId, title: 'FinanzGecko', body: backup.message);
       await store.markBackupOverdueNotified();
     }
 
@@ -126,7 +126,7 @@ class AppState extends ChangeNotifier {
       // One bundled message (like the dashboard banner), not one per
       // Vermögenswert — otherwise many overdue assets would trigger a flood of
       // notifications.
-      await notificationService.show(title: 'FinanzGecko', body: getAssetReminder()!);
+      await notificationService.show(id: kAssetNotificationId, title: 'FinanzGecko', body: getAssetReminder()!);
       for (final asset in newlyOverdue) {
         await store.markAssetOverdueNotified(asset.id);
       }
@@ -345,9 +345,17 @@ class AppState extends ChangeNotifier {
 
   bool get notificationsEnabled => store.notificationsEnabled;
 
-  Future<void> setNotificationsEnabled(bool value) async {
-    await store.setNotificationsEnabled(value);
+  /// Switching this on asks macOS for authorization first and stores `true`
+  /// only if that succeeded — a toggle sitting on while the OS suppresses every
+  /// notification would be a lie. Returns the value actually stored, so the
+  /// caller can explain a refusal. Linux and Windows know no such
+  /// authorization and always grant it. See gherkin/notifications.feature.
+  Future<bool> setNotificationsEnabled(bool value) async {
+    final granted = value ? await notificationService.requestPermission() : true;
+    final effective = value && granted;
+    await store.setNotificationsEnabled(effective);
     await _reloadAndNotify();
+    return effective;
   }
 
   AppThemeMode get themeMode => store.themeMode;

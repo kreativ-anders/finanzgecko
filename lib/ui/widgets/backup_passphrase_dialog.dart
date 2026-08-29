@@ -68,10 +68,7 @@ Future<BackupPassphraseChoice> promptNewBackupPassphrase(BuildContext context) a
             ),
             actions: [
               TextButton(onPressed: () => Navigator.of(ctx).pop(), child: noSelect(const Text('Abbrechen'))),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(''),
-                child: noSelect(const Text('Ohne Passwort')),
-              ),
+              TextButton(onPressed: () => Navigator.of(ctx).pop(''), child: noSelect(const Text('Ohne Passwort'))),
               ElevatedButton(
                 onPressed: canProtect ? () => Navigator.of(ctx).pop(pwCtrl.text) : null,
                 child: noSelect(const Text('Mit Passwort schützen')),
@@ -123,10 +120,7 @@ Future<String?> promptExistingBackupPassphrase(BuildContext context, {bool wasWr
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: noSelect(const Text('Abbrechen'))),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(ctrl.text),
-            child: noSelect(const Text('Entsperren')),
-          ),
+          ElevatedButton(onPressed: () => Navigator.of(ctx).pop(ctrl.text), child: noSelect(const Text('Entsperren'))),
         ],
       ),
     );
