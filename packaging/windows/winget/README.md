@@ -26,6 +26,7 @@ Hinweis darauf, dass ein *Kommentar* gemeint ist. `<typ>` ist `version`, `instal
 | `ElevationRequirement: elevationRequired` | `finanzgecko.iss` installiert nach `{autopf}` (Programme) und setzt kein `PrivilegesRequired`, verlangt also immer Adminrechte. Die Pipeline startet Installer als normaler Benutzer; ohne diesen Eintrag scheitert sie. Nicht `elevatesSelf` — das gilt nur für Installer, die selbst entscheiden, ob sie Rechte anfordern. |
 | `Scope: machine` | Folgt aus `{autopf}`. Steht innerhalb des `Installers`-Eintrags, nicht auf oberster Ebene. |
 | `ReleaseDate` | Das Datum des Git-Tags, nicht das Datum des Einreichens. |
+| `PrivacyUrl` | Die Policy-Prüfung von `winget-pkgs` verlangt sie für Anwendungen, die Finanzdaten speichern (Policies 1.5.1/1.5.5, PR [#417767](https://github.com/microsoft/winget-pkgs/pull/417767)). Pro Sprache eine Seite: de-DE auf `datenschutz.html`, en-US auf `privacy.html`. Beide erklären die App in **Teil B**, getrennt von der Website in Teil A — Prüfer wie Nutzer sollen nicht raten müssen, welcher Absatz für die App gilt. Beide Pfade stehen damit in einem veröffentlichten Manifest — Umbenennen ist ein Bruch. |
 
 **Bewusst nicht gesetzt:** `ProductCode`, `InstallModes` und `InstallerSwitches`. Alle drei sind optional, und
 winget ermittelt sie für Inno-Installer selbst. Ein geratener `ProductCode` führt zu

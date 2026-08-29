@@ -183,8 +183,21 @@ finanzgecko/
 │   │                               #   (platform choice, data handling, updates) — SEO minimum, no
 │   │                               #   install instructions (those stay solely in `#faq-install`)
 │   ├── documentation.html         # Short guide for end users (no relation to AI_MASTER/gherkin)
-│   ├── datenschutz.html           # Privacy policy (Pirsch, GitHub Pages, Stripe, GitHub API, app network paths),
-│   │                               #   linked in every page's footer — update on every new third-party integration
+│   ├── datenschutz.html           # Privacy policy, split into two parts that are kept strictly apart:
+│   │                               #   **Teil A** the website (hosting, Pirsch, GitHub API, Stripe, external links;
+│   │                               #   anchors `a1`…`a5`) and **Teil B** the app (what data, where it lives, what
+│   │                               #   leaves the device, what the user controls; anchors `b1`…`b4`). Teil B is
+│   │                               #   deliberately NON-TECHNICAL — "AES-verschlüsselt" and nothing beyond it: no
+│   │                               #   cipher modes, KDF iterations, credential-store names, file paths or
+│   │                               #   permission bits. Manuel's call, 2026-08-29. Linked in every page's footer;
+│   │                               #   update Teil A on every new third-party integration and Teil B on every
+│   │                               #   change to what the app does. Target of `PrivacyUrl` in the de-DE winget
+│   │                               #   manifest — the path sits inside a published manifest
+│   ├── privacy.html               # Full English equivalent of `datenschutz.html` — same Part A / Part B split,
+│   │                               #   same anchors, not a summary. The one page under docs/ that is deliberately
+│   │                               #   English: it addresses package reviewers and non-German users, and winget's
+│   │                               #   policy review (Policies 1.5.1/1.5.5) requires a readable privacy policy for
+│   │                               #   an app holding financial data. Target of `PrivacyUrl` in the en-US manifest
 │   ├── danke.html                 # Confirmation page after Stripe checkout ("Entwicklung unterstützen"), `noindex`,
 │   │                               #   to be set as the "after payment" redirect in the Stripe payment link —
 │   │                               #   exactly https://finanzgecko.app/danke.html (the redirect URL lives in Stripe,
@@ -216,7 +229,8 @@ are in English. `gherkin/` is now English prose too (as of the translation descr
 Left German everywhere, including in this document and in English prose generally: the binding domain terms from
 §7 (Konto, Fixposten, Vermögenswerte, …) — **never translated, in English running text either** — see §7 and
 "Rules for AI Agents" #3. Only `docs/` (the website) stays German prose end to end, since it addresses the
-German-speaking end users of a German-UI app.
+German-speaking end users of a German-UI app — with one deliberate exception, `docs/privacy.html`, whose
+audience is package reviewers and non-German users (see §3 file tree).
 
 ### The six views (`lib/ui/views/`)
 
@@ -526,6 +540,11 @@ The prose in `docs/` stays German — it addresses the app's German-speaking end
 document and `gherkin/`, which are AI/developer-facing and were translated to English (see the "Doc language"
 note in §3 for the full split, and Rule 3 below for why the domain terms inside them still don't translate).
 
+**One exception inside `docs/`: `docs/privacy.html`**, the full English equivalent of `docs/datenschutz.html`.
+It exists because the winget policy review (Policies 1.5.1/1.5.5) asks an app that stores financial data for a
+privacy policy its reviewers can read, and it is the `PrivacyUrl` of the en-US manifest. Both pages carry the
+same Part A / Part B structure and state the same facts; when one changes, the other changes in the same commit.
+
 **Also English: the text of GitHub releases** (`release.yml`, step "Prüfsummen erzeugen"). It sits on github.com
 right next to README/ROADMAP/CONTRIBUTING and has the same audience — v1.9.0 still shipped with a German
 checksums section. Step names and comments *inside* the workflows stay German; only someone opening the Actions
@@ -549,12 +568,13 @@ test, once they drift apart even once.
 
 | Claim | Locations |
 |---|---|
-| ⚙ Which network connections the app makes at all | `docs/index.html` (feature card), `docs/llms.txt`, `docs/datenschutz.html`, here §6, `services/currency_service.dart`, `services/update_service.dart` |
-| ⚙ Whether there's an update check in the app and what it does | `docs/index.html` (FAQ + JSON-LD), `docs/download.html`, `README.md`, `ROADMAP.md`, `docs/datenschutz.html`, `docs/llms.txt`, `gherkin/settings.feature` |
-| ⚙ Backups can be password-protected | `docs/documentation.html`, `ui/backup_actions.dart`, `data/backup_crypto.dart`, §7 glossary |
+| ⚙ Which network connections the app makes at all | `docs/index.html` (feature card), `docs/llms.txt`, `docs/datenschutz.html` (B3), `docs/privacy.html` (B3), here §6, `services/currency_service.dart`, `services/update_service.dart` |
+| ⚙ Whether there's an update check in the app and what it does | `docs/index.html` (FAQ + JSON-LD), `docs/download.html`, `README.md`, `ROADMAP.md`, `docs/datenschutz.html` (B3), `docs/privacy.html` (B3), `docs/llms.txt`, `gherkin/settings.feature` |
+| ⚙ Backups can be password-protected | `docs/documentation.html`, `docs/datenschutz.html` (B2), `docs/privacy.html` (B2), `ui/backup_actions.dart`, `data/backup_crypto.dart`, §7 glossary |
 | ⚙ macOS is signed and notarized — only Windows warns | `README.md`, `ROADMAP.md`, `docs/index.html` (FAQ), `docs/download.html` (cards) |
 | ⚙ File-name suffixes of the release assets | `utils/update_assets.dart`, `.github/workflows/release.yml`, `docs/download.html` |
-| ⚙ The data file's storage location per OS | `data/app_store.dart`, here §4.1, `dev/setup.md`, `docs/datenschutz.html` |
+| ⚙ The data file's storage location per OS | `data/app_store.dart`, here §4.1, `dev/setup.md` — deliberately NOT on the privacy pages any more, which only say the data sits on the user's own computer |
+| The privacy policy URLs published in the winget manifests | `docs/datenschutz.html` + `docs/privacy.html` (the pages themselves), `packaging/windows/winget/KreativAnders.FinanzGecko.locale.*.yaml` (`PrivacyUrl`), `docs/sitemap.xml`, `docs/llms.txt` — renaming either page breaks a manifest already published in `microsoft/winget-pkgs` |
 | ⚙ The list of Kennzahlen | `ui/views/dashboard_view.dart`, `docs/index.html`, `docs/documentation.html`, §7 glossary |
 | ⚙ The sections of Einstellungen | `ui/views/settings_view.dart`, `docs/documentation.html`, `gherkin/settings.feature` |
 | The page's opening stays free of jargon | `docs/index.html` (`<h1>` + `.pitch`) — `<title>`/meta are deliberately allowed to keep the platform keywords |

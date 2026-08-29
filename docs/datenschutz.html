@@ -4,8 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Datenschutzerklärung — FinanzGecko</title>
-  <meta name="description" content="Datenschutzerklärung für finanzgecko.app: cookiefreie Webanalyse mit Pirsch Analytics, Hosting über GitHub Pages, keine Telemetrie in der App." />
+  <meta name="description" content="Datenschutzerklärung für FinanzGecko: Teil A die Website (cookiefreie Webanalyse mit Pirsch, GitHub Pages, Stripe), Teil B die App (welche Finanzdaten, Speicherort, Verschlüsselung, keine Telemetrie)." />
   <link rel="canonical" href="https://finanzgecko.app/datenschutz.html" />
+  <link rel="alternate" hreflang="de" href="https://finanzgecko.app/datenschutz.html" />
+  <link rel="alternate" hreflang="en" href="https://finanzgecko.app/privacy.html" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="stylesheet" href="assets/style.css" />
@@ -18,7 +20,7 @@
   <meta property="og:locale" content="de_DE" />
   <meta property="og:url" content="https://finanzgecko.app/datenschutz.html" />
   <meta property="og:title" content="Datenschutzerklärung — FinanzGecko" />
-  <meta property="og:description" content="Cookiefreie Webanalyse mit Pirsch Analytics, Hosting über GitHub Pages, und warum die FinanzGecko-App selbst keine Telemetrie sendet." />
+  <meta property="og:description" content="Zwei getrennte Teile: die Website (Pirsch, GitHub Pages, Stripe) und die App (Finanzdaten, Speicherort, Verschlüsselung, keine Telemetrie)." />
   <meta property="og:image" content="https://finanzgecko.app/assets/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -27,7 +29,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Datenschutzerklärung — FinanzGecko" />
-  <meta name="twitter:description" content="Cookiefreie Webanalyse mit Pirsch Analytics, Hosting über GitHub Pages, und warum die FinanzGecko-App selbst keine Telemetrie sendet." />
+  <meta name="twitter:description" content="Zwei getrennte Teile: die Website (Pirsch, GitHub Pages, Stripe) und die App (Finanzdaten, Speicherort, Verschlüsselung, keine Telemetrie)." />
   <meta name="twitter:image" content="https://finanzgecko.app/assets/og-image.png" />
 </head>
 <body>
@@ -47,29 +49,39 @@
   <main class="wrap doc-layout">
     <nav class="doc-nav">
       <a href="#verantwortlicher">Verantwortlicher</a>
-      <a href="#hosting">Hosting</a>
-      <a href="#pirsch">Webanalyse (Pirsch)</a>
-      <a href="#github-api">GitHub-Sternezähler</a>
-      <a href="#stripe">Unterstützung via Stripe</a>
-      <a href="#links">Externe Links</a>
-      <a href="#app">Die App selbst</a>
+      <a href="#website"><strong>Teil A — Die Website</strong></a>
+      <a href="#a1">A1 Hosting</a>
+      <a href="#a2">A2 Webanalyse (Pirsch)</a>
+      <a href="#a3">A3 GitHub-API</a>
+      <a href="#a4">A4 Unterstützung via Stripe</a>
+      <a href="#a5">A5 Externe Links</a>
+      <a href="#app"><strong>Teil B — Die App</strong></a>
+      <a href="#b1">B1 Welche Daten die App kennt</a>
+      <a href="#b2">B2 Wo die Daten liegen</a>
+      <a href="#b3">B3 Was das Gerät verlässt</a>
+      <a href="#b4">B4 Was du steuern kannst</a>
       <a href="#rechte">Deine Rechte</a>
     </nav>
 
     <div class="doc-content">
-      <h1>Datenschutzerklärung für finanzgecko.app</h1>
-      <p class="lead">Diese Erklärung gilt für die Website <strong>finanzgecko.app</strong>. Die FinanzGecko-Desktop-App
-        ist davon getrennt zu betrachten — sie sendet keinerlei Telemetrie (siehe <a href="#app">Die App selbst</a>).</p>
+      <h1>Datenschutzerklärung</h1>
+      <p class="lead">Hier stehen zwei Dinge, die technisch nichts miteinander zu tun haben und deshalb getrennt
+        behandelt werden: <a href="#website"><strong>Teil A</strong></a> beschreibt die Website
+        <strong>finanzgecko.app</strong>, die du gerade liest. <a href="#app"><strong>Teil B</strong></a> beschreibt
+        die <strong>FinanzGecko-App</strong>, die du installierst — sie ist kein Teil dieser Website, spricht nicht
+        mit ihr und sendet keinerlei Telemetrie. English version:
+        <a href="privacy.html">Privacy policy</a>.</p>
 
       <div class="card note">
-        <p>Kurzfassung: Diese Website setzt <strong>keine Cookies</strong>, benötigt deshalb auch kein
-          Cookie-Banner, und legt keine Nutzerkonten an. Zur Reichweitenmessung läuft ein cookiefreies,
-          in Deutschland gehostetes Analyse-Tool, das IP-Adressen nicht speichert.</p>
+        <p>Kurzfassung: Die <strong>Website</strong> setzt keine Cookies und legt keine Nutzerkonten an; zur
+          Reichweitenmessung läuft ein cookiefreies, in Deutschland gehostetes Analyse-Tool, das IP-Adressen nicht
+          speichert. Die <strong>App</strong> überträgt keine Finanzdaten und sendet keine Telemetrie — alles bleibt
+          verschlüsselt auf deinem Rechner.</p>
       </div>
 
       <section id="verantwortlicher">
-        <h2>1. Verantwortlicher</h2>
-        <p>Verantwortlich im Sinne der DSGVO ist:</p>
+        <h2>Verantwortlicher</h2>
+        <p>Verantwortlich im Sinne der DSGVO ist — für die Website wie für die App:</p>
         <p>
           kreativ-anders | Manuel Steinberg<br />
           <a href="https://kreativ-anders.de/impressum" target="_blank" rel="noopener">Impressum</a> ·
@@ -77,8 +89,14 @@
         </p>
       </section>
 
-      <section id="hosting">
-        <h2>2. Hosting (GitHub Pages)</h2>
+      <section id="website">
+        <h2>Teil A — Die Website finanzgecko.app</h2>
+        <p class="lead">Gilt für die Seiten unter <span class="kbd">finanzgecko.app</span>. Sie setzen keine Cookies
+          und legen keine Nutzerkonten an; alle unten genannten Einbindungen lassen sich im
+          <a href="https://github.com/kreativ-anders/finanzgecko/tree/main/docs" target="_blank" rel="noopener">Quellcode</a>
+          der Seite nachprüfen.</p>
+
+        <h3 id="a1">A1 · Hosting (GitHub Pages)</h3>
         <p>Diese Website wird als statische Seite über <strong>GitHub Pages</strong> ausgeliefert, einen Dienst der
           GitHub, Inc. (88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA). Beim Abruf einer Seite verarbeitet
           GitHub technisch notwendige Zugriffsdaten (u. a. IP-Adresse, Zeitpunkt, abgerufene Datei, User-Agent), um die
@@ -86,10 +104,8 @@
           lit. f DSGVO (berechtigtes Interesse am sicheren und zuverlässigen Betrieb der Website). Auf Umfang und
           Speicherdauer dieser Server-Logs besteht kein Einfluss; Näheres regelt die
           <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
-      </section>
 
-      <section id="pirsch">
-        <h2>3. Webanalyse mit Pirsch Analytics</h2>
+        <h3 id="a2">A2 · Webanalyse mit Pirsch Analytics</h3>
         <p>Für die Webanalyse setzen wir Pirsch Analytics ein. Bei Pirsch Analytics handelt es sich um eine
           cookiefreie Webanalysesoftware, die nach dem Grundsatz Privacy by Design entwickelt wurde. Zur Analyse der
           Besucherströme generiert Pirsch Analytics bei Erhalt des Seitenaufrufs mit Hilfe eines Hashing-Algorithmus
@@ -107,10 +123,8 @@
           ausgelesen werden, die über das technisch Notwendige hinausgehen, ist keine Einwilligung nach § 25 TDDDG
           erforderlich. Weitere Informationen:
           <a href="https://docs.pirsch.io/privacy" target="_blank" rel="noopener">Datenschutz bei Pirsch Analytics</a>.</p>
-      </section>
 
-      <section id="github-api">
-        <h2>4. Aufrufe der öffentlichen GitHub-API</h2>
+        <h3 id="a3">A3 · Aufrufe der öffentlichen GitHub-API</h3>
         <p>Zwei Seiten fragen beim Laden die öffentliche GitHub-API (<span class="kbd">api.github.com</span>) ab:
           die <strong>Startseite</strong> für die Anzahl der GitHub-Sterne des Projekts und die
           <strong>Download-Seite</strong>, um die Buttons direkt auf die Datei der neuesten Version zu verlinken und
@@ -118,10 +132,8 @@
           Es werden keine Cookies gesetzt und keine personenbezogenen Daten von uns gespeichert. Ohne diese Abfrage
           bleiben beide Seiten nutzbar — die Download-Buttons führen dann auf die Release-Übersicht.
           Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO.</p>
-      </section>
 
-      <section id="stripe">
-        <h2>5. Freiwillige Unterstützung via Stripe</h2>
+        <h3 id="a4">A4 · Freiwillige Unterstützung via Stripe</h3>
         <p>Wer die Weiterentwicklung freiwillig unterstützen möchte, wird über einen Button auf eine von
           <strong>Stripe</strong> gehostete Zahlungsseite weitergeleitet (Stripe Payments Europe, Ltd., 1 Grand Canal
           Street Lower, Dublin, Irland). Erst mit dem Klick auf diesen Button werden Daten an Stripe übertragen; auf
@@ -129,59 +141,80 @@
           Stripe — Zahlungsdaten wie Kartennummern erreichen uns zu keinem Zeitpunkt. Es gilt die
           <a href="https://stripe.com/de/privacy" target="_blank" rel="noopener">Datenschutzerklärung von Stripe</a>.
           Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Durchführung der von dir angestoßenen Zahlung).</p>
-      </section>
+        <p>Das betrifft ausschließlich diese Website. Die App selbst kennt keine Zahlungen: keine In-App-Käufe, kein
+          Abo, keine Zahlungsdaten (siehe <a href="#b3">B3</a>).</p>
 
-      <section id="links">
-        <h2>6. Externe Links und Downloads</h2>
+        <h3 id="a5">A5 · Externe Links und Downloads</h3>
         <p>Die Download-Buttons verweisen auf GitHub Releases. Beim Klick verlässt du diese Website; ab diesem Zeitpunkt
           gilt die Datenschutzerklärung des jeweiligen Anbieters. Für Inhalte verlinkter Seiten sind ausschließlich
           deren Betreiber verantwortlich.</p>
       </section>
 
       <section id="app">
-        <h2>7. Die FinanzGecko-App selbst</h2>
-        <p>Die Desktop-App ist bewusst offline-first gebaut. Sie legt <strong>kein Nutzerkonto</strong> an, überträgt
-          <strong>keine Finanzdaten</strong> und sendet <strong>keine Telemetrie oder Absturzberichte</strong>. Alle
-          Daten liegen AES-256-GCM-verschlüsselt in einer einzigen Datei auf dem eigenen Rechner; der Schlüssel liegt im
-          Schlüsselbund des Betriebssystems.</p>
-        <p>Weil der Schlüssel an dieses Gerät gebunden ist, lässt sich diese Datei <em>nur</em> auf diesem Computer
-          öffnen — auch eine Kopie davon, etwa in einem Cloud-Ordner, nicht auf einem anderen Gerät. Der Speicherort
-          ist deshalb bewusst nicht frei wählbar: das würde eine Sicherung suggerieren, die keine ist. Für eine
-          Sicherung, die sich überall wieder einlesen lässt, gibt es die Funktion <em>Backup exportieren</em>;
-          diese Datei kann auf Wunsch mit einem selbst vergebenen Passwort verschlüsselt werden und ist dann auch
-          in einer Cloud unbedenklich abzulegen. Ein Export ohne Passwort ist unverschlüsselt lesbar.</p>
-        <p>Von sich aus baut die App überhaupt keine Netzwerkverbindung auf. Es gibt genau zwei Fälle, in denen
-          das überhaupt geschieht — beide setzen eine ausdrückliche Entscheidung von dir voraus, und in beiden
-          werden keine persönlichen oder finanziellen Daten übermittelt:</p>
+        <h2>Teil B — Die FinanzGecko-App</h2>
+        <p class="lead">Gilt für die FinanzGecko-Desktop-App für Windows, macOS und Linux — unabhängig davon, woher
+          du sie bezogen hast. Nichts aus Teil A gilt hier: die App bindet weder Pirsch noch Stripe ein und ruft die
+          Website nicht auf.</p>
+
+        <h3 id="b1">B1 · Welche Daten die App kennt</h3>
+        <p>Nur das, was du selbst einträgst: deine Konten (Bezeichnung, Bank, Art, Währung), die Kontostände, die du
+          monatlich einträgst, deine Vermögenswerte und deine Fixposten.</p>
+        <p>Die App liest keine Konten aus — kein Online-Banking, keine Registrierung, kein Nutzerkonto. Nach IBAN,
+          Kontonummer, Kartennummer oder Zugangsdaten fragt sie nicht, ebenso wenig nach Name, Anschrift oder
+          E-Mail-Adresse. Einzelne Buchungen und Ausgabenkategorien erfasst sie bewusst nicht: FinanzGecko ist ein
+          Vermögenstracker, kein Haushaltsbuch.</p>
+
+        <h3 id="b2">B2 · Wo die Daten liegen</h3>
+        <p>Auf deinem Rechner, AES-verschlüsselt. Der Schlüssel liegt beim Betriebssystem und ist an dieses Gerät
+          gebunden: eine Kopie der Datei — etwa in einem Cloud-Ordner — lässt sich auf einem anderen Computer nicht
+          öffnen. Wir betreiben keinen Server, auf dem etwas von dir liegen könnte, und können deine Daten deshalb
+          auch nicht einsehen.</p>
+        <p>Für eine Sicherung, die sich anderswo wieder einlesen lässt, gibt es <em>Backup exportieren</em>. Du
+          wählst den Speicherort; auf Wunsch schützt ein selbst vergebenes Passwort die Datei. Ohne Passwort ist sie
+          im Klartext lesbar — das gilt auch für den CSV-Export, der zum Auswerten gedacht ist und keine Sicherung
+          ersetzt. Exportierte Dateien liegen allein in deiner Hand.</p>
+
+        <h3 id="b3">B3 · Was das Gerät verlässt</h3>
+        <p>Von allein: nichts. Keine Telemetrie, keine Absturzberichte, keine Nutzungsstatistik, keine Werbe-IDs,
+          keine Weitergabe an Dritte — und keine In-App-Käufe oder Zahlungsdaten. Es gibt genau zwei Fälle, in denen
+          die App überhaupt ins Netz geht, beide nur auf deine Entscheidung hin und ohne dass Finanzdaten übertragen
+          werden:</p>
         <ul class="feature-list">
-          <li><strong>Wechselkurse</strong> — Abruf öffentlicher Referenzkurse über <span class="kbd">api.frankfurter.dev</span>
-            (basierend auf den Referenzkursen der Europäischen Zentralbank). Der Abruf erfolgt <em>nur nach
-            ausdrücklicher Zustimmung</em>: sobald zum ersten Mal ein Betrag in Fremdwährung umgerechnet werden
-            soll, fragt die App einmalig nach. Bis dahin — und nach einer Ablehnung — wird nichts abgerufen.
-            Übertragen werden dabei ausschließlich das Währungspaar und das Datum. Die Entscheidung lässt sich
-            jederzeit unter Einstellungen → Wechselkurse ändern.</li>
-          <li><strong>Update-Prüfung</strong> — Abfrage der neuesten Release-Version über die öffentliche GitHub-API
-            (<span class="kbd">api.github.com</span>), ausschließlich wenn du in den Einstellungen auf
-            „Nach Updates suchen“ klickst. Entscheidest du dich anschließend im Dialog für „Herunterladen“, lädt
-            die App die Installationsdatei und die zugehörige Prüfsummen-Datei von den Release-Servern von GitHub
-            (<span class="kbd">github.com</span> bzw. <span class="kbd">objects.githubusercontent.com</span>) und
-            fragt dich vorher, wo sie gespeichert werden soll. Ohne diesen zweiten Klick wird nichts geladen.</li>
+          <li><strong>Wechselkurse</strong> — erst nach deiner Zustimmung ruft die App öffentliche Referenzkurse ab
+            (<span class="kbd">api.frankfurter.dev</span>). Übertragen werden nur das Währungspaar und das Datum.</li>
+          <li><strong>Update-Prüfung</strong> — nur wenn du in den Einstellungen darauf klickst, fragt die App bei
+            GitHub nach der neuesten Version (<span class="kbd">api.github.com</span>). Willst du sie herunterladen,
+            lädt sie die Datei von GitHub — auch das erst nach einem weiteren Klick.</li>
         </ul>
-        <p>In beiden Fällen ist für den jeweiligen Anbieter technisch bedingt die IP-Adresse sichtbar. Wer das
-          vermeiden möchte, lehnt den Kursabruf ab und verzichtet auf die Update-Prüfung — die App bleibt dann
-          vollständig offline nutzbar; Kurse lassen sich weiterhin von Hand eintragen.</p>
+        <p>Wie bei jedem Aufruf im Internet ist dabei deine IP-Adresse für den Anbieter sichtbar. Wer das vermeiden
+          möchte, lehnt den Kursabruf ab und verzichtet auf die Update-Prüfung — die App bleibt dann vollständig
+          offline nutzbar; Kurse lassen sich von Hand eintragen.</p>
+
+        <h3 id="b4">B4 · Was du steuern kannst</h3>
+        <ul class="feature-list">
+          <li>Die Zustimmung zum Kursabruf jederzeit unter Einstellungen → Wechselkurse ändern.</li>
+          <li>Die Update-Prüfung findet nur statt, wenn du sie startest.</li>
+          <li>Deine Daten jederzeit exportieren (siehe <a href="#b2">B2</a>).</li>
+          <li>Einträge, Konten und Vermögenswerte in der App löschen. Wer alles löschen will, löscht die Datendatei;
+            wo sie liegt, zeigen die Einstellungen an. Eine Deinstallation lässt sie stehen, damit ein Update nicht
+            jahrelange Aufzeichnungen mitnimmt.</li>
+        </ul>
       </section>
 
       <section id="rechte">
-        <h2>8. Deine Rechte</h2>
+        <h2>Deine Rechte</h2>
         <p>Dir stehen die Rechte auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der
           Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO) zu, außerdem das Recht
           auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde. Wende dich für alle Anliegen bitte an die im
           <a href="https://kreativ-anders.de/impressum" target="_blank" rel="noopener">Impressum</a> genannten
           Kontaktdaten.</p>
-        <p>Hinweis: Da die Analyse-Daten nicht personenbezogen zugeordnet werden können (keine Cookies, keine
-          gespeicherten IP-Adressen, Wiedererkennung maximal 24 Stunden), ist eine Zuordnung einzelner Datensätze zu
-          deiner Person in der Regel technisch nicht möglich.</p>
+        <p>Zur <strong>Website</strong>: Da die Analyse-Daten nicht personenbezogen zugeordnet werden können (keine
+          Cookies, keine gespeicherten IP-Adressen, Wiedererkennung maximal 24 Stunden), ist eine Zuordnung einzelner
+          Datensätze zu deiner Person in der Regel technisch nicht möglich.</p>
+        <p>Zur <strong>App</strong>: Da sie keine Daten an uns überträgt, liegen bei uns auch keine personenbezogenen
+          Daten, auf die sich ein solcher Antrag beziehen könnte. Die Daten stehen ausschließlich unter deiner
+          Kontrolle auf deinem Gerät; die Exportfunktion aus <a href="#b2">B2</a> löst die Datenübertragbarkeit
+          unmittelbar.</p>
 
         <div class="card note">
           <p>Stand: August 2026. Diese Website ist quelloffen — jede hier beschriebene Einbindung lässt sich im
