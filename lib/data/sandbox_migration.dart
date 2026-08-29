@@ -2,39 +2,22 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// One-time copy of the pre-sandbox data files into the App-Sandbox container,
-/// so an existing installation does not start empty once `$HOME` is virtualised.
+/// One-time copy of the pre-sandbox data files into the App-Sandbox container.
 ///
-/// Two invariants, both load-bearing: it **copies** (the original stays put as
-/// the only fallback if anything here goes wrong), and it **never overwrites**
-/// (a container that already holds data wins — a re-run, a downgrade, or an
-/// already-imported backup must not be trampled). It does not touch the
-/// encryption key.
-///
-/// **Temporary by design.** Introduced in v1.8 (2026-08). Removal — this file,
-/// its test, the `run()` call in `AppStore`, and the `temporary-exception`
-/// entitlement, together in one commit — is scheduled for Q3 2027. Deleting the
-/// user's old files is a separate, later step.
-///
-/// Full rationale, the keychain assumption that cannot be verified in CI, and
-/// the removal conditions: dev/ai/persistence.md and ROADMAP "Q3 2027".
+/// WARNING: it copies and never overwrites — the original is the only fallback, and a filled container wins.
+/// INFO: files only, never the key — a sandboxed build reads the legacy keychain entry unchanged (2026-08-13).
+/// TODO: remove this file, its test, the `AppStore` call and the temporary-exception entitlement, from Q3 2027.
+/// INFO: rationale and removal conditions in dev/ai/persistence.md and ROADMAP "Q3 2027".
 class SandboxMigration {
   const SandboxMigration._();
 
-  /// Filename dropped next to the copied data as a breadcrumb for support
-  /// questions ("why does my container have data it never wrote?").
+  /// Breadcrumb dropped next to the copied data, for support questions.
   static const String breadcrumbFilename = 'migrated-from-unsandboxed.txt';
 
   /// Recovers the real home directory from a sandboxed `$HOME`.
   ///
-  /// Under the sandbox every API that would normally report the home directory
-  /// — `$HOME`, `NSHomeDirectory()`, `getpwuid()` via most wrappers — reports
-  /// the container instead. But the container path is built from the real home
-  /// by a fixed rule, so the real home can simply be read back off the end of
-  /// it. That avoids reaching for FFI to call `getpwuid` for one string.
-  ///
-  /// Returns `null` when [home] is not a container path, which is the normal
-  /// case for an unsandboxed build and the signal that no migration applies.
+  /// INFO: every home-reporting API returns the container under the sandbox, so the real home is read back off it.
+  /// INFO: `null` means [home] is not a container path — the normal, unsandboxed case, and no migration applies.
   static String? realHomeFromContainerHome(String home, String bundleId) {
     final suffix = p.join('Library', 'Containers', bundleId, 'Data');
     final normalised = home.endsWith(p.separator) ? home.substring(0, home.length - 1) : home;
@@ -45,8 +28,7 @@ class SandboxMigration {
     return root.endsWith(p.separator) ? root.substring(0, root.length - 1) : root;
   }
 
-  /// The pre-sandbox data directory for this installation, or `null` when the
-  /// process is not running sandboxed (and therefore has nothing to migrate).
+  /// The pre-sandbox data directory, or `null` when the process is not running sandboxed.
   static String? legacyDataDirectory({
     required String home,
     required String bundleId,
@@ -57,14 +39,9 @@ class SandboxMigration {
     return p.join(realHome, 'Library', 'Application Support', legacyDirectoryName);
   }
 
-  /// Copies [filenames] from the pre-sandbox directory into [targetDirectory],
-  /// if and only if the target holds none of them yet.
+  /// Copies [filenames] into [targetDirectory], if and only if the target holds none of them yet.
   ///
-  /// Reading the source requires the entitlement
-  /// `com.apple.security.temporary-exception.files.home-relative-path.read-write`
-  /// scoped to `/Library/Application Support/de.finanzgecko.app/`. Without it
-  /// every read below throws a permission error, which is caught and reported
-  /// as [SandboxMigrationOutcome.failed] rather than crashing the startup path.
+  /// WARNING: without the home-relative-path temporary-exception entitlement every read below reports `failed`.
   static Future<SandboxMigrationOutcome> run({
     required Directory targetDirectory,
     required String home,
@@ -77,7 +54,6 @@ class SandboxMigration {
     final legacyPath = legacyDataDirectory(home: home, bundleId: bundleId, legacyDirectoryName: legacyDirectoryName);
     if (legacyPath == null) return SandboxMigrationOutcome.notApplicable;
 
-    // Rule 2: anything already present in the container wins.
     for (final name in filenames) {
       if (await File(p.join(targetDirectory.path, name)).exists()) {
         return SandboxMigrationOutcome.targetNotEmpty;
@@ -88,8 +64,7 @@ class SandboxMigration {
     try {
       if (!await legacyDir.exists()) return SandboxMigrationOutcome.nothingToMigrate;
     } catch (_) {
-      // Denied rather than absent — treat as a failure, not as "fresh install",
-      // so the difference stays visible in the log instead of looking normal.
+      // Denied rather than absent: reporting a fresh install here would hide the difference in the log.
       return SandboxMigrationOutcome.failed;
     }
 
@@ -98,8 +73,7 @@ class SandboxMigration {
       for (final name in filenames) {
         final source = File(p.join(legacyPath, name));
         if (!await source.exists()) continue;
-        // copy(), not rename(): rename across the container boundary would
-        // both fail on a different volume and violate rule 1.
+        // copy(), not rename(): a cross-volume rename fails, and the original must stay put.
         await source.copy(p.join(targetDirectory.path, name));
         copiedAny = true;
       }
@@ -123,9 +97,7 @@ class SandboxMigration {
   }
 }
 
-/// Outcome of [SandboxMigration.run] — deliberately distinguishes "nothing to
-/// do" from "could not do it", because those look identical to the user (an
-/// empty app) but mean opposite things to whoever is debugging it.
+/// Outcome of [SandboxMigration.run]; "nothing to do" and "could not do it" look alike to the user.
 enum SandboxMigrationOutcome {
   /// Not macOS, or not running sandboxed — the overwhelmingly common case.
   notApplicable,
@@ -133,14 +105,12 @@ enum SandboxMigrationOutcome {
   /// Sandboxed, but the container already holds data. No-op.
   targetNotEmpty,
 
-  /// Sandboxed, container empty, and no pre-sandbox data exists either: a
-  /// genuinely fresh install.
+  /// Sandboxed, container empty, and no pre-sandbox data either: a genuinely fresh install.
   nothingToMigrate,
 
   /// Data was copied into the container.
   migrated,
 
-  /// Pre-sandbox data appears to exist but could not be read or copied —
-  /// almost always a missing/mis-scoped temporary-exception entitlement.
+  /// Pre-sandbox data exists but could not be read or copied — usually a mis-scoped entitlement.
   failed,
 }

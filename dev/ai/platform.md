@@ -151,3 +151,12 @@
   (tag push or version-bump dispatch, not on a plain test build with `bump: none`), a section with the commit
   messages since the previous tag gets prepended and pushed straight to `main`. Deliberately **no** separate
   push/PR workflow for this — that would water down the "single workflow" decision above.
+
+## The update check, in detail
+
+- The **200 MB asset ceiling** is a memory bound, not a policy: releases are ~20 MB, and the whole download is
+  held in memory to be hashed before anything touches disk. Without the cap, an unbounded response is an OOM.
+- `UpdateCheckStatus.unavailable` and `.failed` are deliberately **distinct states**. "No file for your system" is
+  permanent and explainable (a platform build failed, or the release predates `SHA256SUMS`); network trouble is
+  transient. Both fall back to the download page, but the wording differs — a user who is told "try again later"
+  about a permanent condition tries again forever.

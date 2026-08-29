@@ -12,6 +12,29 @@ The reason isn't aesthetics: explaining the same decision in two places means ma
 nothing checks whether both still agree. The comment layer once grew to ~11,000 words, mostly architecture
 rationale that already lived here in more detail.
 
+## The four tags
+
+Every comment that survives a trim is either **tagged** or a **single line** stating why that line is the way it
+is. There is no third category: a multi-line untagged paragraph in the code is the thing this rule exists to
+prevent (the comment layer once grew to ~11,000 words).
+
+| Tag | Means | Example |
+|---|---|---|
+| `// WARNING:` | Touching this breaks something concrete, elsewhere, silently. Names the failure. | `// WARNING: order matters — notifyListeners() before the await drops the pending edit.` |
+| `// TODO:` | Future work, with the condition that makes it due. | `// TODO: drop once the macOS 12 floor lands (see dev/ai/platform.md).` |
+| `// INFO:` | A non-obvious fact or a deliberate decision, including pointers into `dev/ai/`. | `// INFO: rate frozen at entry time on purpose — see dev/ai/persistence.md.` |
+| `// DEBUG:` | Diagnostics, temporary instrumentation, debug-only branches. | `// DEBUG: kDebugMode only — never reached in a release build.` |
+
+Rules for the tags:
+
+- **Uppercase, colon, then the point in one sentence.** No tag stacking, no `TODO(name)` owners — git blame has
+  the owner.
+- A `TODO` without a condition ("someday nicer") is not a TODO; delete it.
+- `WARNING` is for a failure someone can actually cause. If nothing breaks, it is `INFO` or nothing at all.
+- Dartdoc (`///`) stays what it is — a one-line summary of a public member. If it needs a warning, the warning is
+  its own `// WARNING:` line above the member, not a paragraph inside the doc block.
+- Tags are for code. `dev/ai/` never uses them: prose there is documentation, not a flag.
+
 Practical rules:
 
 - A Dartdoc block over **8 lines** needs a reason. Headings (`## Why this exists`) **inside** a comment are the
@@ -60,12 +83,12 @@ test, once they drift apart even once.
 |---|---|
 | ⚙ Which network connections the app makes at all | `docs/index.html` (feature card), `docs/llms.txt`, `docs/datenschutz.html`, [platform.md](platform.md), `services/currency_service.dart`, `services/update_service.dart` |
 | ⚙ Whether there's an update check in the app and what it does | `docs/index.html` (FAQ + JSON-LD), `docs/download.html`, `README.md`, `ROADMAP.md`, `docs/datenschutz.html`, `docs/llms.txt`, `gherkin/settings.feature` |
-| ⚙ Backups can be password-protected | `docs/documentation.html`, `ui/backup_actions.dart`, `data/backup_crypto.dart`, [glossary.md](glossary.md) glossary |
+| ⚙ Backups can be password-protected | `docs/documentation.html`, `ui/backup_actions.dart`, `data/backup_crypto.dart`, [glossary.md](glossary.md) |
 | ⚙ macOS is signed and notarized — only Windows warns | `README.md`, `ROADMAP.md`, `docs/index.html` (FAQ), `docs/download.html` (cards) |
 | ⚙ File-name suffixes of the release assets | `utils/update_assets.dart`, `.github/workflows/release.yml`, `docs/download.html` |
 | ⚙ The data file's storage location per OS | `data/app_store.dart`, [persistence.md](persistence.md), `dev/setup.md`, `docs/datenschutz.html` |
-| Which crypto implementation the app uses, and the export-compliance answer that rests on it | `macos/Runner/Info.plist`, [persistence.md](persistence.md), `dev/app-store.md` [state-and-models.md](state-and-models.md), `dev/native-libraries.md`, `data/crypto_platform.dart`, `data/apple_pbkdf2.dart`, `gherkin/data_security.feature` |
-| ⚙ The list of Kennzahlen | `ui/views/dashboard_view.dart`, `docs/index.html`, `docs/documentation.html`, [glossary.md](glossary.md) glossary |
+| Which crypto implementation the app uses, and the export-compliance answer that rests on it | `macos/Runner/Info.plist`, [persistence.md](persistence.md), `dev/app-store.md` §4, `dev/native-libraries.md`, `data/crypto_platform.dart`, `data/apple_pbkdf2.dart`, `gherkin/data_security.feature` |
+| ⚙ The list of Kennzahlen | `ui/views/dashboard_view.dart`, `docs/index.html`, `docs/documentation.html`, [glossary.md](glossary.md) |
 | ⚙ The sections of Einstellungen | `ui/views/settings_view.dart`, `docs/documentation.html`, `gherkin/settings.feature` |
 | Desktop notifications are opt-in (off by default) and macOS asks for authorization exactly once, when the toggle is switched on | `ui/views/settings_view.dart`, `state/app_state.dart`, `services/notification_service.dart`, `data/app_schema.dart`, [persistence.md](persistence.md) + [ui-conventions.md](ui-conventions.md), `docs/documentation.html`, `gherkin/settings.feature`, `gherkin/notifications.feature` |
 | The page's opening stays free of jargon | `docs/index.html` (`<h1>` + `.pitch`) — `<title>`/meta are deliberately allowed to keep the platform keywords |

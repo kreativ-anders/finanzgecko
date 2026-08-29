@@ -46,7 +46,9 @@ auto-loaded. Prose belongs there, not in this file.
   and the relevant `gherkin/*.feature` — `dev/ai/rules.md` #1. Code without the doc update is incomplete.
 - **New functional behavior is a Gherkin scenario first**, at the latest in the same step — never "later".
 - **Comments are English and answer "why this line"**, not "how this app works" — the latter belongs in `dev/ai/`
-  and the comment becomes a one-line pointer. Full rules: `dev/ai/code-style.md`.
+  and the comment becomes a one-line pointer. A surviving comment is either **tagged**
+  (`// WARNING:` / `// TODO:` / `// INFO:` / `// DEBUG:`) or a **single** untagged line — never a paragraph.
+  Full rules: `dev/ai/code-style.md`.
 - **Always verify:** `flutter analyze` and `flutter test` after every change (same as the release gate). After
   touching `analysis_options.yaml`, run `dart fix --apply && dart format .` first.
 - `test/gherkin_sync_test.dart` names the broken spec/code/test link in its failure message — read it before hunting.

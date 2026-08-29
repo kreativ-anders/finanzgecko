@@ -22,9 +22,7 @@ Future<void> _openSuggestionMail() async {
   await launchUrl(uri);
 }
 
-/// Bank text field with a color preview (matching the account's future
-/// accent color) and a colored swatch per suggestion in the dropdown —
-/// reusing the same [kBanks] brand colors the account list already shows.
+/// Bank field with a color preview and per-suggestion swatches from [kBanks].
 class _BankField extends StatefulWidget {
   const _BankField({required this.controller, required this.fallbackColorHex});
 
@@ -51,9 +49,7 @@ class _BankFieldState extends State<_BankField> {
     super.dispose();
   }
 
-  // Repaints the color swatch and "Bank fehlt?" hint as the user types —
-  // needed because we hand our controller straight to Autocomplete below
-  // instead of shadowing it with a second, manually-synced one.
+  // Repaints swatch and hint while typing: the controller is handed to Autocomplete directly, not shadowed.
   void _handleControllerChanged() => setState(() {});
 
   @override
@@ -93,9 +89,7 @@ class _BankFieldState extends State<_BankField> {
                           height: 12,
                           decoration: BoxDecoration(color: colorFromHex(hex), shape: BoxShape.circle),
                         ),
-                        // noSelect: see dev/ai/ui-conventions.md — otherwise the
-                        // SelectionArea's text cursor overrides the ListTile's
-                        // click cursor.
+                        // WARNING: without noSelect the SelectionArea text cursor beats the ListTile click cursor.
                         title: noSelect(Text(name)),
                         onTap: () => onSelected(name),
                       );
@@ -131,8 +125,7 @@ class _BankFieldState extends State<_BankField> {
   }
 }
 
-/// Transparency note: shown whenever the currency differs from the base
-/// currency, since exchange rates then come from a third-party API, not offline data.
+/// Transparency note shown whenever the currency differs from the Basiswährung: rates then come from an API.
 class _CurrencyHint extends StatelessWidget {
   const _CurrencyHint({required this.currency, required this.baseCurrency});
 
@@ -180,9 +173,7 @@ class _BankSuggestionHint extends StatelessWidget {
   }
 }
 
-/// The Bank/Name/Typ/Währung field group shared by the "Neues Konto" form and
-/// the inline edit form — each wraps it in its own [Form], so only the field
-/// layout is shared here.
+/// Shared Bank/Name/Kontotyp/Währung field group; each caller wraps it in its own [Form].
 class _AccountFormFields extends StatelessWidget {
   const _AccountFormFields({
     required this.nameCtrl,
@@ -452,10 +443,7 @@ class _AccountEditFormState extends State<_AccountEditForm> {
   }
 
   Future<void> _save() async {
-    // Same Form + validators as the "Neues Konto" creation flow (Pflichtfeld
-    // name, known-bank check inside _BankField) — editing used to bypass
-    // them with separate manual checks, so a validator tightened on
-    // creation silently didn't apply here.
+    // WARNING: edit must run the same validators as creation — separate manual checks silently missed new rules.
     if (!_formKey.currentState!.validate()) return;
     final bank = _bankCtrl.text.trim();
     try {

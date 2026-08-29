@@ -7,23 +7,8 @@ import '../models/subscription.dart';
 /// One file of the CSV export: its fixed file name and its content.
 typedef CsvExportFile = ({String fileName, String content});
 
-/// Builds the CSV export as one table per domain — Konten, Kontostände,
-/// Fixposten, Vermögenswerte — instead of a single wide sheet.
-///
-/// Why split: the Konto master data (Bank, Kontotyp) belongs to the Konto, not
-/// to the month, and repeating it in every monthly row is what made the old
-/// single-file export awkward to pivot. `Konto-ID` is the join column between
-/// Konten and Kontostände; it survives two Konten sharing a name, which the
-/// name alone does not.
-///
-/// Deliberately narrow: every amount appears exactly once, in the currency it
-/// was entered in — no rate, no converted second amount, no derived column.
-/// Everything the receiving spreadsheet can do itself (monthly equivalents,
-/// sums, currency conversion) stays out, so each table reads like the view it
-/// comes from. Also lossy and read-only — there is no CSV re-import, the JSON
-/// backup is the only round-trip. See dev/ai/state-and-models.md.
-///
-/// Pass [accounts] including archived ones so historical rows keep their names.
+/// Builds the CSV export as one table per domain; pass [accounts] including archived ones.
+// INFO: deliberately narrow, lossy and without re-import — the rationale is in dev/ai/analysis.md.
 List<CsvExportFile> buildCsvExports({
   required List<Account> accounts,
   required List<Balance> balances,
@@ -38,9 +23,7 @@ List<CsvExportFile> buildCsvExports({
   (fileName: 'finanzgecko-vermoegenswerte-$dateStamp.csv', content: buildAssetsCsv(assets, baseCurrency: baseCurrency)),
 ];
 
-/// Konto master data — one row per Konto, sorted by name like the Konten view.
-/// Archived Konten are included (their historical Kontostände would otherwise
-/// point at nothing) but not marked as such.
+/// Konto master data, one row per Konto sorted by name; archived Konten are included but not marked.
 String buildAccountsCsv(List<Account> accounts) {
   final rows = [...accounts]..sort((a, b) => a.name.compareTo(b.name));
   final buffer = StringBuffer()..writeln(_row(['Konto-ID', 'Konto', 'Bank', 'Kontotyp']));
@@ -50,10 +33,7 @@ String buildAccountsCsv(List<Account> accounts) {
   return buffer.toString();
 }
 
-/// The recorded Kontostände — one row per Konto and Monat, sorted by Monat,
-/// then Konto name. Master data lives in [buildAccountsCsv]; what stays here is
-/// what actually varies per month. The Betrag is the amount as entered, in the
-/// Konto's own currency — see the currency caveat on [buildCsvExports].
+/// The recorded Kontostände, one row per Konto and Monat; Betrag is as entered, in the Konto's currency.
 String buildBalancesCsv(List<Account> accounts, List<Balance> balances) {
   final accountsById = {for (final a in accounts) a.id: a};
   final rows = [...balances]
@@ -72,8 +52,7 @@ String buildBalancesCsv(List<Account> accounts, List<Balance> balances) {
       _row([
         b.period,
         '${b.accountId}',
-        // Keeps an orphaned row readable instead of dropping it; the ID column
-        // still points at the Konto that once was.
+        // Keeps an orphaned row readable; the ID column still points at the Konto that once was.
         _guarded(acc?.name ?? '(gelöscht)'),
         b.currencyOriginal,
         _dec(b.amountOriginal, 2),
@@ -83,11 +62,8 @@ String buildBalancesCsv(List<Account> accounts, List<Balance> balances) {
   return buffer.toString();
 }
 
-/// Fixposten — Einnahmen first, then Ausgaben, each sorted by name, mirroring
-/// the Fixposten view. The Betrag is per [Subscription.interval], not per
-/// month: converting the intervals into a comparable monthly figure is the
-/// app's job (`AppState.monthlyEquivalent`), and a spreadsheet that needs it
-/// can derive it from the Intervall column.
+/// Fixposten — Einnahmen first, then Ausgaben, each sorted by name.
+// INFO: Betrag is per interval, not per month; the Intervall column lets a spreadsheet derive the monthly figure.
 String buildSubscriptionsCsv(List<Subscription> subscriptions) {
   final income = subscriptions.where((s) => s.amountOriginal > 0).toList()..sort((a, b) => a.name.compareTo(b.name));
   final expense = subscriptions.where((s) => s.amountOriginal <= 0).toList()..sort((a, b) => a.name.compareTo(b.name));
@@ -97,8 +73,7 @@ String buildSubscriptionsCsv(List<Subscription> subscriptions) {
     buffer.writeln(
       _row([
         _guarded(s.name),
-        // Redundant with the sign of the amount, on purpose: it makes the CSV
-        // filterable/pivotable without writing a formula first.
+        // Redundant with the amount's sign on purpose: it makes the CSV filterable without a formula first.
         s.amountOriginal > 0 ? 'Einnahme' : 'Ausgabe',
         intervalLabel(s.interval),
         s.currencyOriginal,
@@ -109,9 +84,7 @@ String buildSubscriptionsCsv(List<Subscription> subscriptions) {
   return buffer.toString();
 }
 
-/// Vermögenswerte — one row per Sachwert, sorted by name like the
-/// Vermögenswerte view. Sachwerte carry no own currency, so their value is
-/// always the base currency.
+/// Vermögenswerte, one row per Sachwert sorted by name; Sachwerte carry no own currency.
 String buildAssetsCsv(List<Asset> assets, {required String baseCurrency}) {
   final rows = [...assets]..sort((a, b) => a.name.compareTo(b.name));
   final buffer = StringBuffer()..writeln(_row(['Vermögenswert', 'Wert ($baseCurrency)']));
@@ -121,14 +94,12 @@ String buildAssetsCsv(List<Asset> assets, {required String baseCurrency}) {
   return buffer.toString();
 }
 
-/// Joins one row, quoting each field per RFC 4180 where needed. Delimiter is
-/// ';' and decimals use a comma, matching the German defaults.
+/// Joins one row, quoting per RFC 4180; the ';' delimiter and decimal comma match the German defaults.
 String _row(List<String> fields) => fields.map(_csvField).join(';');
 
 String _dec(double value, int decimals) => value.toStringAsFixed(decimals).replaceAll('.', ',');
 
-/// Quotes a CSV field only when it contains a delimiter, quote, or line break;
-/// internal quotes are doubled.
+/// Quotes a CSV field only when it contains a delimiter, quote or line break; internal quotes are doubled.
 String _csvField(String value) {
   if (value.contains(';') || value.contains('"') || value.contains('\n') || value.contains('\r')) {
     return '"${value.replaceAll('"', '""')}"';
@@ -136,15 +107,8 @@ String _csvField(String value) {
   return value;
 }
 
-/// Guards against CSV/spreadsheet formula injection: if the value starts with
-/// `=`, `+`, `-`, or `@`, spreadsheet apps (Excel/LibreOffice) read it as the
-/// start of a formula/DDE command when the CSV is opened, so a leading `'`
-/// neutralizes it. Applied only to the free-text columns a user (or an
-/// imported backup) fully controls — Konto-Name, Bank, Fixposten- und
-/// Vermögenswert-Name — never to the app-generated numeric/enum columns
-/// (Kontotyp, Intervall, Währung, Beträge), whose legitimate values (e.g. a
-/// negative amount) must stay unprefixed so spreadsheet formulas like SUM()
-/// keep working on them. Quoting itself happens once, in [_csvField] via [_row].
+/// Prefixes a leading `=`, `+`, `-` or `@` with `'` so a spreadsheet cannot read the value as a formula.
+// WARNING: free-text columns only — prefixing the numeric columns would break SUM() on negative amounts.
 String _guarded(String value) {
   const triggerChars = '=+-@';
   return value.isNotEmpty && triggerChars.contains(value[0]) ? "'$value" : value;

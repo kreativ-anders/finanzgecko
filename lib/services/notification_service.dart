@@ -2,31 +2,21 @@ import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// Thin wrapper around `flutter_local_notifications` (native OS
-/// Benachrichtigungen for Linux/macOS/Windows). Best-effort throughout: a
-/// missing notification daemon (Linux) or denied authorization (macOS) must
-/// never crash the app, so errors are swallowed here instead of propagated.
-///
-/// macOS is the reason this class has a [requestPermission] separate from
-/// [init]: `UNUserNotificationCenter` needs explicit user authorization, and
-/// asking for it at startup would put a system dialog in front of an app that
-/// otherwise asks for nothing. So the toggle in Einstellungen is opt-in and
-/// owns the prompt. See dev/ai/ui-conventions.md "Desktop notifications" and
-/// gherkin/notifications.feature.
+/// Thin wrapper around `flutter_local_notifications` (native OS Benachrichtigungen, Linux/macOS/Windows).
+// INFO: best-effort throughout — a missing daemon (Linux) or denied authorization (macOS) never crashes.
+// INFO: [requestPermission] is separate from [init] so macOS never shows its system dialog at startup.
 class NotificationService {
   NotificationService({FlutterLocalNotificationsPlugin? plugin}) : _injectedPlugin = plugin;
 
   final FlutterLocalNotificationsPlugin? _injectedPlugin;
 
-  /// Lazy on purpose: a test double that overrides every method of this class
-  /// then never constructs the real plugin at all.
+  /// Lazy on purpose: a test double overriding every method never constructs the real plugin.
   late final FlutterLocalNotificationsPlugin _plugin = _injectedPlugin ?? FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
 
-  /// Identifies FinanzGecko to the Windows toast API. Generated once and must
-  /// stay stable — changing it makes Windows treat the notifications as coming
-  /// from a different application.
+  /// Identifies FinanzGecko to the Windows toast API.
+  // WARNING: must stay stable — changing it makes Windows treat the notifications as a different app.
   static const String _windowsGuid = '71b365b0-9392-4a56-a0d5-f671406337bf';
 
   Future<void> init() async {
@@ -34,17 +24,13 @@ class NotificationService {
     try {
       await _plugin.initialize(
         settings: InitializationSettings(
-          // All three deliberately false: the authorization prompt belongs to
-          // the moment the user switches the feature on, not to startup. See
-          // [requestPermission].
+          // INFO: the authorization prompt belongs to [requestPermission], not to startup.
           macOS: DarwinInitializationSettings(
             requestAlertPermission: false,
             requestBadgePermission: false,
             requestSoundPermission: false,
           ),
-          // Shown by some Linux notification servers as the label of the
-          // notification's default click action. The app has nothing to
-          // navigate to, so it only opens the window.
+          // INFO: some Linux notification servers show this as the default click action's label.
           linux: LinuxInitializationSettings(defaultActionName: 'Öffnen'),
           windows: WindowsInitializationSettings(
             appName: 'FinanzGecko',
@@ -55,18 +41,12 @@ class NotificationService {
       );
       _initialized = true;
     } catch (_) {
-      // No notification backend available — Benachrichtigungen stay off, the
-      // rest of the app works unchanged.
+      // No notification backend available — Benachrichtigungen stay off.
     }
   }
 
-  /// Asks macOS for authorization and reports whether notifications may now be
-  /// shown. Linux and Windows have no such concept and always report true.
-  ///
-  /// macOS shows its dialog only on the first call ever; every later call
-  /// returns the answer already on record without asking again. That is why a
-  /// user who denied once has to change it in the Systemeinstellungen — the
-  /// toggle in Einstellungen cannot re-ask.
+  /// Asks macOS for authorization; Linux and Windows have no such concept and always report true.
+  // INFO: macOS asks only on the very first call — after a denial the user must use the Systemeinstellungen.
   Future<bool> requestPermission() async {
     await init();
     if (!Platform.isMacOS) return true;
@@ -80,9 +60,8 @@ class NotificationService {
     }
   }
 
-  /// [id] keeps the two reminder kinds apart: reusing one id would make the
-  /// Vermögenswerte message replace the backup message when both fire in the
-  /// same check cycle. See `kBackupNotificationId`/`kAssetNotificationId`.
+  /// [id] keeps the two reminder kinds apart (`kBackupNotificationId`/`kAssetNotificationId`).
+  // WARNING: reusing one id makes the Vermögenswerte reminder replace the backup one in the same cycle.
   Future<void> show({required int id, required String title, required String body}) async {
     try {
       await _plugin.show(
@@ -90,11 +69,7 @@ class NotificationService {
         title: title,
         body: body,
         notificationDetails: NotificationDetails(
-          // Spelled out rather than left to the plugin's fallbacks: the app
-          // fires these while it is running and often frontmost, and macOS
-          // suppresses a foreground notification unless presentBanner/
-          // presentList say otherwise. presentBadge is false because init()
-          // never asks for the badge permission.
+          // INFO: macOS suppresses a foreground notification unless presentBanner/presentList are set.
           macOS: DarwinNotificationDetails(
             presentAlert: true,
             presentBanner: true,

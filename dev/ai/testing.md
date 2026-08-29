@@ -115,3 +115,11 @@ of the `flutter_gherkin` package. Rationale: zero extra dependency, runs nativel
 (and thus in the release gate), easy for an AI to read/extend. `flutter_gherkin` targets UI/e2e integration tests
 (`integration_test`) and would be overhead for pure domain logic. **Don't replace it with the package without
 discussing it first** (cf. Rule 5 below).
+
+## Why `AppStore` has an in-memory mode
+
+`persistToDisk: false` does no `dart:io` at all, and `_inFlutterTest` (via the `FLUTTER_TEST` env var) skips the
+`chmod`/`icacls` hardening. Both exist for the same reason: widget tests run under a fake-async clock that never
+pumps the real event loop, so real file I/O and `Process.run` never complete and the test hangs. Persistence
+itself is covered by plain `test()`-based store tests instead — and hardening a throwaway temp directory would
+prove nothing anyway.

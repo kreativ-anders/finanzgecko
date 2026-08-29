@@ -5,8 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../data/app_store.dart';
 
-/// Where a rate came from — mirrors the "Quelle" wording in
-/// `gherkin/currency_exchange.feature`.
+/// Where a rate came from — mirrors the "Quelle" wording in `gherkin/currency_exchange.feature`.
 enum RateSource { identity, live, cache }
 
 class RateResult {
@@ -17,12 +16,8 @@ class RateResult {
 }
 
 /// Why no rate could be produced.
-///
-/// Exists because every failure used to collapse into a bare `null`, so the
-/// manual-rate dialog claimed "(offline?)" even when the real cause was a
-/// missing opt-in or a rejected response. [message] sits **in the enum**, not
-/// in an extension: an extension is only visible where its file is imported
-/// directly, and the only caller knows the type indirectly via `AppState`.
+// INFO: failures used to collapse to a bare `null`, so the dialog blamed "(offline?)" for a missing opt-in.
+// INFO: [message] lives in the enum, not an extension — the only caller knows the type via `AppState`.
 enum RateFailure {
   /// Rate lookups aren't allowed (opt-in `unset`/`denied`) and nothing cached.
   notAllowed(
@@ -30,8 +25,7 @@ enum RateFailure {
     'und für dieses Währungspaar liegt kein gespeicherter Kurs vor.',
   ),
 
-  /// Allowed, but the request failed (no connection, timeout, HTTP error,
-  /// unparsable answer) and nothing cached.
+  /// Allowed, but the request failed (no connection, timeout, HTTP error, bad answer) and nothing cached.
   requestFailed(
     'Der Wechselkurs konnte nicht abgerufen werden (keine Verbindung oder Störung der API), '
     'und für dieses Währungspaar liegt kein gespeicherter Kurs vor.',
@@ -43,32 +37,23 @@ enum RateFailure {
   final String message;
 }
 
-/// Exchange rates via the free Frankfurter.app API (ECB reference rates).
-/// Rates are cached in the app store so the app keeps working offline with
-/// the last known rate.
+/// Exchange rates via the free Frankfurter.app API (ECB reference rates), cached for offline use.
 class CurrencyService {
   CurrencyService(this._store, {http.Client? client}) : _client = client ?? http.Client();
 
   final AppStore _store;
 
-  /// Injectable so the rate path can be exercised without a network, and
-  /// long-lived so repeated lookups reuse one connection instead of opening a
-  /// socket per call.
+  /// Injectable so the rate path can run without a network, long-lived so lookups reuse one connection.
   final http.Client _client;
 
   static const _apiBase = 'https://api.frankfurter.dev/v1';
 
-  /// How long a live rate lookup waits before falling back to the cache — i.e.
-  /// how long a save blocks on a slow connection before offering the
-  /// offline/manual-rate path.
+  /// How long a save blocks on a slow connection before the cache/manual-rate path takes over.
   static const _requestTimeout = Duration(seconds: 10);
 
   String _cacheKey(String from, String to, String dateStr) => '${from}_${to}_$dateStr';
 
-  /// Diagnostics stay in debug builds. `debugPrint` is NOT stripped from a
-  /// release build — it writes to the OS log. Currency pairs are financial
-  /// data, and an app whose promise is that nothing leaves the machine should
-  /// not narrate them to a shared system log.
+  // DEBUG: guarded because `debugPrint` is not stripped from release builds and currency pairs are financial data.
   void _log(String message) {
     if (kDebugMode) debugPrint('CurrencyService: $message');
   }
@@ -77,17 +62,10 @@ class CurrencyService {
   void dispose() => _client.close();
 
   /// Whether the user has allowed rate lookups (Einstellungen → Wechselkurse).
-  /// Read through here so callers have a single source of truth.
   bool get mayFetchRates => _store.mayFetchRates;
 
-  /// Live reachability probe for Einstellungen → "Hilfe" — separate from
-  /// [getExchangeRate]'s cache-fallback path so it reflects the connection
-  /// right now rather than "was there ever a successful call". Hits the
-  /// cheapest endpoint with a short timeout.
-  ///
-  /// Returns null when fetching hasn't been allowed — the caller then shows
-  /// "nicht geprüft" instead of a misleading "nicht erreichbar". Never
-  /// triggered by merely opening a view; only by an explicit button.
+  /// Live reachability probe for Einstellungen → "Hilfe"; null when fetching isn't allowed ("nicht geprüft").
+  // INFO: runs only on an explicit click, never when a view opens — see dev/ai/stack.md.
   Future<bool?> isApiReachable({Duration timeout = const Duration(seconds: 3)}) async {
     if (!mayFetchRates) return null;
     try {
@@ -99,14 +77,10 @@ class CurrencyService {
   }
 
   /// Last reason [getExchangeRate] came back empty, for the manual-rate dialog.
-  ///
-  /// Diagnostic only, never read for control flow. Safe because rate lookups
-  /// happen strictly sequentially inside one save (see `resolveRate`).
+  // WARNING: diagnostic only — safe solely because rate lookups run strictly sequentially inside one save.
   RateFailure? lastFailure;
 
-  /// dateStr must be "YYYY-MM-DD". Returns null only if neither the API nor
-  /// the cache can supply a rate; [lastFailure] then says why and the caller
-  /// asks the user for a manual rate.
+  /// dateStr must be "YYYY-MM-DD"; null when neither API nor cache can supply a rate ([lastFailure] says why).
   Future<RateResult?> getExchangeRate(String from, String to, String dateStr) async {
     if (from == to) {
       lastFailure = null;
@@ -125,10 +99,7 @@ class CurrencyService {
       return null;
     }
 
-    // Opt-in gate, enforced *here* rather than at the call sites: this is the
-    // one place that opens a socket, so no future caller can forget it. The
-    // local cache stays fair game — reading a file on this machine contacts
-    // nobody.
+    // WARNING: the opt-in gate sits here, not at the call sites — this is the only place that opens a socket.
     if (!mayFetchRates) {
       _log('Abruf $from→$to übersprungen (Zustimmung: ${_store.rateFetchConsent.name}).');
       return fromCache(RateFailure.notAllowed);
@@ -143,17 +114,10 @@ class CurrencyService {
       final rate = rates?[to];
       if (rate is! num) throw Exception('Kein Kurs in der Antwort enthalten');
       final rateD = rate.toDouble();
-      // A rate <= 0 (or NaN/Infinity) is not a valid answer and would
-      // otherwise be cached and written into `Balance.rate`/`Subscription.rate`
-      // — entries_view already has to guard `rate != 0` there. Better treated
-      // as a failure here (cache/manual entry takes over), since manual entry
-      // has always validated the same condition.
+      // INFO: an implausible rate would otherwise be cached and written into `Balance.rate`/`Subscription.rate`.
       if (!rateD.isFinite || rateD <= 0) throw Exception('Unplausibler Kurs in der Antwort: $rateD');
 
-      // Caching is best-effort and must never cost a rate we already hold: a
-      // failing write to finanzgecko-rates.json (read-only directory, full
-      // disk) previously landed in the outer catch and turned a perfectly good
-      // live rate into "kein Wechselkurs verfügbar".
+      // INFO: a failing cache write must not turn a good live rate into "kein Wechselkurs verfügbar".
       try {
         await _store.setCachedRate(key, rateD);
       } catch (err) {

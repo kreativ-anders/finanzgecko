@@ -2,20 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 
-/// True only in the Mac-App-Store build
-/// (`--dart-define=FINANZGECKO_MAS=true`). Default **false**, so the
-/// Developer-ID/DMG build every existing user runs is unaffected. See
-/// dev/ai/persistence.md "macOS-Spezifika".
-///
-/// Must stay a `const` from `bool.fromEnvironment` rather than a runtime
-/// lookup: the tree-shaker then strips the update-download path out of the App
-/// Store binary entirely instead of merely hiding its button.
+/// True only in the Mac App Store build (`--dart-define=FINANZGECKO_MAS=true`), default false.
+// INFO: every macOS build difference hangs off this flag, see dev/ai/persistence.md.
+// WARNING: keep this a const bool.fromEnvironment; a runtime lookup leaves the update path in the App Store binary.
 const bool kIsMacAppStore = bool.fromEnvironment('FINANZGECKO_MAS');
 
 const List<String> kTags = ['Girokonto', 'Tagesgeld', 'Depot', 'Bargeld', 'Krypto'];
 
-/// Hex strings, not Color — stored verbatim in account.color, so this avoids
-/// a lossy round-trip through Color objects.
+// INFO: hex strings rather than Color objects, so account.color round-trips losslessly.
 const Map<String, String> kTagColors = {
   'Girokonto': '#00c878',
   'Tagesgeld': '#2fd0a0',
@@ -30,9 +24,7 @@ const List<String> kCurrencies = ['EUR', 'USD', 'CHF', 'GBP', 'JPY', 'SEK', 'NOK
 
 const List<String> kMonthLabels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
 
-/// A global keyboard shortcut: the [key] bound in `ui/navigation_shell.dart`
-/// and the hint letter shown in `ui/views/settings_view.dart` — paired here so
-/// a rebind can't silently desync the displayed hint.
+/// A global keyboard shortcut, pairing the key binding with the hint letter so a rebind cannot desync them.
 class AppShortcut {
   const AppShortcut(this.key, this.letter);
 
@@ -48,9 +40,7 @@ class AppShortcuts {
   static const quit = AppShortcut(LogicalKeyboardKey.keyQ, 'Q');
 }
 
-/// Fixposten: recurring income/expenses. monthFactor converts each interval
-/// into a Monatsäquivalent so that e.g. a yearly and a monthly amount become
-/// comparable.
+/// Fixposten interval; monthFactor converts it into a Monatsäquivalent so intervals stay comparable.
 class SubscriptionInterval {
   final String value;
   final String label;
@@ -82,11 +72,7 @@ double intervalMonthFactor(String value) {
 }
 
 /// Known banks & brand colors, for autocomplete + Konto accent color.
-///
-/// Hand-maintained and deliberately incomplete. `colorHex` is each bank's
-/// official brand color, researched by hand rather than derived algorithmically.
-/// New entries arrive through the channels linked in the Konto form — see
-/// dev/ai/persistence.md and `gherkin/accounts.feature`.
+// INFO: hand-maintained, deliberately incomplete, official brand colors only — see dev/ai/persistence.md.
 class Bank {
   final String name;
   final String colorHex;
@@ -95,7 +81,6 @@ class Bank {
 }
 
 const List<Bank> kBanks = [
-  // Branch banks (major banks, Sparkassen/cooperative banks)
   Bank('Sparkasse', '#ff0000'),
   Bank('Volksbank Raiffeisenbank', '#0069b4'),
   Bank('Deutsche Bank', '#0018a8'),
@@ -110,7 +95,6 @@ const List<Bank> kBanks = [
   Bank('norisbank', '#f08701'),
   Bank('OLB', '#007858'),
 
-  // Direct banks & neobanks
   Bank('ING', '#ff6200'),
   Bank('DKB', '#003d7d'),
   Bank('N26', '#48ac98'),
@@ -125,7 +109,6 @@ const List<Bank> kBanks = [
   Bank('OSKAR', '#29b68c'),
   Bank('Qonto', '#6b5aed'),
 
-  // Captive car-maker banks
   Bank('Volkswagen Bank', '#007392'),
   Bank('Mercedes-Benz Bank', '#000000'),
   Bank('BMW Bank', '#0066b1'),
@@ -133,19 +116,16 @@ const List<Bank> kBanks = [
   Bank('Ford Bank', '#003478'),
   Bank('Renault Bank', '#efdf00'),
 
-  // Brokers & Krypto
   Bank('Trade Republic', '#000000'),
   Bank('Scalable Capital', '#00d3a5'),
   Bank('Smartbroker', '#80ff04'),
   Bank('eToro', '#13c636'),
   Bank('Bitpanda', '#103e36'),
 
-  // Credit-card / niche banks
   Bank('Advanzia Bank (Gebührenfrei)', '#00174a'),
   Bank('Hanseatic Bank', '#e6323c'),
   Bank('Barclays', '#00aeef'),
 
-  // International payment services
   Bank('PayPal', '#003087'),
   Bank('Wise', '#9fe870'),
   Bank('Revolut', '#0075eb'),
@@ -161,17 +141,13 @@ String? bankColorHex(String? bankName) {
 }
 
 /// True if [bankName] matches an entry in [kBanks] (case-insensitive).
-/// Accounts must reference a known bank so the dashboard can rely on a
-/// resolved brand color instead of free text.
 bool isKnownBank(String? bankName) => bankColorHex(bankName) != null;
 
-/// Surfaces a brand color is rendered against — mirrored from `ui/theme.dart`
-/// so this file stays free of Flutter imports and unit-testable.
+/// Surfaces a brand color is rendered against, mirrored from `ui/theme.dart` to keep this file Flutter-free.
 const String kSurfaceDarkHex = '#101713';
 const String kSurfaceLightHex = '#ffffff';
 
-/// WCAG AA for normal-size text. The Kontotyp chip renders at 11px bold, so
-/// the 3:1 large-text exception does not apply.
+// WCAG AA for normal text; the Kontotyp chip renders at 11px bold, so the 3:1 large-text exception is out.
 const double _kMinTextContrast = 4.5;
 
 /// Relative luminance per WCAG 2.1, from a `#rrggbb` string.
@@ -185,8 +161,7 @@ double relativeLuminance(String hex) {
   return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
 }
 
-/// WCAG contrast ratio between two `#rrggbb` colors — 1.0 (identical) to 21.0
-/// (black on white).
+/// WCAG contrast ratio between two `#rrggbb` colors — 1.0 (identical) to 21.0 (black on white).
 double contrastRatio(String aHex, String bHex) {
   final la = relativeLuminance(aHex);
   final lb = relativeLuminance(bHex);
@@ -195,22 +170,12 @@ double contrastRatio(String aHex, String bHex) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/// A brand color made legible as *text* on [backgroundHex].
-///
-/// Bank brand colors in [kBanks] are logo colors, not type colors: `#000000`
-/// (Trade Republic, C24, Mercedes-Benz Bank) disappears on the dark card,
-/// `#ffe600` (comdirect) on the light one. Mixes toward white or black — the
-/// direction the background allows — in 2% steps until it clears
-/// [_kMinTextContrast]. Mixing rather than an HSL lightness bump keeps the
-/// achromatic extremes predictable, at the cost of some saturation.
-///
-/// Pure hex-in/hex-out, so it is unit-testable without a Flutter binding —
-/// see `gherkin/executable/account_color.feature`.
+/// A brand color made legible as *text* on [backgroundHex], by mixing toward white or black in 2% steps.
+// INFO: mixing rather than an HSL lightness bump keeps the achromatic extremes predictable.
 String readableOn(String colorHex, String backgroundHex) {
   if (contrastRatio(colorHex, backgroundHex) >= _kMinTextContrast) return _normalizeHex(colorHex);
 
-  // Direction taken from the background, not the color: that avoids pushing a
-  // mid-grey the wrong way, where it would never reach the target.
+  // Direction comes from the background, not the color: a mid-grey would otherwise be pushed the wrong way.
   final towardWhite = relativeLuminance(backgroundHex) < 0.5;
   final target = towardWhite ? [255, 255, 255] : [0, 0, 0];
   final rgb = _rgb(colorHex);
@@ -224,8 +189,7 @@ String readableOn(String colorHex, String backgroundHex) {
     ]);
     if (contrastRatio(mixed, backgroundHex) >= _kMinTextContrast) return mixed;
   }
-  // Unreachable for our surfaces (pure white/black always clears 4.5:1 against
-  // both), but returning the extreme beats returning something illegible.
+  // Unreachable for our surfaces, but returning the extreme beats returning something illegible.
   return _hex(target);
 }
 
@@ -239,16 +203,8 @@ String _hex(List<int> rgb) => '#${rgb.map((c) => c.clamp(0, 255).toRadixString(1
 
 String _normalizeHex(String hex) => _hex(_rgb(hex));
 
-/// The stored accent color for an account, derived from its [bank]:
-/// - a **known** bank → that bank's brand color (single source of truth),
-/// - an **empty** bank (e.g. Bargeld/Krypto without an institution) → the
-///   Kontotyp color as a fallback,
-/// - an **unknown, non-empty** bank → throws [FormatException].
-///
-/// This is the invariant the account form already enforces
-/// (`bankColorHex(bank) ?? tagColorHex(tag)` + known-bank validator); it lives
-/// here as a pure function so import/backup can enforce the same rule instead
-/// of trusting an arbitrary `color` from the file.
+/// Accent color for an account: known bank → its brand color, empty bank → Kontotyp color, else [FormatException].
+// INFO: the same invariant the Konto form enforces, applied on import too — see dev/ai/persistence.md.
 String resolveAccountColor({required String bank, required String tag}) {
   final trimmed = bank.trim();
   if (trimmed.isEmpty) return tagColorHex(tag);
@@ -259,40 +215,27 @@ String resolveAccountColor({required String bank, required String tag}) {
   return color;
 }
 
-/// First backup reminder, measured from the earliest recorded activity (not
-/// from app installation) — while the app is empty (no Konten, Kontostände,
-/// Vermögenswerte, Fixposten) there is simply nothing to back up, see
-/// [AppState.getBackupReminder].
+/// Deliberate value, not a default: measured from the earliest recorded activity, not from installation.
 const int kBackupReminderFirstDays = 182; // ~6 months
-/// Repeat backup reminder after the first export, measured from the last
-/// export.
+/// Deliberate value, not a default: repeat reminder measured from the last export.
 const int kBackupReminderRepeatDays = 90; // ~3 months
+/// Deliberate value, not a default: a Vermögenswert counts as stale after this long without a re-valuation.
 const int kAssetReevaluationDays = 182; // ~6 months
 
-/// Stable OS-notification ids for the two reminder kinds. They must stay
-/// distinct: the platform replaces an existing notification when a new one
-/// reuses its id, which would drop the backup message the moment the
-/// Vermögenswerte message fires in the same check cycle. See
-/// `NotificationService.show` and gherkin/notifications.feature.
+// WARNING: ids must stay distinct — reusing one makes the Vermögenswerte notification replace the backup one.
 const int kBackupNotificationId = 1;
 const int kAssetNotificationId = 2;
 
-/// Debounce before an inline-edited field (Vermögenswerte, Fixposten) is
-/// auto-saved — see dev/ai/ui-conventions.md "Inline-Edit mit Debounce".
+/// Deliberate value, not a default: debounce before an inline-edited field is auto-saved.
 const Duration kInlineEditDebounce = Duration(milliseconds: 600);
 
-/// Share (of positive Kontotyp totals) above which the dashboard flags a
-/// concentration risk in "Verteilung nach Kontotyp".
+/// Deliberate value, not a default: share of positive Kontotyp totals above which the dashboard warns.
 const double kConcentrationRiskThreshold = 0.65;
 
 const String kDangerHex = '#ff6b6b';
 const String kPrimaryHex = '#00c878';
 
-/// Erscheinungsbild setting (Einstellungen → Erscheinungsbild). `system`
-/// follows the OS setting and is the default. The actual color resolution
-/// (which palette for which mode) lives in `ui/theme.dart`; this is only the
-/// domain representation, so `AppSchema`/`AppStore` can persist it without
-/// depending on the UI layer.
+/// Erscheinungsbild setting; the domain representation only, colors are resolved in `ui/theme.dart`.
 enum AppThemeMode { system, light, dark }
 
 String appThemeModeToJson(AppThemeMode mode) => mode.name;
@@ -300,13 +243,8 @@ String appThemeModeToJson(AppThemeMode mode) => mode.name;
 AppThemeMode appThemeModeFromJson(String? value) =>
     AppThemeMode.values.firstWhere((m) => m.name == value, orElse: () => AppThemeMode.system);
 
-/// Consent to fetching Wechselkurse from api.frankfurter.dev.
-///
-/// Deliberately three-valued instead of `bool`: [unset] means "never asked"
-/// and is visibly different in the Einstellungen from an explicit [denied].
-/// The default for new **and** existing installations is [unset] — the user is
-/// only asked when a rate is genuinely needed for the first time, never on
-/// merely opening a view.
+/// Consent to fetching Wechselkurse.
+// INFO: three-valued on purpose — [unset] ("never asked") stays distinguishable from an explicit [denied].
 enum RateFetchConsent { unset, granted, denied }
 
 String rateFetchConsentToJson(RateFetchConsent value) => value.name;

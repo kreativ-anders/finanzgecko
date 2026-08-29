@@ -202,3 +202,26 @@ and (2) the startup load path in `ensureInitialized()` (downgrade guard + automa
 `persistence.md`). **When incrementing, do NOT** touch the frozen golden-file fixture `test/fixtures/backup_v1.json` —
 instead add a new `backup_v<n>.json` + test, so that "a newer app can no longer read old data" shows up in CI
 before it ships.
+
+## Details worth knowing before you touch this file
+
+- **Reminder notifications are throttled per episode, not by time.** A flag (`backupOverdueNotified`) resp. an id
+  set (`assetOverdueNotifiedIds`) records that the *current* overdue state has been notified; the action that
+  resolves it — an export, or re-valuing the Vermögenswert — clears the entry, so the next episode notifies
+  again. Nothing here is time-based.
+- **File-permission hardening runs once per path per session** (`_hardened`): the bits survive a rewrite, and
+  persists are frequent (inline-edited amounts autosave after a typing pause), so one subprocess spawn per path
+  beats one per keystroke pause. Both binaries are addressed **absolutely** on purpose (`/bin/chmod`,
+  `%SystemRoot%\System32\icacls.exe`) because `PATH` is attacker-influenced, and `icacls` is applied to the
+  *directory* with inheritable flags so later quarantine copies and snapshots inherit the restriction without
+  each call site having to remember.
+- **`resetAll()` deliberately preserves `WindowPrefs`.** Window geometry is not a user-visible setting; resetting
+  it would move and resize the window in the middle of an action the user thinks is about their data.
+- **PBKDF2 stays at 200,000 iterations**, even though the native Apple path could afford far more. The number was
+  a compromise against the pure-Dart implementation on the UI isolate; it is deliberately **not** raised until
+  Windows and Linux can follow, so the file format never depends on which machine wrote the backup. The
+  parameters live in the file precisely so the number can be raised later, on all platforms at once.
+- **`ApplePbkdf2` binds `CCKeyDerivationPBKDF` through libSystem**, not through a plugin — no Podfile entry, which
+  also keeps the build working past the CocoaPods registry going read-only. `deriveKey` is synchronous on
+  purpose: native iterations cost far less than the pure-Dart path, and `Isolate.run` is the escape hatch if the
+  count is ever raised.

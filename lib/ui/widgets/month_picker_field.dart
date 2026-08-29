@@ -4,9 +4,7 @@ import '../../constants.dart';
 import '../../utils/formatting.dart';
 import '../theme.dart';
 
-/// Custom month/year picker, replacing the native <input type="month">
-/// equivalent — WebKitGTK didn't implement a picker UI for it, and the same
-/// custom widget now works identically across every desktop platform.
+/// Custom month/year picker — WebKitGTK ships no picker UI for the native month input.
 class MonthPickerField extends StatelessWidget {
   const MonthPickerField({super.key, required this.value, required this.onChanged});
 
@@ -55,8 +53,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
     viewYear = selectedYear;
   }
 
-  /// Tolerant "YYYY-MM" parse — malformed input (e.g. a hand-edited import)
-  /// falls back to the current month in [initState] instead of throwing.
+/// Tolerant "YYYY-MM" parse; malformed input falls back to the current month instead of throwing.
   static (int, int)? _parsePeriod(String value) {
     final parts = value.split('-');
     if (parts.length != 2) return null;

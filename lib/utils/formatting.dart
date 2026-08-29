@@ -11,16 +11,13 @@ String fmtMoney(double value, String currency) {
   }
 }
 
-/// [value] is a plain percentage number (7.3, not 0.073); negative sign is
-/// added automatically, positive sign is left to the caller (matches fmtMoney).
+/// [value] is a plain percentage number (7.3, not 0.073); a positive sign is left to the caller.
 String fmtPercent(double value) => '${NumberFormat('#,##0.0', 'de_DE').format(value)}%';
 
-/// [fmtMoney] with an explicit leading "+" for non-negative values, so a delta
-/// reads unambiguously (fmtMoney alone leaves positive values unsigned).
+/// [fmtMoney] with an explicit leading "+" for non-negative values, so a delta reads unambiguously.
 String fmtSignedMoney(double value, String currency) => '${value >= 0 ? '+' : ''}${fmtMoney(value, currency)}';
 
-/// [fmtMoney] rounded to whole currency units, for estimated figures where
-/// cents would be false precision (e.g. the dashboard's contribution split).
+/// [fmtMoney] rounded to whole currency units, for estimates where cents would be false precision.
 String fmtMoneyRounded(double value, String currency) {
   try {
     return NumberFormat.simpleCurrency(locale: 'de_DE', name: currency, decimalDigits: 0).format(value);
@@ -33,16 +30,11 @@ String fmtMoneyRounded(double value, String currency) {
 String fmtSignedMoneyRounded(double value, String currency) =>
     '${value >= 0 ? '+' : ''}${fmtMoneyRounded(value, currency)}';
 
-/// Formats a number for prefilling an editable amount field: German
-/// separators, trailing zeros trimmed, no currency symbol — so it round-trips
-/// through [parseInputNumber].
+/// Formats a number for prefilling an editable amount field, so it round-trips through [parseInputNumber].
 String fmtInputNumber(double value) => NumberFormat('#,##0.##', 'de_DE').format(value);
 
-/// Parses text typed into an amount field. Accepts German notation
-/// ("1.234,56") as well as a bare decimal point ("1234.56", what older
-/// versions prefilled), so existing values keep working. A lone dot followed
-/// by exactly 3 digits is a thousands separator, not a decimal point —
-/// amounts here never carry 3 decimal places.
+/// Parses text typed into an amount field: German notation ("1.234,56") and a bare "1234.56".
+// INFO: a lone dot before exactly 3 digits is a thousands separator — amounts here never have 3 decimals.
 double? parseInputNumber(String raw) {
   final trimmed = raw.trim();
   if (trimmed.isEmpty) return null;
@@ -79,8 +71,7 @@ String currentPeriod() {
 
 String todayISO() => DateTime.now().toIso8601String().substring(0, 10);
 
-/// German day.month.year, e.g. "03.06.2026" — the app-wide date display
-/// format (distinct from [todayISO]'s machine-readable ISO form).
+/// German day.month.year, e.g. "03.06.2026" — the app-wide date display format.
 String fmtDate(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
 
@@ -91,8 +82,7 @@ Color? _tryColorFromHex(String hex) {
   return value != null ? Color(value) : null;
 }
 
-/// Falls back to the app's primary brand color ([kPrimaryHex]) for
-/// unparseable input, rather than a separate hardcoded literal.
+/// Falls back to the app's primary brand color ([kPrimaryHex]) for unparseable input.
 Color colorFromHex(String hex) => _tryColorFromHex(hex) ?? _tryColorFromHex(kPrimaryHex)!;
 
 int daysSince(DateTime date) => DateTime.now().difference(date).inDays;

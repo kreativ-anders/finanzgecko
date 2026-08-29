@@ -6,9 +6,7 @@ import '../models/subscription.dart';
 
 const int currentSchemaVersion = 1;
 
-/// Parses a JSON list tolerantly: skips any entry that isn't a usable map or
-/// fails [fromJson] — one malformed row must never cost the caller the rest of
-/// the list. Shared by on-disk and backup parsing.
+/// Parses a JSON list tolerantly: a malformed entry is skipped instead of costing the caller the whole list.
 List<T> parseTolerantList<T>(dynamic raw, T Function(Map<String, dynamic>) fromJson) {
   if (raw is! List) return <T>[];
   final result = <T>[];
@@ -43,9 +41,7 @@ class WindowPrefs {
   Map<String, dynamic> toJson() => {'width': width, 'height': height, 'maximized': maximized};
 }
 
-/// In-memory representation of the whole app database — a single JSON file
-/// on disk, matching the schema of existing exports/backups so they stay
-/// readable.
+/// In-memory image of the whole app database — one JSON file on disk.
 class AppSchema {
   int schemaVersion;
   String baseCurrency;
@@ -61,19 +57,7 @@ class AppSchema {
   DateTime? lastExportAt;
   WindowPrefs window;
 
-  // Reminder Benachrichtigungen (OS notifications): throttled per episode
-  // rather than by time — a flag/id set remembers that the *current* overdue
-  // state has already been notified. The action resolving that state (export,
-  // or re-valuing a Vermögenswert) resets the respective entry. See
-  // gherkin/notifications.feature.
-  //
-  // Opt-in, default off: macOS asks the user for authorization the moment this
-  // is switched on, and an app that otherwise asks for nothing must not spring
-  // that on anyone who never chose the feature. It is persisted under the key
-  // `notificationsOptIn` rather than the older `notificationsEnabled`
-  // precisely so files written before the opt-in switch do NOT carry their
-  // always-on default into a build that would then prompt. Those users find
-  // the toggle off once and turn it on themselves. See dev/ai/ui-conventions.md.
+  // WARNING: persisted as `notificationsOptIn`, not this field name — the old key would opt existing files in.
   bool notificationsEnabled;
   bool backupOverdueNotified;
   List<int> assetOverdueNotifiedIds;
@@ -81,9 +65,7 @@ class AppSchema {
   /// Einstellungen → Erscheinungsbild (system/light/dark), default: system.
   AppThemeMode themeMode;
 
-  /// Consent for fetching Wechselkurse. If the key is absent (every file
-  /// written before this feature), `unset` results — the app then asks once at
-  /// the next genuine rate need. See gherkin/currency_exchange.feature.
+  /// Consent for fetching Wechselkurse; an absent key yields `unset`, so the app asks once instead of assuming.
   RateFetchConsent rateFetchConsent;
 
   AppSchema({
@@ -123,9 +105,7 @@ class AppSchema {
     window: WindowPrefs.defaults(),
   );
 
-  /// Parses a decoded JSON value; null if it isn't a usable object at all
-  /// (caller then falls back to [AppSchema.defaults]). Malformed list entries
-  /// are skipped rather than failing the whole file.
+  /// Parses a decoded JSON value; null if it isn't a usable object at all.
   static AppSchema? fromDynamic(dynamic parsed) {
     if (parsed is! Map) return null;
     final json = parsed;
@@ -136,9 +116,7 @@ class AppSchema {
         ? Map<String, dynamic>.from(json['ratesCache'] as Map)
         : <String, dynamic>{};
 
-    // Cached rates now live in their own file; this only still parses the
-    // legacy in-store `ratesCache` so [AppStore] can migrate it out on first
-    // load. A malformed entry is skipped rather than aborting the whole file.
+    // INFO: legacy in-store rates, parsed only so [AppStore] can migrate them into their own file.
     final ratesCache = <String, double>{};
     for (final entry in ratesRaw.entries) {
       final v = entry.value;
@@ -196,14 +174,12 @@ class AppSchema {
     'window': window.toJson(),
   };
 
-  /// Shape written by "Backup exportieren" / read by "Backup importieren" —
-  /// intentionally excludes ratesCache/meta/window (internal-only state).
+  /// Shape written by "Backup exportieren" / read by "Backup importieren"; excludes internal-only state.
   Map<String, dynamic> toExportJson() => {
     'schemaVersion': schemaVersion,
     'exportedAt': DateTime.now().toIso8601String(),
     'baseCurrency': baseCurrency,
-    // Accounts use toExportJson (no color) — the color is derived from the
-    // bank on import, so it isn't part of the backup format.
+    // No color: it is re-derived from the bank on import.
     'accounts': accounts.map((a) => a.toExportJson()).toList(),
     'balances': balances.map((b) => b.toJson()).toList(),
     'assets': assets.map((a) => a.toJson()).toList(),

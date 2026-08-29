@@ -14,12 +14,7 @@ import 'theme.dart';
 import 'widgets/app_snackbar.dart';
 import 'widgets/backup_passphrase_dialog.dart';
 
-/// Export/import flow for backups. Pure UI orchestration — persistence, schema
-/// checking, bank→colour derivation and encryption live in [AppState]/AppStore
-/// (see `# Source:` in gherkin/backup_restore.feature).
-///
-/// Free functions rather than methods in `navigation_shell.dart`, so the
-/// navigation shell and the backup flow each have their own primary file.
+/// Export/import flow for backups; persistence, schema checks and encryption live in [AppState].
 
 const _backupTypeGroups = [
   XTypeGroup(label: 'JSON-Backup', extensions: ['json']),
@@ -30,10 +25,7 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
   final exportData = appState.exportAllData();
   final suggestedName = 'finanzgecko-backup-${todayISO()}.json';
 
-  // Password prompt before the file dialog: it concerns the content, not the
-  // location. Empty string = deliberately no password, null = cancelled — the
-  // two must not be confused, or a cancellation would turn into an unprotected
-  // export.
+// WARNING: empty means deliberately no password, null means cancelled — confusing them exports unprotected.
   final passphrase = await promptNewBackupPassphrase(context);
   if (passphrase == null) return;
 
@@ -41,8 +33,7 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
   if (location == null) return; // dialog cancelled
 
   try {
-    // Without a password, exactly the previous plaintext JSON — existing flows
-    // and older app versions keep reading it unchanged.
+// Without a password, byte-identical plaintext JSON so older app versions keep reading it.
     final jsonStr = passphrase.isEmpty
         ? const JsonEncoder.withIndent('  ').convert(exportData)
         : await encryptBackup(exportData, passphrase);
@@ -60,11 +51,7 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
   }
 }
 
-/// Exports the data as CSV tables — one file per domain (Konten, Kontostände,
-/// Fixposten, Vermögenswerte), all written into one folder the user picks.
-/// Unlike the JSON backup this is lossy and read-only, so it deliberately does
-/// NOT count as a backup (no `markExported`, does not reset the backup
-/// reminder).
+/// Exports lossy, read-only CSV tables; deliberately not a backup (no `markExported`, no reminder reset).
 Future<void> exportCsvTables(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
   final files = buildCsvExports(
@@ -76,17 +63,13 @@ Future<void> exportCsvTables(BuildContext context, ValueChanged<AppView> onNavig
     dateStamp: todayISO(),
   );
 
-  // A folder, not four save dialogs: the tables only make sense together (the
-  // Konto-ID column joins Konten and Kontostände), and fixed file names keep a
-  // re-export recognizable next to the previous one.
+// One folder instead of four save dialogs: the tables only make sense together.
   final directoryPath = await getDirectoryPath(confirmButtonText: 'Exportieren');
   if (directoryPath == null) return; // dialog cancelled
 
   final targets = [for (final f in files) File('$directoryPath${Platform.pathSeparator}${f.fileName}')];
 
-  // The folder picker — unlike the save dialog — never asks about overwriting,
-  // so ask once here for the whole set instead of silently replacing an
-  // earlier export.
+// The folder picker never asks about overwriting, so ask once here for the whole set.
   final existing = targets.where((f) => f.existsSync()).length;
   if (existing > 0) {
     if (!context.mounted) return;
@@ -144,9 +127,7 @@ Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate
     final raw = await file.readAsString();
     final decoded = jsonDecode(raw);
 
-    // The import recognises encrypted backups by their structure, not by file
-    // extension or name — a plaintext backup takes the previous path unchanged
-    // and asks for nothing.
+// Encrypted backups are recognised by their structure, not by file extension or name.
     Map<String, dynamic>? payload;
     if (isEncryptedBackup(decoded)) {
       var wasWrong = false;
@@ -157,8 +138,7 @@ Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate
         try {
           payload = await decryptBackup(decoded as Map, passphrase);
         } on WrongBackupPassphraseException {
-          // Ask again instead of aborting — a typo should not cost the whole
-          // flow.
+// Ask again instead of aborting — a typo should not cost the whole flow.
           wasWrong = true;
         }
       }

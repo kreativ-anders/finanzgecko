@@ -4,10 +4,7 @@ import '../theme.dart';
 
 const String _confirmPhrase = 'ZURÜCKSETZEN';
 
-/// Asks the user to type [_confirmPhrase] before allowing the irreversible
-/// "reset app + delete all data" action — a typed confirmation, rather than
-/// a plain Ja/Nein dialog, guards against an accidental click on something
-/// this destructive.
+/// Requires typing [_confirmPhrase] before the irreversible reset — see dev/ai/ui-conventions.md.
 Future<bool> confirmReset(BuildContext context) async {
   final ctrl = TextEditingController();
   try {
@@ -65,10 +62,7 @@ Future<bool?> _showConfirmResetDialog(BuildContext context, TextEditingControlle
             TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
             ElevatedButton(
               onPressed: matches ? () => Navigator.of(ctx).pop(true) : null,
-              // Same near-black-on-danger pairing as OverspendBanner's button
-              // (banners.dart) — white-on-kDanger measures ~2.8:1, short of
-              // WCAG AA's 4.5:1 text-contrast minimum in either theme, since
-              // kDanger is deliberately identical light/dark (see theme.dart).
+// INFO: near-black on kDanger — white text there measures ~2.8:1, short of WCAG AA.
               style: ElevatedButton.styleFrom(backgroundColor: kDanger, foregroundColor: const Color(0xFF2B0000)),
               child: noSelect(const Text('Endgültig zurücksetzen')),
             ),

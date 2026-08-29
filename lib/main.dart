@@ -14,8 +14,7 @@ import 'ui/navigation_shell.dart';
 import 'ui/splash_screen.dart';
 import 'ui/theme.dart';
 
-/// Persists window size + maximized state (best-effort, debounced) so the
-/// app reopens the way it was left.
+/// Persists window size + maximized state (best-effort, debounced) so the app reopens as it was left.
 class _WindowPrefsSaver with WindowListener {
   _WindowPrefsSaver(this.store);
 
@@ -49,13 +48,7 @@ class _WindowPrefsSaver with WindowListener {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Names the cryptographic implementations actually in use, once per start.
-  // Not diagnostics for their own sake: `cryptography_flutter` falls back to a
-  // bundled Dart implementation silently, and the App Store build's
-  // `ITSAppUsesNonExemptEncryption = false` says it does not. This line is the
-  // only way to check that on a signed, sandboxed build — `flutter test` runs
-  // without a plugin registrant and always reports the fallback. Deliberately
-  // not debug-gated, and deliberately free of any path or key material.
+  // INFO: the only way to check which crypto implementation is live in a signed build, see dev/ai/persistence.md.
   debugPrint(describeCryptoPlatform());
 
   try {
@@ -63,9 +56,7 @@ Future<void> main() async {
     await store.ensureInitialized();
     final windowPrefs = store.windowPrefs;
 
-    // Must come before WindowOptions is built: its backgroundColor reads
-    // kBackground, which without this call still holds the dark default,
-    // because ThemeScope only builds after runApp().
+    // WARNING: must precede WindowOptions — its backgroundColor reads kBackground, still the dark default here.
     primeThemeBrightness(store.themeMode);
 
     await windowManager.ensureInitialized();
@@ -93,35 +84,19 @@ Future<void> main() async {
 
     runApp(FinanzGeckoApp(appState: appState));
   } on ForeignKeyDataException catch (err) {
-    // Not an error as such: the file is fine, it just belongs to a different
-    // computer. What matters most is what does NOT happen here — nothing is
-    // moved and nothing is written.
-    //
-    // Debug-only, unlike the startup failure below: `debugPrint` survives into
-    // release builds and writes to the OS log, and this line would put the
-    // user's data-file path there on every launch.
+    // INFO: debug-gated unlike the case below: debugPrint reaches the OS log, and this line carries the data path.
     if (kDebugMode) {
       debugPrint('FinanzGecko: data file belongs to a different installation: ${err.filePath}');
     }
     runApp(_ForeignDataApp(filePath: err.filePath));
   } catch (err, stack) {
-    // A failure this early (e.g. no OS keychain/secret-service daemon
-    // available for SecureKeyStore) would otherwise crash before a single
-    // frame is drawn, with nothing shown to the user at all — show a
-    // minimal, dependency-free error screen instead of a silent crash.
-    //
-    // Deliberately NOT debug-gated: this is the one message a user reporting
-    // "it won't start" needs, and it carries a stack trace, not their data.
+    // INFO: deliberately not debug-gated — the one message an "it won't start" report needs, carrying no user data.
     debugPrint('FinanzGecko startup failed: $err\n$stack');
     runApp(_StartupErrorApp(error: err));
   }
 }
 
-/// Explains in everyday language why a data file brought from elsewhere
-/// cannot be opened here — without using "key", "keychain" or "encryption" as
-/// the explanation. Someone who knows the file from a cloud folder expects it
-/// to open anywhere; the text has to clear that expectation away and at the
-/// same time say what to do instead.
+/// Explains in everyday language — without "key", "keychain" or "encryption" — why a file from elsewhere won't open.
 class _ForeignDataApp extends StatelessWidget {
   const _ForeignDataApp({required this.filePath});
 
@@ -181,9 +156,7 @@ class _ForeignDataApp extends StatelessWidget {
   }
 }
 
-/// Minimal fallback UI for a startup failure — deliberately doesn't depend on
-/// [AppState]/[AppStore] (those are exactly what may have failed to
-/// initialize), so it has nothing else that could fail along the way.
+/// Startup-failure fallback UI, deliberately free of [AppState]/[AppStore] — those may be what failed.
 class _StartupErrorApp extends StatelessWidget {
   const _StartupErrorApp({required this.error});
 
@@ -234,10 +207,7 @@ class FinanzGeckoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: appState,
-      // The inner Builder matters: buildAppTheme() must run *during* a build
-      // descending from ThemeScope, not while MaterialApp is merely being
-      // constructed as ThemeScope's child argument — that would run too early,
-      // against the previous brightness.
+      // WARNING: keep the inner Builder — buildAppTheme() must run inside ThemeScope, not as its child argument.
       child: Consumer<AppState>(
         builder: (context, app, _) => ThemeScope(
           mode: app.themeMode,

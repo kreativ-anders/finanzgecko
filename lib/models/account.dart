@@ -43,8 +43,7 @@ class Account {
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
   );
 
-  /// Full serialization for the encrypted on-disk store (keeps [color] so the
-  /// UI has the resolved accent without recomputing on every load).
+  /// Full serialization for the encrypted on-disk store (keeps [color] as the resolved accent).
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
@@ -56,10 +55,8 @@ class Account {
     'createdAt': createdAt.toIso8601String(),
   };
 
-  /// Serialization for "Backup exportieren": deliberately **omits [color]**.
-  /// The color is a derived value (from the bank, see `resolveAccountColor`)
-  /// and is recomputed on import — leaving it out keeps backups smaller and
-  /// prevents a stale/arbitrary color from riding along into an import.
+  /// Serialization for "Backup exportieren", deliberately without [color].
+  // INFO: the color is re-derived on import via resolveAccountColor, see dev/ai/persistence.md.
   Map<String, dynamic> toExportJson() => {
     'id': id,
     'name': name,

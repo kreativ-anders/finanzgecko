@@ -34,3 +34,10 @@ path is the only lossless round trip). The files are written into a user-chosen 
 dialog, the folder dialog doesn't ask on its own. Tested in `test/csv_export_test.dart`.
 
 On any change to these formulas: update `test/analysis_test.dart` **and** the matching Gherkin feature.
+
+## CSV formula-injection guard
+
+A leading `=`, `+`, `-` or `@` in an exported cell is prefixed with `'`, because Excel and LibreOffice read such a
+cell as a formula (and, historically, as a DDE command) when the file is opened. It is applied **only** to the
+free-text columns — Konto name, Bank, Fixposten and Vermögenswert names — and deliberately **not** to
+app-generated numeric or enum columns, so a negative amount stays a number and `SUM()` keeps working.

@@ -9,32 +9,19 @@ import '../constants.dart';
 
 const String _keyName = 'finanzgecko_dek';
 
-/// Holds the AES-256 data-encryption key in the OS-native credential store
-/// (Windows Credential Locker/DPAPI, macOS Keychain, Linux
-/// libsecret/kwallet) rather than anywhere in the app's own files, so the
-/// on-disk store is only readable on this machine, by this OS user.
+/// Holds the AES-256 data-encryption key in the OS-native credential store, never in the app's own files.
 class SecureKeyStore {
   const SecureKeyStore();
 
-  // NOT a free choice: the two macOS keychains store the item in different
-  // places, so a build that switches sides can no longer read a key the other
-  // one wrote. Flipping this for the DMG build would make every existing
-  // user's data file undecryptable. Which build gets which, and why:
-  // dev/ai/persistence.md "macOS-Spezifika".
+  // WARNING: flipping this switches macOS keychains and leaves every existing user's data file undecryptable.
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     mOptions: MacOsOptions(usesDataProtectionKeychain: kIsMacAppStore),
   );
 
-  /// One CSPRNG for all 32 bytes. `Random.secure()` inside the generator
-  /// callback constructed a fresh instance per byte — same security, 32x the
-  /// setup.
+  /// One CSPRNG for all 32 bytes: `Random.secure()` inside the callback built a fresh instance per byte.
   static final Random _secureRandom = Random.secure();
 
-  /// Unlike the store's other OS calls (chmod, icacls, ...), a failure here
-  /// is deliberately NOT swallowed: without a key the app cannot read or
-  /// write its data at all, so the error is left to propagate up to the
-  /// startup guard in `main()`, which shows it instead of silently
-  /// continuing in a broken state.
+  /// WARNING: a failure here must propagate to the startup guard in `main()`; swallowing it starts a keyless app.
   Future<SecretKey> getOrCreateKey() async {
     final existing = await _storage.read(key: _keyName);
     if (existing != null) {

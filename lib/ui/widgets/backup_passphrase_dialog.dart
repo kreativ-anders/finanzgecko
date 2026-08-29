@@ -2,15 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// Result of [promptNewBackupPassphrase]: empty string = deliberately no
-/// password, null = dialog cancelled. Keeping these distinct matters —
-/// "cancelled" must never trigger an unprotected export.
+/// Result of [promptNewBackupPassphrase]: empty string = deliberately no password, null = cancelled.
 typedef BackupPassphraseChoice = String?;
 
-/// Asks on export whether the backup should be password-protected.
-///
-/// Both paths are their own button instead of "leave the field empty":
-/// encryption should be a decision made on purpose, not skipped by accident.
+/// Asks on export whether to protect the backup; both paths are their own button, so neither is accidental.
 Future<BackupPassphraseChoice> promptNewBackupPassphrase(BuildContext context) async {
   final pwCtrl = TextEditingController();
   final repeatCtrl = TextEditingController();
@@ -84,9 +79,7 @@ Future<BackupPassphraseChoice> promptNewBackupPassphrase(BuildContext context) a
   }
 }
 
-/// Asks on import for the password of a protected backup file.
-/// Null = cancelled. [wasWrong] shows the hint after a failed attempt,
-/// instead of just re-showing the dialog without comment.
+/// Asks on import for the password; null = cancelled, [wasWrong] shows the hint after a failed attempt.
 Future<String?> promptExistingBackupPassphrase(BuildContext context, {bool wasWrong = false}) async {
   final ctrl = TextEditingController();
   try {
