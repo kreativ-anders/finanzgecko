@@ -48,7 +48,7 @@ dependencies:
   # javax.crypto on Android) instead of the bundled Dart one. On Windows and
   # Linux it changes nothing but the isolate the work runs on. Reason it is
   # here at all: Apple's export-compliance exemption for encryption "limited to
-  # that within the operating system" — AI_MASTER §4.1 "Export compliance".
+  # that within the operating system" — dev/ai/persistence.md "Export compliance".
   cryptography_flutter: ^2.3.4
   # Direct because lib/data/apple_pbkdf2.dart imports it — the one algorithm
   # cryptography_flutter does not cover natively on Apple platforms.
@@ -57,7 +57,7 @@ dependencies:
   # 2024, NSUserNotification — deprecated since macOS 11 — and no SwiftPM
   # support). Pulls in flutter_local_notifications_windows for the Windows
   # side; on macOS it uses UNUserNotificationCenter, which needs the user
-  # authorization the Einstellungen toggle now asks for. AI_MASTER §5
+  # authorization the Einstellungen toggle now asks for. dev/ai/ui-conventions.md
   # "Desktop notifications".
   flutter_local_notifications: ^22.3.0
   package_info_plus: ^10.2.1

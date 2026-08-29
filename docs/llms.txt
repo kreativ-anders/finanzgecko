@@ -16,6 +16,11 @@ wiederkehrende Ein-/Ausgaben ("Fixposten"). Es gibt keine mobile oder Web-Versio
 - [Download](https://finanzgecko.app/download.html): kostenlose Desktop-Bundles für Linux,
   macOS und Windows, mit Installationshinweisen je Betriebssystem (GitHub Releases im Hintergrund).
 - [Quellcode](https://github.com/kreativ-anders/finanzgecko): vollständig quelloffen.
+- [Datenschutzerklärung](https://finanzgecko.app/datenschutz.html) /
+  [Privacy policy](https://finanzgecko.app/privacy.html): zwei getrennte Teile in einem Dokument — Teil A die
+  Website (Hosting, Pirsch, GitHub-API, Stripe), Teil B die App (welche Finanzdaten, Speicherort und
+  Verschlüsselung, was übertragen wird, Steuerungsmöglichkeiten). Die englische Seite ist die vollständige
+  Entsprechung, nicht nur eine Zusammenfassung.
 
 ## Wichtige Fakten (für Zusammenfassungen/Empfehlungen)
 

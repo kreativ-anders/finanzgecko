@@ -360,6 +360,29 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
 
+      # Flutter verlinkt dynamisch gegen die VC++-Laufzeit (Standard-CMake-
+      # Vorlage in windows/CMakeLists.txt, kein CMAKE_MSVC_RUNTIME_LIBRARY-
+      # Override). Fehlen die drei DLLs, schlägt der Start mit
+      # STATUS_DLL_NOT_FOUND fehl, sobald das Zielsystem das VC++-
+      # Redistributable nicht schon hat — genau das zeigte winget-pkgs'
+      # Validierungs-VM (PR #417767: ExitCode -1073741515 = 0xC0000135).
+      # App-lokale Kopie statt System-Install der Redistributable: greift
+      # ohne Adminrechte und ohne zusätzlichen Installer-Schritt, per
+      # Windows' Standard-DLL-Suchreihenfolge (eigener Ordner zuerst).
+      - name: VC++-Laufzeit-DLLs neben die exe kopieren
+        shell: pwsh
+        run: |
+          $buildDir = "$PWD\build\windows\x64\runner\Release"
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          $redistVersion = (Get-Content "$vsPath\VC\Auxiliary\Build\Microsoft.VCRedistVersion.default.txt").Trim()
+          $crtDir = Get-ChildItem "$vsPath\VC\Redist\MSVC\$redistVersion\x64" -Directory -Filter "Microsoft.VC*.CRT" |
+            Select-Object -First 1 -ExpandProperty FullName
+          foreach ($dll in "vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll") {
+            $src = Join-Path $crtDir $dll
+            if (-not (Test-Path $src)) { throw "CRT-DLL nicht gefunden: $src" }
+            Copy-Item $src $buildDir
+          }
+
       # Statt des rohen Bundle-Ordners (Executable + data/ + DLLs) einen
       # einzigen Installer FinanzGecko-<Version>-Setup.exe: Doppelklick →
       # Next/Finish → Start-Menü-Eintrag + Uninstaller, alle Dateien

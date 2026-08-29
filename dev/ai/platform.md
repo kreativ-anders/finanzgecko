@@ -53,6 +53,22 @@
   `FinanzGecko.app` + a symlink to `/Applications`). The version is read from `pubspec.yaml` in every build job
   (not from the git tag), so even untagged ad-hoc test builds (`workflow_dispatch`, `bump: none`) get a versioned
   file name. `packaging/linux/install.sh` remains as an alternative for the Linux start menu from an unpacked bundle.
+- **Windows: the three VC++ runtime DLLs (`vcruntime140.dll`, `vcruntime140_1.dll`, `msvcp140.dll`) ship next to
+  `finanzgecko.exe`**, copied into the build output by the `windows` job in `release.yml` right after `flutter
+  build windows --release`, before `iscc` packages `{#BuildDir}\*` (no change needed in `finanzgecko.iss` itself).
+  `windows/CMakeLists.txt` is the stock Flutter template — dynamically linked against the VC++ runtime, no
+  `CMAKE_MSVC_RUNTIME_LIBRARY` override — and that runtime is usually already present on a real user's machine
+  (Windows Update, other software) but isn't guaranteed everywhere. This surfaced as a real gap: the winget-pkgs
+  submission (PR #417767) failed `Validation-Executable-Error` because their validation VM lacks it —
+  `finanzgecko.exe` exited with `STATUS_DLL_NOT_FOUND` (`0xC0000135`) before ever opening a window, which the
+  automated test reports as "executable not found." App-local DLLs (Windows' own DLL search order checks the exe's
+  own folder first) rather than a system-wide redistributable install: covers `finanzgecko.exe`,
+  `flutter_windows.dll`, *and* any prebuilt plugin DLL that dynamically links the CRT (e.g. `dartjni.dll`) equally,
+  without needing admin rights or an extra installer step — switching to a statically-linked CRT
+  (`CMAKE_MSVC_RUNTIME_LIBRARY`) would only cover binaries built from this repo's own CMake, not prebuilt
+  third-party plugin DLLs. Source path: `vswhere.exe` → the VS installation → `VC\Redist\MSVC\<version>\x64\
+  Microsoft.VC*.CRT\`, the path Microsoft itself documents for redistributing these files, not `System32` (avoids
+  depending on whatever happens to be installed on the runner already).
 - **macOS: DMG instead of a zipped `.app` bundle** (since August 2026). Two reasons, the second is the real one:
   first, "open the image, drag the app onto `Programme`" is the macOS-familiar flow — with the ZIP, the bundle
   landed in the downloads folder and often got launched from there. Second, a DMG can carry the notarization

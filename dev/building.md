@@ -58,6 +58,13 @@ packaging script needed. `flutter build windows` produces a folder (`build/windo
 be distributed as a whole; CI packages it with Inno Setup (`packaging/windows/finanzgecko.iss`) into
 `FinanzGecko-<version>-Setup.exe`.
 
+The Windows build links dynamically against the VC++ runtime (stock Flutter CMake template) but doesn't ship it —
+CI copies `vcruntime140.dll`/`vcruntime140_1.dll`/`msvcp140.dll` next to `finanzgecko.exe` itself, from the local
+Visual Studio install (see [dev/ai/platform.md](ai/platform.md) "Release artifacts"). A local dev build without
+those DLLs still runs fine as long as the runtime happens to already be installed on your machine — which is the
+case for almost every real Windows install, just not guaranteed everywhere (see `dev/ai/platform.md` for why this
+needed fixing).
+
 ```powershell
 .\build\windows\x64\runner\Release\finanzgecko.exe
 ```

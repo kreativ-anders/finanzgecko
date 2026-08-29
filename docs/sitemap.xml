@@ -20,8 +20,14 @@
   </url>
   <url>
     <loc>https://finanzgecko.app/datenschutz.html</loc>
-    <lastmod>2026-08-05</lastmod>
+    <lastmod>2026-08-29</lastmod>
     <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://finanzgecko.app/privacy.html</loc>
+    <lastmod>2026-08-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
   </url>
 </urlset>

@@ -108,8 +108,21 @@ finanzgecko/
 │   │                               #   (platform choice, data handling, updates) — SEO minimum, no
 │   │                               #   install instructions (those stay solely in `#faq-install`)
 │   ├── documentation.html         # Short guide for end users (no relation to dev/ai/ or gherkin/)
-│   ├── datenschutz.html           # Privacy policy (Pirsch, GitHub Pages, Stripe, GitHub API, app network paths),
-│   │                               #   linked in every page's footer — update on every new third-party integration
+│   ├── datenschutz.html           # Privacy policy, split into two parts that are kept strictly apart:
+│   │                               #   **Teil A** the website (hosting, Pirsch, GitHub API, Stripe, external links;
+│   │                               #   anchors `a1`…`a5`) and **Teil B** the app (what data, where it lives, what
+│   │                               #   leaves the device, what the user controls; anchors `b1`…`b4`). Teil B is
+│   │                               #   deliberately NON-TECHNICAL — "AES-verschlüsselt" and nothing beyond it: no
+│   │                               #   cipher modes, KDF iterations, credential-store names, file paths or
+│   │                               #   permission bits. Manuel's call, 2026-08-29. Linked in every page's footer;
+│   │                               #   update Teil A on every new third-party integration and Teil B on every
+│   │                               #   change to what the app does. Target of `PrivacyUrl` in the de-DE winget
+│   │                               #   manifest — the path sits inside a published manifest
+│   ├── privacy.html               # Full English equivalent of `datenschutz.html` — same Part A / Part B split,
+│   │                               #   same anchors, not a summary. The one page under docs/ that is deliberately
+│   │                               #   English: it addresses package reviewers and non-German users, and winget's
+│   │                               #   policy review (Policies 1.5.1/1.5.5) requires a readable privacy policy for
+│   │                               #   an app holding financial data. Target of `PrivacyUrl` in the en-US manifest
 │   ├── danke.html                 # Confirmation page after Stripe checkout ("Entwicklung unterstützen"), `noindex`,
 │   │                               #   to be set as the "after payment" redirect in the Stripe payment link —
 │   │                               #   exactly https://finanzgecko.app/danke.html (the redirect URL lives in Stripe,
@@ -139,7 +152,8 @@ are in English. `gherkin/` is now English prose too (as of the translation descr
 Left German everywhere, including in these documents and in English prose generally: the binding domain terms from
 [glossary.md](glossary.md) (Konto, Fixposten, Vermögenswerte, …) — **never translated, in English running text either** — see [glossary.md](glossary.md) and
 "Rules for AI Agents" #3. Only `docs/` (the website) stays German prose end to end, since it addresses the
-German-speaking end users of a German-UI app.
+German-speaking end users of a German-UI app — with one deliberate exception, `docs/privacy.html`, whose
+audience is package reviewers and non-German users (see file tree above).
 
 ## The six views (`lib/ui/views/`)
 

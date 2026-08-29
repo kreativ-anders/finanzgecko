@@ -33,17 +33,28 @@ The traps, in the order they tend to bite (⚙ = already enforced by the test):
   padding, a heading size, or a fixed-column grid needs a matching entry there. Desktop paddings are deliberately
   *not* uniform (the hero breathes more than the trust strip); the breakpoint compresses that scale, it doesn't
   flatten it — so use explicit per-section values, not one shared token.
-- ⚙ **Every new third-party call or embed must be added to `docs/datenschutz.html`** (currently: Pirsch, GitHub
-  Pages, the GitHub API on index + download, Stripe). The page is linked from all footers; a German site that
-  loads something undisclosed is the one failure mode here with legal weight.
+- ⚙ **Every new third-party call or embed must be added to Teil A of `docs/datenschutz.html` and Part A of
+  `docs/privacy.html`** (currently: Pirsch, GitHub Pages, the GitHub API on index + download, Stripe). The German
+  page is linked from all footers; a site that loads something undisclosed is the one failure mode here with
+  legal weight.
 - **New page? Copy the whole `<head>` contract:** the Pirsch snippet (`api.pirsch.io/pa.js`, `id="pianjs"`), a
   `canonical` on `https://finanzgecko.app/…`, and either an entry in `docs/sitemap.xml` or `noindex`.
 - **`docs/404.html` is the one page using root-absolute paths** (`/assets/…`). GitHub Pages serves it at whatever
   depth the bad URL had, so relative paths break it. Don't "fix" them to match the other pages.
 - **`docs/CNAME` pins `finanzgecko.app`.** No absolute URL anywhere in the repo may point at
   `kreativ-anders.github.io` — that includes `README.md` and `_downloadPageUrl` in `lib/ui/views/settings_view.dart`.
-- ⚙ **Claims about the app's network access appear in four places** — `docs/index.html` (feature card),
-  `docs/llms.txt`, `docs/datenschutz.html`, and [stack.md](stack.md). The app makes exactly two calls: exchange rates
-  (`api.frankfurter.dev`) and the manual update check (`api.github.com`). Keep all four in agreement.
+- ⚙ **Claims about the app's network access appear in five places** — `docs/index.html` (feature card),
+  `docs/llms.txt`, `docs/datenschutz.html`, `docs/privacy.html`, and [stack.md](stack.md). The app makes exactly two
+  calls: exchange rates (`api.frankfurter.dev`) and the manual update check (`api.github.com`). Keep all five in
+  agreement.
+- ⚙ **One privacy policy per language, split into two parts inside the page** — `docs/datenschutz.html` (German)
+  and `docs/privacy.html` (its full English equivalent, the only deliberately English page under `docs/`).
+  **Teil A / Part A** is the website (hosting, Pirsch, GitHub API, Stripe), **Teil B / Part B** is the app
+  (what data, where it lives, what leaves the device, what the user controls); the `A1…A5` / `B1…B4` anchors are
+  cross-linked, so don't renumber them casually. **Teil B stays non-technical:** "AES-verschlüsselt" is the whole
+  encryption statement — no cipher modes, KDF iterations, credential-store product names, file paths or
+  permission bits. That belongs in the code, not in a privacy policy (Manuel, 2026-08-29). Both pages are
+  `PrivacyUrl` targets in the winget manifests — the two paths must keep working. A new third-party embed goes
+  into Part A of **both**; a change to what the app does goes into Part B of **both**, in the same commit.
 - **The Stripe "after payment" redirect lives in Stripe's dashboard, not the repo**, and points at
   `https://finanzgecko.app/danke.html`. Nothing in CI will catch it after a domain or path change.

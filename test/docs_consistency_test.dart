@@ -49,33 +49,42 @@ void main() {
       return hosts;
     }
 
-    test('die Datenschutzseite nennt jeden Host, den der Code aufrufen kann', () {
-      final datenschutz = read('docs/datenschutz.html');
-      for (final host in endpointsInCode()) {
-        expect(
-          datenschutz.contains(host),
-          isTrue,
-          reason:
-              '"$host" wird im Code aufgerufen, steht aber nicht in docs/datenschutz.html.\n'
-              'Eine deutsche Seite, die einen nicht offengelegten Dienst kontaktiert, ist das '
-              'einzige Versäumnis hier mit rechtlichem Gewicht — bitte ergänzen, nicht diesen '
-              'Test anpassen.',
-        );
+    // Both language versions, not just the German one: `privacy.html` is the
+    // full English equivalent of `datenschutz.html` (same Part A / Part B
+    // structure, not a summary), and it is what the en-US winget manifest's
+    // `PrivacyUrl` points at. A host disclosed in only one of the two would
+    // leave the other page claiming a completeness it no longer has.
+    const privacyPages = ['docs/datenschutz.html', 'docs/privacy.html'];
+
+    test('jede Datenschutzseite nennt jeden Host, den der Code aufrufen kann', () {
+      for (final page in privacyPages) {
+        final content = read(page);
+        for (final host in endpointsInCode()) {
+          expect(
+            content.contains(host),
+            isTrue,
+            reason:
+                '"$host" wird im Code aufgerufen, steht aber nicht in $page.\n'
+                'Eine Datenschutzseite, die einen nicht offengelegten Dienst verschweigt, ist das '
+                'einzige Versäumnis hier mit rechtlichem Gewicht — bitte ergänzen, nicht diesen '
+                'Test anpassen.',
+          );
+        }
       }
     });
 
     // Tripwire, deliberately exact. It is not "two is the right number"; it is
-    // "if this number changes, four documents and a privacy claim need a human
+    // "if this number changes, five documents and a privacy claim need a human
     // decision". dev/ai/website.md lists them.
-    test('die Anzahl externer Endpunkte ist unverändert (sonst: vier Dokumente prüfen)', () {
+    test('die Anzahl externer Endpunkte ist unverändert (sonst: fünf Dokumente prüfen)', () {
       expect(
         endpointsInCode(),
         {'api.frankfurter.dev', 'api.github.com'},
         reason:
             'Die Menge der externen Hosts hat sich geändert.\n'
-            'Bei jeder Änderung müssen mitgezogen werden: docs/datenschutz.html, docs/llms.txt, '
-            'docs/index.html und dev/ai/stack.md — dort steht jeweils die Aussage, welche '
-            'Verbindungen die App überhaupt aufbauen kann.',
+            'Bei jeder Änderung müssen mitgezogen werden: docs/datenschutz.html, docs/privacy.html, '
+            'docs/llms.txt, docs/index.html und dev/ai/stack.md — dort steht jeweils die Aussage, '
+            'welche Verbindungen die App überhaupt aufbauen kann.',
       );
     });
   });
