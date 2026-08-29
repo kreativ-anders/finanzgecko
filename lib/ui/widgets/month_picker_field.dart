@@ -53,7 +53,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
     viewYear = selectedYear;
   }
 
-/// Tolerant "YYYY-MM" parse; malformed input falls back to the current month instead of throwing.
+  /// Tolerant "YYYY-MM" parse; malformed input falls back to the current month instead of throwing.
   static (int, int)? _parsePeriod(String value) {
     final parts = value.split('-');
     if (parts.length != 2) return null;

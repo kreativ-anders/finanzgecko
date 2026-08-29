@@ -51,7 +51,7 @@ void showSavedSnackBar(BuildContext context, ValueChanged<AppView> onNavigate, {
     SnackBar(
       content: Text(message),
       duration: const Duration(seconds: 3),
-// INFO: SnackBar sets persist whenever an action is present, which disables the auto-dismiss timer.
+      // INFO: SnackBar sets persist whenever an action is present, which disables the auto-dismiss timer.
       persist: false,
       action: SnackBarAction(label: 'Zum Dashboard', onPressed: () => onNavigate(AppView.dashboard)),
     ),
@@ -64,7 +64,7 @@ void showErrorSnackBar(BuildContext context, String message) {
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(
-// INFO: near-black on kDanger — white text there measures ~2.8:1, short of WCAG AA.
+      // INFO: near-black on kDanger — white text there measures ~2.8:1, short of WCAG AA.
       content: Text(message, style: const TextStyle(color: Color(0xFF2B0000))),
       duration: const Duration(seconds: 4),
       backgroundColor: kDanger,

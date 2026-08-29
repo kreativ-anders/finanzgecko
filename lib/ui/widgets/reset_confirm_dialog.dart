@@ -62,7 +62,7 @@ Future<bool?> _showConfirmResetDialog(BuildContext context, TextEditingControlle
             TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: noSelect(const Text('Abbrechen'))),
             ElevatedButton(
               onPressed: matches ? () => Navigator.of(ctx).pop(true) : null,
-// INFO: near-black on kDanger — white text there measures ~2.8:1, short of WCAG AA.
+              // INFO: near-black on kDanger — white text there measures ~2.8:1, short of WCAG AA.
               style: ElevatedButton.styleFrom(backgroundColor: kDanger, foregroundColor: const Color(0xFF2B0000)),
               child: noSelect(const Text('Endgültig zurücksetzen')),
             ),

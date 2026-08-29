@@ -32,7 +32,7 @@ class AppStackedAreaChart extends StatelessWidget {
   final double height;
   final String currency;
 
-/// Adds a hover crosshair + tooltip listing every active series at that period.
+  /// Adds a hover crosshair + tooltip listing every active series at that period.
   final bool showHover;
 
   @override
@@ -70,7 +70,7 @@ class AppStackedAreaChart extends StatelessWidget {
     final maxY = totals.reduce((a, b) => a > b ? a : b);
     final axisMaxY = maxY <= 0 ? 1.0 : maxY * 1.08;
 
-// Largest cumulative first so the smaller bands paint on top and stay visible.
+    // Largest cumulative first so the smaller bands paint on top and stay visible.
     final bars = <LineChartBarData>[];
     for (var j = active.length - 1; j >= 0; j--) {
       final color = active[j].color;
@@ -81,7 +81,7 @@ class AppStackedAreaChart extends StatelessWidget {
           color: color,
           barWidth: 1,
           dotData: const FlDotData(show: false),
-// Solid fill via a single-color gradient — the same belowBarData usage that works in AppLineChart.
+          // Solid fill via a single-color gradient — the same belowBarData usage that works in AppLineChart.
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.9)]),
@@ -104,7 +104,7 @@ class AppStackedAreaChart extends StatelessWidget {
       ),
     );
 
-// The legend already lists every series, so this label covers only the span and current total.
+    // The legend already lists every series, so this label covers only the span and current total.
     final latestTotal = currency.isEmpty ? totals.last.toStringAsFixed(0) : fmtMoney(totals.last, currency);
     final areaSemanticLabel =
         'Zusammensetzung über Zeit von ${periodLabels.first} bis ${periodLabels.last}, '
@@ -149,7 +149,7 @@ class AppStackedAreaChart extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-// Legend stays readable on its own even with showHover off.
+        // Legend stays readable on its own even with showHover off.
         Wrap(
           spacing: 16,
           runSpacing: 8,
@@ -183,7 +183,7 @@ class _StackedHoverLayer extends StatefulWidget {
   final List<String> periodLabels;
   final List<StackedSeries> active;
 
-/// Cumulative total per period — the denominator for the tooltip shares.
+  /// Cumulative total per period — the denominator for the tooltip shares.
   final List<double> totals;
   final String currency;
 
@@ -266,7 +266,7 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
                     style: TextStyle(color: kTextPrimary, fontSize: 12, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
-// INFO: fixed right-aligned columns keep the numbers aligned across rows, see dev/ai/ui-conventions.md.
+                  // INFO: fixed right-aligned columns keep the numbers aligned across rows, see dev/ai/ui-conventions.md.
                   for (final s in rows)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),

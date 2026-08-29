@@ -26,10 +26,10 @@ class NavigationShell extends StatefulWidget {
 class _NavigationShellState extends State<NavigationShell> {
   AppView _view = AppView.dashboard;
 
-// Deliberately not threaded through [_navigate] — widening it would touch six views for one caller.
+  // Deliberately not threaded through [_navigate] — widening it would touch six views for one caller.
   int? _focusAccountId;
 
-// Clears any pending focus, so returning to "Einträge" later does not re-focus a stale account.
+  // Clears any pending focus, so returning to "Einträge" later does not re-focus a stale account.
   void _navigate(AppView view) => setState(() {
     _view = view;
     _focusAccountId = null;
@@ -149,7 +149,7 @@ class _NavButton extends StatelessWidget {
       child: TextButton(
         onPressed: onTap,
         style: TextButton.styleFrom(foregroundColor: active ? kPrimaryText : kMuted),
-// INFO: noSelect keeps the pointer a hand here, see dev/ai/ui-conventions.md.
+        // INFO: noSelect keeps the pointer a hand here, see dev/ai/ui-conventions.md.
         child: noSelect(Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal))),
       ),
     );

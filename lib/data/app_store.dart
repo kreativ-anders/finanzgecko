@@ -272,7 +272,7 @@ class AppStore {
         _data = AppSchema.defaults();
         await _persist();
       } else {
-          // INFO: without this check a foreign file looks exactly like a corrupt one; see dev/ai/persistence.md.
+        // INFO: without this check a foreign file looks exactly like a corrupt one; see dev/ai/persistence.md.
         final storedKeyId = (decoded as Map)['keyId'];
         if (storedKeyId is String && storedKeyId != await keyFingerprint(_requireKey)) {
           throw ForeignKeyDataException(_filePath!);

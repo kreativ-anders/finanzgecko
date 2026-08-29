@@ -12,7 +12,7 @@ class SignToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isExpense ? kDangerText : kPrimaryText;
-// Reuses the theme's input text style so this decorator's height matches the neighboring text fields.
+    // Reuses the theme's input text style so this decorator's height matches the neighboring text fields.
     final textStyle = (Theme.of(context).textTheme.bodyLarge ?? const TextStyle()).copyWith(
       color: color,
       fontWeight: FontWeight.bold,

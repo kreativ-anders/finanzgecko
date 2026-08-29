@@ -42,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-// WARNING: the file names denote the image color, not the theme — swapping them makes the logo invisible (1.3:1).
+          // WARNING: the file names denote the image color, not the theme — swapping them makes the logo invisible (1.3:1).
           Image.asset(
             kIsDarkTheme ? 'assets/logo/kreativ-anders-light-512.png' : 'assets/logo/kreativ-anders-dark-512.png',
             width: 160,

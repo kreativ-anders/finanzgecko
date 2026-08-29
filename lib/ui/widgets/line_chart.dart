@@ -59,22 +59,22 @@ class AppLineChart extends StatelessWidget {
   final Color color;
   final double height;
 
-/// Shades the area under the line — used by the dashboard hero chart.
+  /// Shades the area under the line — used by the dashboard hero chart.
   final bool filled;
 
-/// Direct-labels the lowest and highest point instead of drawing a full y-axis.
+  /// Direct-labels the lowest and highest point instead of drawing a full y-axis.
   final bool showMinMax;
 
-/// Adds a dashed least-squares trend line one period past the last point; ignored when [forecast] is set.
+  /// Adds a dashed least-squares trend line one period past the last point; ignored when [forecast] is set.
   final bool showTrend;
 
-/// Deterministic projection from a known monthly rate (the Fixposten net).
+  /// Deterministic projection from a known monthly rate (the Fixposten net).
   final ChartForecast? forecast;
 
   /// Adds a mouse-hover crosshair + tooltip showing the period and value.
   final bool showHover;
 
-/// Currency for the min/max and hover labels; a plain rounded number if empty.
+  /// Currency for the min/max and hover labels; a plain rounded number if empty.
   final String currency;
 
   String _fmtValue(double value) => currency.isEmpty ? value.toStringAsFixed(0) : fmtMoney(value, currency);
@@ -111,7 +111,7 @@ class AppLineChart extends StatelessWidget {
         points[i].value != null ? FlSpot(i.toDouble(), points[i].value!) : FlSpot.nullSpot,
     ];
 
-// INFO: OLS over (index, value); gaps keep their real time-distance, exponential would assume steady growth.
+    // INFO: OLS over (index, value); gaps keep their real time-distance, exponential would assume steady growth.
     double? trendSlope;
     double? trendIntercept;
     if (showTrend && forecast == null && values.length >= 2) {
@@ -157,7 +157,7 @@ class AppLineChart extends StatelessWidget {
       if (forecastEndValue > chartMax) chartMax = forecastEndValue;
     }
     final range = (chartMax - chartMin) == 0 ? 1.0 : (chartMax - chartMin);
-// Min/max labels need real pixel headroom above/below the line, not just clearance for the stroke.
+    // Min/max labels need real pixel headroom above/below the line, not just clearance for the stroke.
     final padY = range * (showMinMax ? 0.30 : 0.12);
 
     final mainBar = LineChartBarData(
@@ -184,7 +184,7 @@ class AppLineChart extends StatelessWidget {
       ),
     );
 
-// A flat or noisy line should not claim a direction, so small moves count as neutral.
+    // A flat or noisy line should not claim a direction, so small moves count as neutral.
     Color trendDirectionColor() {
       final totalChange = trendSlope! * lastIndex;
       final threshold = (max - min).abs() * 0.05;
@@ -244,7 +244,7 @@ class AppLineChart extends StatelessWidget {
         maxX: chartMaxX,
         minY: axisMinY,
         maxY: axisMaxY,
-// Hover is handled by _HoverLayer below, not by fl_chart.
+        // Hover is handled by _HoverLayer below, not by fl_chart.
         lineTouchData: kChartLineTouchDisabled,
         gridData: kChartGridHidden,
         borderData: kChartBorderHidden,
@@ -260,7 +260,7 @@ class AppLineChart extends StatelessWidget {
       ),
     );
 
-// Screen-reader summary standing in for the visual line; the chart itself is excludeSemantics.
+    // Screen-reader summary standing in for the visual line; the chart itself is excludeSemantics.
     final semanticBuffer = StringBuffer(
       'Verlauf von ${points.first.label} bis ${points.last.label}: '
       'von ${_fmtValue(values.first)} auf ${_fmtValue(values.last)}.',
@@ -290,7 +290,7 @@ class AppLineChart extends StatelessWidget {
                         final w = constraints.maxWidth;
                         final h = constraints.maxHeight;
 
-// Placed by hand: fl_chart tooltips only ever draw above the spot, which crowds the min label.
+                        // Placed by hand: fl_chart tooltips only ever draw above the spot, which crowds the min label.
                         Positioned label(int index, bool above) {
                           final xFraction = chartMaxX == 0 ? 0.0 : index / chartMaxX;
                           final value = points[index].value!;
@@ -306,7 +306,7 @@ class AppLineChart extends StatelessWidget {
                           return Positioned(
                             left: left,
                             top: rawTop.clamp(0.0, maxTop),
-// So this decorative label never steals a hover event meant for the chart underneath.
+                            // So this decorative label never steals a hover event meant for the chart underneath.
                             child: IgnorePointer(
                               child: Text(text, style: _kValueLabelStyle.copyWith(color: kMuted)),
                             ),
@@ -319,7 +319,7 @@ class AppLineChart extends StatelessWidget {
                             Positioned.fill(child: lineChart),
                             if (showMinMax) label(maxIndex, true),
                             if (showMinMax && minIndex != maxIndex) label(minIndex, false),
-// In the forecast color so the projected endpoint does not read as a recorded value.
+                            // In the forecast color so the projected endpoint does not read as a recorded value.
                             if (useForecast)
                               () {
                                 final value = forecastEndValue!;
@@ -339,7 +339,7 @@ class AppLineChart extends StatelessWidget {
                                   ),
                                 );
                               }(),
-// Painted last so the crosshair and tooltip sit above the min/max labels.
+                            // Painted last so the crosshair and tooltip sit above the min/max labels.
                             if (showHover)
                               Positioned.fill(
                                 child: _HoverLayer(

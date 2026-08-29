@@ -73,7 +73,7 @@ class ThemeScope extends StatelessWidget {
 /// Resolves [mode] before the first build; without it a light-theme user saw a dark window flash.
 void primeThemeBrightness(AppThemeMode mode) {
   _activeBrightness = switch (mode) {
-// Via the binding instance so no extra dart:ui import is needed here.
+    // Via the binding instance so no extra dart:ui import is needed here.
     AppThemeMode.system => WidgetsBinding.instance.platformDispatcher.platformBrightness,
     AppThemeMode.light => Brightness.light,
     AppThemeMode.dark => Brightness.dark,
