@@ -4,15 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'theme.dart';
 
-/// Brief branded splash shown on startup. App data is already loaded by the
-/// time [main] calls runApp, so this is purely a timed brand moment — held for
-/// at least [minDuration] and faded into [child].
-///
-/// The 1100ms + 400ms fade were reviewed deliberately (issue #11) and kept as
-/// a brand decision, not a placeholder. They land *on top of* the time the
-/// window is already visible ([main] shows it before `runApp`), so startup is
-/// ~1.5s total. That trade-off was considered and declined — don't "optimize"
-/// these values without asking (see AI_MASTER §5 and `gherkin/window.feature`).
+/// Timed brand moment: 1100ms hold + 400ms fade, deliberately kept (issue #11) — see dev/ai/ui-conventions.md.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.child, this.minDuration = const Duration(milliseconds: 1100)});
 
@@ -50,17 +42,9 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // CAREFUL: the names denote the *image colour*, not the theme —
-          // that is also how they are named in the source repo
-          // kreativ-anders/static-assets:
-          //   …-light-…  = light logo (white text) → for the DARK background
-          //   …-dark-…   = dark logo (black text) → for the LIGHT background
-          // Before this mapping the light logo was used in both themes and was
-          // practically invisible on light at 1.3:1. Do not "straighten out".
+          // WARNING: the file names denote the image color, not the theme — swapping them makes the logo invisible (1.3:1).
           Image.asset(
-            kIsDarkTheme
-                ? 'assets/logo/kreativ-anders-light-512.png'
-                : 'assets/logo/kreativ-anders-dark-512.png',
+            kIsDarkTheme ? 'assets/logo/kreativ-anders-light-512.png' : 'assets/logo/kreativ-anders-dark-512.png',
             width: 160,
             height: 160,
           ),

@@ -7,11 +7,12 @@
 `./packaging/linux/install.sh` (see [building.md](building.md)).
 
 **Windows: no icon in taskbar/title bar**, even after `dart run tool/generate_icons.dart` + rebuild: usually not
-the `.ico` itself but a stale shortcut. `local_notifier` registers an AUMID plus a start-menu shortcut on first run
+the `.ico` itself but a stale shortcut left behind by `local_notifier`, which the app used until the switch to
+`flutter_local_notifications`. That plugin registered an AUMID plus a start-menu shortcut on first run
 (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\FinanzGecko.lnk`); if it points at a path that's since been
-deleted/moved, the taskbar stays blank for every later build, regardless of how correct its `.ico` is. Fix: quit
-`finanzgecko.exe`, delete the `.lnk` file, restart the app — the shortcut gets recreated pointing at the current
-path.
+deleted/moved, the taskbar stays blank for every later build, regardless of how correct its `.ico` is. Nothing
+writes that shortcut any more, so a fresh machine can't hit this — but an old one still carries the file. Fix:
+quit `finanzgecko.exe`, delete the `.lnk` file, restart the app.
 
 **`flutter build windows` fails with a CMake/MSBuild error:** the "Desktop development with C++" workload is
 missing, see [setup.md](setup.md).

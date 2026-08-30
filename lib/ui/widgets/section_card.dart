@@ -8,13 +8,10 @@ class SectionCard extends StatelessWidget {
   final String? title;
   final Widget child;
 
-  /// Shown at the end of the title row (e.g. a filter control) — ignored
-  /// unless [title] is also set.
+  /// Shown at the end of the title row — ignored unless [title] is set.
   final Widget? trailing;
 
-  /// When true, lets [child] grow to fill the card's remaining height —
-  /// used so cards of equal height (see [cardGap] usage in `_SummaryRow`)
-  /// can pin content like a trailing button to the bottom.
+  /// When true, lets [child] fill the card's remaining height so equal-height cards can pin content.
   final bool expandChild;
 
   @override
@@ -30,9 +27,7 @@ class SectionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(title!, style: Theme.of(context).textTheme.titleLarge),
-                  // Expanded (not just trailing inline) so it's pinned to the
-                  // card's top-right; bounding its width also lets a wide
-                  // filter row wrap onto a second line instead of overflowing.
+                  // Expanded so the trailing widget is pinned right and a wide filter row wraps instead of overflowing.
                   if (trailing != null)
                     Expanded(
                       child: Align(alignment: Alignment.centerRight, child: trailing!),

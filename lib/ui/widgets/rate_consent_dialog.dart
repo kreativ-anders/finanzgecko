@@ -5,17 +5,8 @@ import '../../state/app_state.dart';
 import '../theme.dart';
 import 'manual_rate_dialog.dart';
 
-/// Asks once, at the moment a foreign-currency amount actually needs a rate,
-/// whether the app may contact api.frankfurter.dev.
-///
-/// Shown only from the two places that genuinely need a rate (Einträge and
-/// Fixposten while saving) — never from merely opening a view, and never from
-/// Einstellungen, where a surprise dialog would be baffling. The decision is
-/// stored and can be reversed under Einstellungen → Wechselkurse.
-///
-/// Returns the user's choice, or [RateFetchConsent.unset] if the dialog was
-/// dismissed without deciding — the caller then treats it as "not now" and
-/// falls back to the manual rate, without persisting anything.
+// INFO: dismissing without deciding yields RateFetchConsent.unset and persists nothing.
+/// Asks once, when a foreign-currency amount actually needs a rate, whether api.frankfurter.dev may be called.
 Future<RateFetchConsent> promptRateFetchConsent(
   BuildContext context, {
   required String from,
@@ -64,17 +55,7 @@ Future<RateFetchConsent> promptRateFetchConsent(
   return result ?? RateFetchConsent.unset;
 }
 
-/// The single rate-resolution path for every screen that stores a
-/// foreign-currency amount (Einträge, Fixposten anlegen/bearbeiten).
-///
-/// Order: ask for consent if that has never happened *and* a foreign currency
-/// is actually involved → try [CurrencyService.getExchangeRate] (network only
-/// when granted, local cache always) → fall back to a manually entered rate.
-/// Returns null if the user cancels the manual dialog too; callers treat that
-/// exactly as before, i.e. "not saved".
-///
-/// Same-currency amounts never trigger the question — nothing has to be
-/// converted, so there is nothing to ask about.
+/// The single rate-resolution path: consent if unset, then cache/network rate, then manual entry.
 Future<double?> resolveRate(
   BuildContext context,
   AppState app, {
@@ -86,8 +67,6 @@ Future<double?> resolveRate(
 
   if (app.rateFetchConsent == RateFetchConsent.unset) {
     final decision = await promptRateFetchConsent(context, from: from, to: to);
-    // Dismissed without choosing: don't persist anything, just continue on the
-    // offline path. The question comes back the next time a rate is needed.
     if (decision != RateFetchConsent.unset) {
       await app.setRateFetchConsent(decision);
     }

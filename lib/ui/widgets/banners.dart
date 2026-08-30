@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// Distinguishes a routine nudge from a genuinely overdue/urgent state — both
-/// render as the same neutral [InfoBanner] shell, but sharing one warning
-/// icon for both made a "you haven't entered this month yet" nudge look as
-/// urgent as "backup 45 days overdue". Only [urgent] gets the warning glyph.
+/// Only [urgent] gets the warning glyph — one shared icon made a nudge look as urgent as an overdue backup.
 enum BannerUrgency { nudge, urgent }
 
 class InfoBanner extends StatelessWidget {
@@ -46,8 +43,7 @@ class InfoBanner extends StatelessWidget {
   }
 }
 
-/// Deliberately louder than [InfoBanner]: expenses exceeding income should
-/// jump out immediately.
+/// Deliberately louder than [InfoBanner]: expenses exceeding income should jump out immediately.
 class OverspendBanner extends StatelessWidget {
   const OverspendBanner({super.key, required this.expenseText, required this.incomeText, required this.onCheck});
 

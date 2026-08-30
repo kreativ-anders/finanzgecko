@@ -27,10 +27,7 @@ class SubscriptionTotals {
   const SubscriptionTotals({required this.totalIncome, required this.totalExpense, required this.net});
 }
 
-/// Central app state: loads the store once at startup, then keeps an in-memory
-/// copy of everything the UI needs. Every mutating action re-reads from the
-/// store afterwards and calls notifyListeners(), so all views stay in sync
-/// automatically.
+/// Central app state: every mutating action reloads from the store and notifies — see dev/ai/state-and-models.md.
 class AppState extends ChangeNotifier {
   AppState(this.store, {NotificationService? notificationService, UpdateService? updateService})
     : currencyService = CurrencyService(store),
@@ -44,8 +41,7 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
-    // Releases the HTTP connection pools — both services own a long-lived
-    // client so repeated lookups don't pay for a new connection each time.
+    // Releases the HTTP connection pools; both services hold a long-lived client.
     updateService.dispose();
     currencyService.dispose();
     super.dispose();
@@ -59,10 +55,7 @@ class AppState extends ChangeNotifier {
   List<Subscription> subscriptions = [];
   String baseCurrency = 'EUR';
 
-  // Dashboard UI preferences. Held here rather than as local State in
-  // DashboardView so they survive navigating away and back — AppState lives
-  // for the whole session, the view doesn't. Deliberately in-memory only, not
-  // persisted (see gherkin/dashboard.feature).
+  // Held here, not in DashboardView's State, so they survive navigating away; deliberately not persisted.
   HistoryRange? dashboardRangePreset;
   AccountSortOrder accountSortOrder = AccountSortOrder.standard;
   bool includeAssetsInTotal = false;
@@ -104,18 +97,13 @@ class AppState extends ChangeNotifier {
     await _checkReminderNotifications();
   }
 
-  /// Fires an OS notification exactly once per "episode" of an overdue backup
-  /// or Vermögenswerte reminder — not again on every app start while the state
-  /// stays overdue. The episode is reset by the resolving action (export, or
-  /// re-valuing/deleting a Vermögenswert; see [AppStore.setLastExportAt]/
-  /// [AppStore.updateAsset]/[AppStore.deleteAsset]). See
-  /// gherkin/notifications.feature.
+  /// Fires an OS notification once per overdue episode, not on every start — see gherkin/notifications.feature.
   Future<void> _checkReminderNotifications() async {
     if (!store.notificationsEnabled) return;
 
     final backup = getBackupReminder();
     if (backup.overdue && !store.backupOverdueNotified) {
-      await notificationService.show(title: 'FinanzGecko', body: backup.message);
+      await notificationService.show(id: kBackupNotificationId, title: 'FinanzGecko', body: backup.message);
       await store.markBackupOverdueNotified();
     }
 
@@ -123,10 +111,8 @@ class AppState extends ChangeNotifier {
     final notifiedIds = store.assetOverdueNotifiedIds;
     final newlyOverdue = overdueAssets.where((a) => !notifiedIds.contains(a.id)).toList();
     if (newlyOverdue.isNotEmpty) {
-      // One bundled message (like the dashboard banner), not one per
-      // Vermögenswert — otherwise many overdue assets would trigger a flood of
-      // notifications.
-      await notificationService.show(title: 'FinanzGecko', body: getAssetReminder()!);
+      // One bundled message instead of one per Vermögenswert, otherwise many overdue assets flood the user.
+      await notificationService.show(id: kAssetNotificationId, title: 'FinanzGecko', body: getAssetReminder()!);
       for (final asset in newlyOverdue) {
         await store.markAssetOverdueNotified(asset.id);
       }
@@ -162,8 +148,7 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
-  /// Looks up an account regardless of archived status ([accounts] holds only
-  /// active ones). Null if it no longer exists at all.
+  /// Looks up an account regardless of archived status; null if it no longer exists at all.
   Account? findAccount(int id) => store.getAccount(id);
 
   // ---------- Balances ----------
@@ -197,8 +182,7 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
-  /// Most recent balance strictly before [period] — shown as an orientation
-  /// hint while entering a new value.
+  /// Most recent balance strictly before [period] — the orientation hint shown while entering a new value.
   Balance? previousBalance(int accountId, String period) {
     final matches = balances.where((b) => b.accountId == accountId && b.period.compareTo(period) < 0).toList();
     if (matches.isEmpty) return null;
@@ -206,8 +190,7 @@ class AppState extends ChangeNotifier {
     return matches.last;
   }
 
-  // balances is kept sorted ascending by period, so the last matching entry
-  // is the most recent one for that account.
+  // balances is kept sorted ascending by period, so the last match is that account's most recent entry.
   Balance? latestBalanceForAccount(int accountId) {
     for (final b in balances.reversed) {
       if (b.accountId == accountId) return b;
@@ -229,8 +212,7 @@ class AppState extends ChangeNotifier {
   /// Sum of all account balances (in base currency) for [period].
   double totalForPeriod(String period) => balancesInPeriod(period).fold<double>(0, (sum, b) => sum + b.amountBase);
 
-  /// Including archived ones — only where their historical balances still
-  /// matter (e.g. the CSV export), not for normal display (see [accounts]).
+  /// Including archived ones — only where their historical balances still matter, e.g. the CSV export.
   List<Account> allAccountsIncludingArchived() => store.getAccounts(includeArchived: true);
 
   // ---------- Vermögenswerte ----------
@@ -264,8 +246,7 @@ class AppState extends ChangeNotifier {
     return '$n Vermögenswert${n == 1 ? '' : 'e'} seit über 6 Monaten nicht mehr neu bewertet: $names';
   }
 
-  /// Nudge to keep the monthly ritual going: fires when there's history but no
-  /// balance entry for the current month yet. Null when up to date (or empty).
+  /// Nudge when there is history but no entry for the current month yet; null when up to date or empty.
   String? getUpdateReminder() {
     if (balances.isEmpty) return null;
     final latest = balances.map((b) => b.period).reduce((a, b) => a.compareTo(b) > 0 ? a : b);
@@ -345,9 +326,13 @@ class AppState extends ChangeNotifier {
 
   bool get notificationsEnabled => store.notificationsEnabled;
 
-  Future<void> setNotificationsEnabled(bool value) async {
-    await store.setNotificationsEnabled(value);
+  /// Stores `true` only once macOS has actually granted authorization, and returns the value stored.
+  Future<bool> setNotificationsEnabled(bool value) async {
+    final granted = value ? await notificationService.requestPermission() : true;
+    final effective = value && granted;
+    await store.setNotificationsEnabled(effective);
     await _reloadAndNotify();
+    return effective;
   }
 
   AppThemeMode get themeMode => store.themeMode;
@@ -357,10 +342,7 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
-  /// Consent for fetching Wechselkurse (issue #16). `unset` means "never
-  /// asked" and is treated like a denial until the user has actually been
-  /// asked at the moment of entry — see
-  /// `ui/widgets/rate_consent_dialog.dart`.
+  /// Consent for fetching Wechselkurse; `unset` is treated like a denial until the user has been asked.
   RateFetchConsent get rateFetchConsent => store.rateFetchConsent;
 
   bool get mayFetchRates => store.mayFetchRates;
@@ -372,9 +354,7 @@ class AppState extends ChangeNotifier {
 
   DateTime? get lastExportAt => store.lastExportAt;
 
-  /// Where the encrypted database lives on disk — surfaced read-only in
-  /// Einstellungen → Sicherheit, and to open it in the OS file manager.
-  /// The location is not user-selectable, see [AppStore.resolveDataDirectory].
+  /// Where the encrypted database lives; the location is not user-selectable, see dev/ai/persistence.md.
   String get dataDirectoryPath => AppStore.resolveDataDirectory().path;
 
   Future<void> markExported() async {
@@ -382,10 +362,7 @@ class AppState extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
-  /// Earliest recorded activity across all data — the anchor for the "never
-  /// exported" backup reminder (see [getBackupReminder]). Null while the app is
-  /// completely empty, when there is nothing to back up and no reminder should
-  /// fire at all.
+  /// Earliest recorded activity — the anchor for the "never exported" reminder; null while the app is empty.
   DateTime? _firstActivityAt() {
     DateTime? earliest;
     void consider(DateTime candidate) {
@@ -410,19 +387,14 @@ class AppState extends ChangeNotifier {
   BackupReminder getBackupReminder() {
     final lastExportAt = store.lastExportAt;
     if (lastExportAt == null) {
-      // Nothing exported yet: only nag once there's something to lose, and
-      // only after it's had time to accumulate (see gherkin/dashboard.feature).
+      // Only nag once there is something to lose, and once it has had time to accumulate.
       final firstActivityAt = _firstActivityAt();
       if (firstActivityAt == null) {
         return const BackupReminder(overdue: false, message: 'Noch keine Daten erfasst.');
       }
       final days = daysSince(firstActivityAt);
       if (days >= kBackupReminderFirstDays) {
-        // The reminder is the only place most users ever learn about the
-        // export — so it says not just "make a backup" but also the two things
-        // that matter about it: keep it elsewhere, and that ONLY this file
-        // works on another machine. The data file itself cannot (see
-        // AppStore.resolveDataDirectory).
+        // INFO: this reminder is where most users first learn that ONLY the backup opens on another machine.
         return const BackupReminder(
           overdue: true,
           message:

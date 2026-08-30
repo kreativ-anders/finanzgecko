@@ -7,16 +7,51 @@ Feature: OS notifications for backup and Vermögenswerte reminders
 
   Background:
     Given the app is started and initialized
-    And Desktop-Benachrichtigungen are enabled (default)
+    And Desktop-Benachrichtigungen are switched on, unless a scenario says otherwise
 
-  Scenario: Notifications are enabled by default
-    Given a fresh installation with no prior setting
-    Then the "Desktop-Benachrichtigungen" toggle in Einstellungen is on
+  Rule: Opt-in — the feature is off until the user asks for it
 
-  Scenario: A disabled toggle suppresses both kinds of notifications
-    Given I turned off "Desktop-Benachrichtigungen" in Einstellungen
-    And both the backup and the Vermögenswerte reminder are overdue
-    Then no OS notification is sent
+    Scenario: Notifications are off by default
+      Given a fresh installation with no prior setting
+      Then the "Desktop-Benachrichtigungen" toggle in Einstellungen is off
+      And no OS notification is sent even while a reminder is overdue
+      And the operating system is never asked for permission
+
+    Scenario: An installation from before the opt-in switch also starts off
+      Given a data file written by an older version, in which the setting was on by default
+      When the app is started
+      Then the toggle is off, because that older value is deliberately not carried over
+      And nobody gets a permission prompt they did not ask for
+
+    Scenario: Switching the toggle on asks macOS for permission
+      Given the toggle is off
+      When I switch it on
+      Then macOS asks once for permission for notifications
+      And with permission granted the toggle stays on
+      And a reminder that is already overdue notifies right away
+
+    Scenario: A denied permission does not leave a toggle that lies
+      Given I switch the toggle on
+      When the operating system refuses
+      Then the toggle stays off
+      And a note explains that this can be changed in the Systemeinstellungen under "Mitteilungen"
+      And the app does not ask again — macOS only asks once per user
+
+    Scenario: Switching off needs no permission
+      When I switch the toggle off
+      Then the operating system is not asked
+
+  Rule: The toggle governs both kinds
+
+    Scenario: A disabled toggle suppresses both kinds of notifications
+      Given I turned off "Desktop-Benachrichtigungen" in Einstellungen
+      And both the backup and the Vermögenswerte reminder are overdue
+      Then no OS notification is sent
+
+    Scenario: Both kinds in one cycle stay visible side by side
+      Given the backup reminder and a Vermögenswert both newly become overdue in the same check
+      Then two separate notifications appear
+      And neither replaces the other — they carry distinct notification ids
 
   Rule: Backup reminder — once per overdue episode
 
@@ -75,9 +110,14 @@ Feature: OS notifications for backup and Vermögenswerte reminders
       Given the app isn't running
       Then no notification is sent even if a reminder becomes overdue in the meantime
       And the check catches up only at the next start resp. while the app is running again afterward (no
-        background service, see AI_MASTER.md §2/§6)
+        background service, see dev/ai/stack.md/§6)
 
     Scenario: A missing notification backend must never crash the app
       Given no notification daemon is available (e.g. a minimal Linux setup) or permission was denied
       Then the notification silently doesn't happen
       And every other app function stays unaffected
+
+    Scenario: The Dashboard banners are the primary channel
+      Given the toggle is off
+      Then the backup and Vermögenswerte reminders still appear as banners on the Dashboard
+      And the notification only ever duplicates them outside the window, it never replaces them

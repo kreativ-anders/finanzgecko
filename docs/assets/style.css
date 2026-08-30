@@ -28,7 +28,7 @@
 
 /* Helle Palette — 1:1 die Light-Tokens aus lib/ui/theme.dart, damit Website und
    App im selben Systemtheme gleich aussehen. Die Markenfarben (--primary,
-   --danger) bleiben in beiden Themes identisch, siehe AI_MASTER.md §5. */
+   --danger) bleiben in beiden Themes identisch, siehe dev/ai/design-tokens.md. */
 @media (prefers-color-scheme: light) {
   :root {
     --bg: #f4f7f5;
@@ -509,7 +509,7 @@ header.site nav a:hover {
   padding: 28px;
 }
 
-/* --primary-text, nicht --primary: als Rahmenindikator gilt die AI_MASTER-§5-Regel
+/* --primary-text, nicht --primary: als Rahmenindikator gilt die dev/ai/design-tokens.md-Regel
    (Markenfarbe, die einen Rahmen/Fokus färbt → *Text-Variante). #00c878 erreicht
    auf dem hellen Theme nur 2,2:1 gegen --surface und wäre als 1px-Rahmen praktisch
    unsichtbar; #00814d liegt bei 4,9:1. Im Dark Theme sind beide Tokens identisch. */
@@ -744,7 +744,7 @@ footer.site .wrap {
    suggerieren, mit der App stimme etwas nicht. Der schmale linke Akzent hebt
    sie trotzdem aus dem Fließtext heraus.
    Akzent wie bei .card.note: Rahmenindikator, also --primary-text statt
-   --primary (das käme hell nur auf 2,2:1). Siehe AI_MASTER §5. */
+   --primary (das käme hell nur auf 2,2:1). Siehe dev/ai/design-tokens.md. */
 .download-note {
   padding: 0 0 24px;
 }

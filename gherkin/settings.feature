@@ -27,8 +27,10 @@ Feature: Einstellungen
       setting
 
   Scenario: Turn desktop notifications on/off
-    Then the "Benachrichtigungen" section shows a "Desktop-Benachrichtigungen" toggle, on by default
-    When I turn the toggle off
+    Then the "Benachrichtigungen" section shows a "Desktop-Benachrichtigungen" toggle, off by default
+    When I turn the toggle on
+    Then macOS asks once for permission, and only with permission granted does the toggle stay on
+    When I turn the toggle off again
     Then no more OS notifications are sent from now on (detail behavior: see gherkin/notifications.feature)
 
   Scenario: Security information is viewable, but not sensitive
@@ -126,7 +128,7 @@ Feature: Einstellungen
     Then the app queries the project's public GitHub releases API (kreativ-anders/finanzgecko) for the
       latest release tag and compares it against the installed version
     And this query happens only on this click — no automatic background check at app start or periodically
-      while running (see AI_MASTER.md Section 6)
+      while running (see dev/ai/platform.md)
     Given a newer version is available
     Then a dialog "Update verfügbar" opens with the new version number and the currently installed version,
       plus the buttons "Später" (closes the dialog with no action) and "Herunterladen"

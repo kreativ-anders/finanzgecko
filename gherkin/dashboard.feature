@@ -194,7 +194,7 @@ Feature: Dashboard — net-worth overview
         Computers auf. Nur das Backup lässt sich auf einem anderen Rechner öffnen." appears
       And the text deliberately names both — the storage location and portability: for most users this
         reminder is the only place they ever learn about export, and there's deliberately no automatic
-        backup (see AI_MASTER §4.1)
+        backup (see dev/ai/persistence.md)
       Given the earliest recorded activity is less than kBackupReminderFirstDays ago
       Then no backup reminder banner appears yet (only an unobtrusive note in Einstellungen)
 

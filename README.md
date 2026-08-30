@@ -10,7 +10,7 @@ Download for end users: [Website](https://finanzgecko.app/) ·
 
 This entire codebase was written by AI (Claude), but not through freeform "vibe coding." Every behavior is
 specified as a [Gherkin](https://cucumber.io/docs/gherkin/) scenario in [gherkin/](gherkin/) and tied to
-[AI_MASTER.md](AI_MASTER.md), the single source of truth for architecture, data models, and conventions. New
+the AI reference set in [dev/ai/](dev/ai/), the source of truth for architecture, data models, and conventions. New
 work navigates spec → owning file → test instead of re-deriving context from the whole repo each time — which
 keeps generated code consistent with what's already there, and keeps the context/token cost of each change down.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the actual workflow.
@@ -46,8 +46,9 @@ packaging, and the icon pipeline: [dev/building.md](dev/building.md).
 | `lib/utils/analysis.dart` | Pure, testable computation logic (trend, projection, KPIs) |
 | `gherkin/` | Behavioral specification (Gherkin) |
 
-Full reference (data flow, domain glossary, feature↔test mapping): [AI_MASTER.md](AI_MASTER.md) — keeps the
-binding German domain terms untranslated inline (see "Doc language" in §3 for why). Architecture decisions in
+Full reference (data flow, domain glossary, feature↔test mapping): [dev/ai/](dev/ai/), routed from
+[CLAUDE.md](CLAUDE.md) — keeps the binding German domain terms untranslated inline (see "Doc language" in
+[dev/ai/structure.md](dev/ai/structure.md) for why). Architecture decisions in
 detail (encryption, why no DB engine, window behavior): [dev/architecture.md](dev/architecture.md).
 
 ## Contributing

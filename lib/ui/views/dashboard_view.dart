@@ -19,8 +19,7 @@ class DashboardView extends StatelessWidget {
 
   final ValueChanged<AppView> onNavigate;
 
-  /// Opens "Einträge" positioned on one account — separate from [onNavigate],
-  /// which carries no payload.
+  /// Opens "Einträge" positioned on one account — [onNavigate] carries no payload.
   final ValueChanged<int> onOpenAccountEntry;
 
   @override
@@ -56,8 +55,7 @@ class DashboardView extends StatelessWidget {
         InfoBanner(message: assetReminder, actionLabel: 'Jetzt prüfen', onAction: () => onNavigate(AppView.assets)),
     ];
 
-    // Resolved once and threaded through every time-based card below, so the
-    // filter drives the whole dashboard.
+    // Resolved once and threaded through every time-based card, so the filter drives the whole dashboard.
     final available = availableRanges(allPeriods);
     final storedPreset = app.dashboardRangePreset;
     final preset = (storedPreset != null && available.contains(storedPreset)) ? storedPreset : defaultRange(available);
@@ -124,12 +122,8 @@ class DashboardView extends StatelessWidget {
   }
 }
 
-/// Onboarding hero shown in place of the charts until there's at least one
-/// balance entry — staged in two steps so the call to action matches what's
-/// actually missing (an account first, then a first Kontostand). `Center` is
-/// required because this sits inside a Column with crossAxisAlignment.start;
-/// without it the block would shrink-wrap and "center" relative to itself,
-/// i.e. look left-aligned.
+// WARNING: the Center is required — inside a crossAxisAlignment.start Column the block otherwise shrink-wraps.
+/// Onboarding hero shown until the first balance exists; the call to action matches what is still missing.
 class _EmptyDashboard extends StatelessWidget {
   const _EmptyDashboard({required this.onNavigate, required this.hasAccounts});
 
@@ -203,9 +197,7 @@ class _TotalsOverview extends StatelessWidget {
       return acc != null && acc.currency != app.baseCurrency;
     });
 
-    // Vermögenswerte (Sachwerte) have no monthly history, so including them
-    // only adds a constant to the headline — the delta and the
-    // contribution/market split are account-based and unaffected.
+    // INFO: Sachwerte have no monthly history, so they only shift the headline — delta and split stay account-based.
     final assetsTotal = app.assets.fold<double>(0, (sum, a) => sum + a.value);
     final hasAssets = app.assets.isNotEmpty;
     final withAssets = app.includeAssetsInTotal && hasAssets;
@@ -215,14 +207,8 @@ class _TotalsOverview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          // Bottom deliberately smaller than top: this block has no
-          // SectionCard border of its own, and the next section already adds
-          // cardGap (20) plus its own 20px top padding — a symmetric 16 here
-          // made the gap to "Verlauf" nearly 5x the intra-block line gap.
+          // Bottom smaller than top: cardGap (20) plus the next section's own 20px top padding already separate them.
           padding: const EdgeInsets.only(top: 16, bottom: 4),
-          // The range filter is a global control, so it sits top-right,
-          // anchored to the top of the block, instead of sharing a baseline
-          // with a caption line.
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -230,9 +216,7 @@ class _TotalsOverview extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Overline stands alone — the "inkl. Sachwerte" switch
-                    // sits under the number it controls instead of competing
-                    // with this line at nearly the same weight.
+                    // Overline stands alone: the "inkl. Sachwerte" switch sits under the number it controls.
                     Text(
                       withAssets
                           ? 'GESAMTVERMÖGEN INKL. SACHWERTE · STAND ${periodLabel(latestPeriod).toUpperCase()}'
@@ -271,10 +255,7 @@ class _TotalsOverview extends StatelessWidget {
                       )
                     else
                       Text('Noch kein Vergleichsmonat', style: TextStyle(color: kMuted)),
-                    // Contributions are estimated from the Fixposten net
-                    // (scaled by the month gap), the rest is market/other
-                    // movement. Rounded to whole units — the split is an
-                    // estimate, so cents would be false precision.
+                    // INFO: contributions estimated from the Fixposten net; rounded because the split is an estimate.
                     if (delta != null && prevPeriod != null && app.subscriptions.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Builder(
@@ -304,9 +285,7 @@ class _TotalsOverview extends StatelessWidget {
                         },
                       ),
                     ],
-                    // Shown ONLY when the latest month is missing accounts.
-                    // At full coverage the line is noise; when incomplete it
-                    // is a real "your total is understated" flag.
+                    // Shown only when the latest month is incomplete — at full coverage the line is noise.
                     if (entriesInLatest < app.accounts.length) ...[
                       const SizedBox(height: 12),
                       Row(
@@ -325,9 +304,6 @@ class _TotalsOverview extends StatelessWidget {
                     ],
                     if (hasForeignCurrencyInTotal) ...[
                       const SizedBox(height: 12),
-                      // Capped to a readable width — at the dashboard's full
-                      // ~1100px content width this line would stretch well
-                      // past a comfortable measure.
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 560),
                         child: Row(
@@ -370,9 +346,7 @@ extension on HistoryRange {
   };
 }
 
-/// The "Verlauf" card: total net worth over the active window, with a forward
-/// projection. [includesLatest] says whether the window reaches the most
-/// recent entry — only then is a projection drawn.
+/// The "Verlauf" card: net worth over the active window, with a projection only when [includesLatest].
 class _HistoryCard extends StatelessWidget {
   const _HistoryCard({required this.periods, required this.app, required this.includesLatest});
 
@@ -386,10 +360,7 @@ class _HistoryCard extends StatelessWidget {
     final chartData = [for (final p in filtered) ChartPoint(periodLabel(p), app.totalForPeriod(p))];
     final values = [for (final p in filtered) app.totalForPeriod(p)];
 
-    // Projection: least-squares trend of the actual history, stabilized by
-    // the Fixposten net as a decaying prior (see utils/analysis.dart). Only
-    // drawn when the window reaches the latest entry — never from a stale
-    // anchor, so it disappears on "Letztes Jahr".
+    // INFO: trend from least squares, stabilized by the Fixposten net (utils/analysis.dart); latest window only.
     final net = app.computeSubscriptionTotals().net;
     final months = (includesLatest && filtered.isNotEmpty) ? monthsToYearEnd(filtered.last) : 0;
 
@@ -436,8 +407,6 @@ class _HistoryCard extends StatelessWidget {
                 } else {
                   basis = 'Prognose aus den Fixposten (noch wenig Verlauf)';
                 }
-                // The rate is the one number worth reading at a glance;
-                // basis and endpoint are detail, demoted to a second line.
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -460,9 +429,7 @@ class _HistoryCard extends StatelessWidget {
   }
 }
 
-/// Net worth split by Kontotyp across every recorded month — a stacked area so
-/// allocation drift (e.g. a growing Depot share) becomes visible over time,
-/// which the single-month donut can't show.
+/// Net worth by Kontotyp over time — a stacked area makes allocation drift visible, which the donut cannot.
 class _CompositionCard extends StatelessWidget {
   const _CompositionCard({required this.app, required this.periods});
 
@@ -477,15 +444,13 @@ class _CompositionCard extends StatelessWidget {
       final acc = app.findAccount(b.accountId);
       if (acc != null && acc.tag == tag) sum += b.amountBase;
     }
-    // Negative balances (e.g. an overdrawn account) can't stack sensibly, so
-    // the composition shows positive holdings only.
+    // Negative balances (overdrawn account) can't stack, so the composition shows positive holdings only.
     return sum < 0 ? 0 : sum;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Tags actually in use, ordered by the canonical kTags order, with any
-    // custom tags appended so nothing is dropped.
+    // Ordered by the canonical kTags order, with custom tags appended so nothing is dropped.
     final used = app.accounts.map((a) => a.tag).toSet();
     final orderedTags = <String>[
       for (final t in kTags)
@@ -584,9 +549,7 @@ class _StatsCard extends StatelessWidget {
   }
 }
 
-/// Like [Wrap], but avoids a trailing row of exactly one tile by pulling the
-/// previous row's last tile forward into it — so a resize never strands a
-/// single tile by itself.
+/// Like [Wrap], but never strands a single tile alone in the last row.
 class _BalancedMetricsGrid extends StatelessWidget {
   const _BalancedMetricsGrid({
     required this.itemWidths,
@@ -629,8 +592,7 @@ class _BalancedMetricsGrid extends StatelessWidget {
   }
 }
 
-/// Greedily packs item indices into rows fitting [maxWidth], then borrows the
-/// previous row's last item if exactly one would be left alone at the end.
+/// Packs item indices into rows fitting [maxWidth], borrowing one back if the last row would hold just one.
 List<List<int>> _packRows(List<double> widths, double maxWidth, double spacing) {
   final rows = <List<int>>[];
   var current = <int>[];
@@ -711,9 +673,7 @@ class _PresetChip extends StatelessWidget {
   }
 }
 
-/// Sort control for the Konto-Karten grid. A compact popup rather than a
-/// [_PresetChip] row like the range filter, since six options would crowd the
-/// header; each entry pairs its label with a directional icon.
+/// Sort control for the Konto-Karten grid — a popup rather than chips, since six options would crowd the header.
 class _AccountSortSelector extends StatelessWidget {
   const _AccountSortSelector({required this.selected, required this.onChanged});
 
@@ -790,9 +750,7 @@ extension on AccountSortOrder {
   };
 }
 
-/// Non-interactive header chip breaking the total change into "eingezahlt"
-/// vs. "Markt". [tint] drives both the faint fill and the icon/text color, so
-/// it reads as a quiet label rather than a button.
+/// Non-interactive chip splitting the change into "eingezahlt" vs. "Markt"; [tint] drives fill and text.
 class _SplitChip extends StatelessWidget {
   const _SplitChip({required this.icon, required this.label, required this.tint});
 
@@ -976,15 +934,8 @@ class _AccountCard extends StatelessWidget {
     final points = [for (final b in accBalances) ChartPoint(periodLabel(b.period), b.amountBase)];
     final latest = app.latestBalanceForAccount(acc.id);
 
-    // Whole card is the click target, not just the chart: the 70px chart
-    // alone is a small, hard-to-discover hit area. The Card's own radius (12,
-    // see theme.dart cardTheme) is repeated on the InkWell so the hover/splash
-    // doesn't bleed over the rounded corners.
-    //
-    // `noSelect` is what makes the hand cursor appear: the app-wide
-    // SelectionArea's text cursor sits *deeper* in the tree than the InkWell
-    // and would otherwise win. Same rule for any clickable surface with text,
-    // see AI_MASTER §5.
+    // WARNING: repeat the Card's radius (12) on the InkWell or the hover/splash bleeds over the rounded corners.
+    // WARNING: noSelect keeps the hand cursor — the SelectionArea text cursor sits deeper (dev/ai/ui-conventions.md).
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -1028,8 +979,6 @@ class _AccountCard extends StatelessWidget {
                     latest != null ? fmtMoney(latest.amountBase, app.baseCurrency) : '—',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  // Month-over-month change, so each card shows direction at
-                  // a glance, not just the current figure.
                   if (latest != null)
                     Builder(
                       builder: (context) {
@@ -1061,24 +1010,18 @@ class _AccountCard extends StatelessWidget {
   }
 }
 
-/// Low-emphasis label for the account's Kontotyp — the bank is the card's
-/// primary identity now, since the type mostly matters only at creation.
+/// Low-emphasis label for the account's Kontotyp — the bank is the card's primary identity.
 class _TagChip extends StatelessWidget {
   const _TagChip({required this.tag, required this.accountColorHex});
 
   final String tag;
 
-  /// The account's own accent color rather than the Kontotyp color, so the
-  /// chip matches the dot and mini chart on the same card.
+  /// The account's accent color, not the Kontotyp color, so the chip matches the dot and mini chart.
   final String accountColorHex;
 
   @override
   Widget build(BuildContext context) {
-    // Bank brand colors are logo colors and fail as 11px bold text on our
-    // surfaces (#000000 on the dark card, #ffe600 on the light one), so the
-    // *label* uses the contrast-corrected variant. The 15% fill keeps the
-    // untouched brand color — as a background it has no contrast requirement
-    // and is what makes the chip read as "that bank".
+    // INFO: bank colors fail as text, so only the label is contrast-corrected — see dev/ai/design-tokens.md.
     final fill = colorFromHex(accountColorHex);
     final label = colorFromHex(readableOn(accountColorHex, kSurfaceHex));
     return Container(
@@ -1191,9 +1134,7 @@ class _SubscriptionsSection extends StatelessWidget {
   }
 }
 
-// Getters, not `const`/`final` fields: kMuted resolves against the current
-// theme, so a cached value would freeze at whatever theme was active on
-// first use and never follow a later Hell/Dunkel switch.
+// WARNING: getters, not fields — a cached kMuted freezes at the theme active on first use.
 TextStyle get _metricLabelStyle => TextStyle(color: kMuted, fontSize: 13);
 const _metricValueStyle = TextStyle(fontSize: 20, fontWeight: FontWeight.bold);
 TextStyle get _metricSubValueStyle => TextStyle(color: kMuted, fontSize: 12);
@@ -1220,9 +1161,7 @@ class _SummaryItem extends StatelessWidget {
   }
 }
 
-/// Natural width a single metric tile needs (the widest of its label, value
-/// and subValue) — measured from the real text/style rather than guessed, so
-/// [_BalancedMetricsGrid] packs rows as tightly as the content allows.
+/// Natural width a metric tile needs, measured from real text so [_BalancedMetricsGrid] can pack tightly.
 double _metricTileWidth(BuildContext context, {required String label, required String value, String? subValue}) {
   final scaler = MediaQuery.textScalerOf(context);
   double measure(String text, TextStyle style) {

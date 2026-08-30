@@ -84,14 +84,17 @@ void main() {
 
     test('liefert die Release-Assets mit, damit kein zweiter Aufruf nötig ist', () async {
       final client = MockClient(
-        (request) async => http.Response(jsonEncode({
-          'tag_name': 'v2.0.0',
-          'assets': [
-            {'name': 'FinanzGecko-2.0.0-mac.dmg', 'browser_download_url': 'https://example.test/dmg'},
-            {'name': 'SHA256SUMS', 'browser_download_url': 'https://example.test/sums'},
-            {'name': 'kaputt'},
-          ],
-        }), 200),
+        (request) async => http.Response(
+          jsonEncode({
+            'tag_name': 'v2.0.0',
+            'assets': [
+              {'name': 'FinanzGecko-2.0.0-mac.dmg', 'browser_download_url': 'https://example.test/dmg'},
+              {'name': 'SHA256SUMS', 'browser_download_url': 'https://example.test/sums'},
+              {'name': 'kaputt'},
+            ],
+          }),
+          200,
+        ),
       );
 
       final result = await UpdateService(client: client).checkForUpdate(currentVersion: '1.3.3');
@@ -154,7 +157,10 @@ void main() {
     });
 
     test('meldet unavailable, wenn das Release keine SHA256SUMS beilegt (ältere Releases)', () async {
-      final service = UpdateService(allowedAssetHosts: fakeHosts, client: clientWith(sums: ''));
+      final service = UpdateService(
+        allowedAssetHosts: fakeHosts,
+        client: clientWith(sums: ''),
+      );
 
       final result = await service.downloadAndVerify(
         assets: const {assetName: 'https://example.test/dmg'},

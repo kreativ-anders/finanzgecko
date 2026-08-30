@@ -1,36 +1,27 @@
-/// Pure, UI-free analysis helpers for the dashboard and capture screens.
-/// Deterministic and side-effect free, so it is unit testable without a
-/// Flutter binding (see test/analysis_test.dart).
+/// Pure, deterministic, UI-free analysis helpers — see dev/ai/analysis.md.
 library;
 
-/// Whole calendar months from period [a] to [b], both "YYYY-MM".
-/// Negative if [b] precedes [a].
+/// Whole calendar months from period [a] to [b] (both "YYYY-MM"), negative if [b] precedes [a].
 int monthsBetweenPeriods(String a, String b) {
   final pa = a.split('-');
   final pb = b.split('-');
   return (int.parse(pb[0]) - int.parse(pa[0])) * 12 + (int.parse(pb[1]) - int.parse(pa[1]));
 }
 
-/// Months from [period] ("YYYY-MM") to the end of its calendar year. December
-/// has nowhere to go within the year, so it returns a full 12 (project a year
-/// ahead) rather than 0.
+/// Months from [period] to the end of its calendar year; December returns a full 12, not 0.
 int monthsToYearEnd(String period) {
   final remaining = 12 - int.parse(period.split('-')[1]);
   return remaining <= 0 ? 12 : remaining;
 }
 
-/// [period] ("YYYY-MM") advanced by [months] (year rollover handled by
-/// [DateTime]'s own month-overflow normalization).
+/// [period] advanced by [months], year rollover handled by [DateTime]'s month-overflow normalization.
 String addMonthsToPeriod(String period, int months) {
   final parts = period.split('-');
   final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]) + months);
   return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
 }
 
-/// Ordinary least-squares fit of [ys] against [xs] (same length; x need not be
-/// contiguous — a gap is just a larger step). Null with fewer than two points
-/// or a degenerate fit. The general form behind [trendSlopePerMonth], used
-/// directly where the x-axis isn't a plain 0..n-1 index.
+/// Ordinary least-squares fit of [ys] against [xs]; null with fewer than two points or a degenerate fit.
 ({double slope, double intercept})? olsTrend(List<double> xs, List<double> ys) {
   final n = xs.length;
   if (n < 2) return null;
@@ -54,17 +45,12 @@ String addMonthsToPeriod(String period, int months) {
   return (slope: slope, intercept: yMean - slope * xMean);
 }
 
-/// Ordinary least-squares slope (change per step) of [values] against their
-/// indices 0..n-1 — the observed per-month trend. Null with fewer than two
-/// values or a degenerate fit.
+/// OLS slope of [values] against their indices — the observed per-month trend, null on a degenerate fit.
 double? trendSlopePerMonth(List<double> values) =>
     olsTrend([for (var i = 0; i < values.length; i++) i.toDouble()], values)?.slope;
 
-/// Blends a statistical [trendRate] with a [planRate] prior (the Fixposten
-/// net). The trend is primary; the plan only stabilizes small samples, its
-/// weight decaying as [trendPoints] grows past [priorStrength]. The plan is
-/// NOT added to the trend — both estimate the same monthly rate, so adding
-/// would double-count the recurring part. Null when neither basis exists.
+/// Blends a statistical [trendRate] with a [planRate] prior whose weight decays as [trendPoints] grows.
+// WARNING: the plan is not added to the trend — both estimate the same monthly rate, adding double-counts it.
 double? projectionRate({double? planRate, double? trendRate, required int trendPoints, double priorStrength = 3}) {
   if (trendRate != null && planRate != null) {
     final wTrend = trendPoints / (trendPoints + priorStrength);
@@ -73,9 +59,7 @@ double? projectionRate({double? planRate, double? trendRate, required int trendP
   return trendRate ?? planRate;
 }
 
-/// Splits a net-worth change [delta] into the part explained by planned
-/// contributions ([monthlyNet] × [monthGap]) and the residual attributed to
-/// market/other movement. Both are estimates.
+/// Splits a net-worth change [delta] into planned contributions and the residual market/other movement.
 ({double contributions, double market}) contributionMarketSplit({
   required double delta,
   required double monthlyNet,
@@ -85,8 +69,7 @@ double? projectionRate({double? planRate, double? trendRate, required int trendP
   return (contributions: contributions, market: delta - contributions);
 }
 
-/// True when [entered] is at least 10× larger or smaller than [previous] — the
-/// signature of a mistyped digit. False when either side is zero (no basis).
+/// True when [entered] is at least 10× off [previous] — the signature of a mistyped digit.
 bool isBalanceAnomaly(double entered, double previous) {
   if (entered == 0 || previous == 0) return false;
   final ratio = entered.abs() / previous.abs();
@@ -109,13 +92,11 @@ class NetWorthStats {
   /// Largest loss, or least-positive change.
   final MonthChange worst;
 
-  /// Mean change.
   final double averageChange;
 
   /// Months whose change was strictly positive.
   final int monthsUp;
 
-  /// Changes considered.
   final int changeCount;
 
   /// Net growth from the first recorded total to the last.
@@ -124,7 +105,6 @@ class NetWorthStats {
   /// What [totalGrowth] is measured from.
   final String startPeriod;
 
-  /// Highest total ever recorded, and the period it occurred in.
   final double peak;
   final String peakPeriod;
 
@@ -144,9 +124,7 @@ class NetWorthStats {
   double get upShare => changeCount == 0 ? 0 : monthsUp / changeCount;
 }
 
-/// Computes [NetWorthStats] from a period-ordered [series] of totals. Returns
-/// null with fewer than two points (no change to measure). [series] is assumed
-/// sorted ascending by period.
+/// [NetWorthStats] from a period-ordered [series]; null below two points, [series] assumed sorted ascending.
 NetWorthStats? computeNetWorthStats(List<({String period, double total})> series) {
   if (series.length < 2) return null;
   MonthChange? best;
@@ -182,12 +160,10 @@ NetWorthStats? computeNetWorthStats(List<({String period, double total})> series
   );
 }
 
-/// The dashboard-wide time-range presets. German labels live in the UI; the
-/// filtering logic here is pure and testable.
+/// The dashboard-wide time-range presets; the German labels live in the UI.
 enum HistoryRange { ytd, twelveMonths, lastYear, all }
 
-/// The subset of [all] ("YYYY-MM", ascending) that falls within [range].
-/// [now] is injectable so the calendar-relative ranges are testable.
+/// The subset of [all] within [range]; [now] is injectable so calendar-relative ranges stay testable.
 List<String> periodsForRange(List<String> all, HistoryRange range, {DateTime? now}) {
   final ref = now ?? DateTime.now();
   final currentYear = ref.year;
@@ -206,8 +182,7 @@ List<String> periodsForRange(List<String> all, HistoryRange range, {DateTime? no
   }
 }
 
-/// Ranges worth offering: a narrower preset appears only when it yields a
-/// distinct, non-empty window. "Alle" is always present and last.
+/// Ranges worth offering: a narrower preset appears only when it yields a distinct, non-empty window.
 List<HistoryRange> availableRanges(List<String> all, {DateTime? now}) {
   if (all.isEmpty) return const [HistoryRange.all];
   String sig(List<String> r) => r.isEmpty ? '' : '${r.first}|${r.last}|${r.length}';
@@ -223,20 +198,15 @@ List<HistoryRange> availableRanges(List<String> all, {DateTime? now}) {
   return result;
 }
 
-/// The initial range: "Dieses Jahr" when it's a distinct option, otherwise
-/// "Alle".
+/// The initial range: "Dieses Jahr" when it is a distinct option, otherwise "Alle".
 HistoryRange defaultRange(List<HistoryRange> available) =>
     available.contains(HistoryRange.ytd) ? HistoryRange.ytd : HistoryRange.all;
 
-/// Sort order for the dashboard's Konto-Karten grid. German labels/icons live
-/// in the UI; `standard` keeps the caller's existing order (account creation
-/// order).
+/// Sort order for the dashboard's Konto-Karten grid; `standard` keeps the caller's existing order.
 enum AccountSortOrder { standard, nameAsc, amountDesc, amountAsc, changeDesc, changeAsc }
 
-/// Sorts [items] per [order]. Generic rather than importing the `Account`
-/// model, so this file stays dependency-free; [amountFor]/[changeFor] return
-/// null when an item has no balance yet, which sorts it last. Ties (including
-/// all of [AccountSortOrder.standard]) preserve the original order.
+/// Sorts [items] per [order]; a null amount/change sorts last and ties preserve the original order.
+// INFO: generic rather than importing the Account model, so this file stays dependency-free.
 List<T> sortAccounts<T>(
   List<T> items,
   AccountSortOrder order, {

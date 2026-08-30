@@ -4,11 +4,7 @@ import '../../data/app_store.dart';
 import '../app_view.dart';
 import '../theme.dart';
 
-/// Maps a caught error to German user-facing text. The data layer's own
-/// exceptions (see `data/app_store.dart`) intentionally carry no message
-/// text — composing it is a UI-layer concern, kept in this one place so it
-/// doesn't get re-derived ad hoc at every catch site. Anything else falls
-/// back to its own string form.
+/// Maps a caught error to German user-facing text, in one place instead of at every catch site.
 String describeError(Object err) {
   if (err is RecordNotFoundException) {
     return switch (err.entity) {
@@ -36,16 +32,8 @@ String describeError(Object err) {
 DateTime? _lastSavedSnackBarAt;
 String? _lastSavedSnackBarMessage;
 
-/// Standard confirmation snackbar shown after any successful user change
-/// (save, add, delete, settings update, …) so feedback is consistent across
-/// the whole app.
-///
-/// Editing several rows in quick succession (e.g. bumping a handful of
-/// Fixposten amounts after a price hike) used to retrigger this on every
-/// single field's debounced save — each call hides the current bar and shows
-/// a fresh one, so the confirmation visibly flickered instead of reading as
-/// one calm "saved". Repeat calls with the same message within a short
-/// window are treated as one ongoing save and don't restart the bar.
+// WARNING: repeated same-message calls inside 800ms are coalesced — otherwise debounced row edits flicker the bar.
+/// Standard confirmation snackbar after any successful user change.
 void showSavedSnackBar(BuildContext context, ValueChanged<AppView> onNavigate, {String message = 'Gespeichert.'}) {
   final now = DateTime.now();
   if (_lastSavedSnackBarMessage == message &&
@@ -63,29 +51,20 @@ void showSavedSnackBar(BuildContext context, ValueChanged<AppView> onNavigate, {
     SnackBar(
       content: Text(message),
       duration: const Duration(seconds: 3),
-      // SnackBar defaults `persist` to true whenever an `action` is set, which
-      // disables the auto-dismiss timer entirely (it just sits there until
-      // replaced or dismissed) — force it off so the confirmation still
-      // times out on its own.
+      // INFO: SnackBar sets persist whenever an action is present, which disables the auto-dismiss timer.
       persist: false,
       action: SnackBarAction(label: 'Zum Dashboard', onPressed: () => onNavigate(AppView.dashboard)),
     ),
   );
 }
 
-/// Standard error/validation snackbar, styled in the danger color so it reads
-/// as distinct from the (neutral) success snackbar above. Always hides
-/// whatever snackbar is currently showing first — without that, a validation
-/// error retriggered on every keystroke (e.g. while a field is transiently
-/// invalid) queues up behind itself and the bar never seems to go away.
+/// Error snackbar in the danger color; hides the current bar first, or repeated errors queue up behind it.
 void showErrorSnackBar(BuildContext context, String message) {
   final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(
-      // Same near-black-on-danger pairing as OverspendBanner/reset_confirm_dialog:
-      // white text on kDanger measures ~2.8:1, short of WCAG AA's 4.5:1 minimum,
-      // since kDanger is deliberately identical light/dark (see theme.dart).
+      // INFO: near-black on kDanger — white text there measures ~2.8:1, short of WCAG AA.
       content: Text(message, style: const TextStyle(color: Color(0xFF2B0000))),
       duration: const Duration(seconds: 4),
       backgroundColor: kDanger,

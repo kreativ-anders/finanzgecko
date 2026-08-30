@@ -5,8 +5,7 @@ import '../../utils/formatting.dart';
 import '../theme.dart';
 import 'line_chart.dart' show kChartBorderHidden, kChartGridHidden, kChartLineTouchDisabled, kChartTitlesHidden;
 
-/// One band of a stacked-area chart: a labelled, coloured series with one
-/// value per period (bottom-to-top stacking order is the list order).
+/// One band of a stacked-area chart; list order is the bottom-to-top stacking order.
 class StackedSeries {
   final String label;
   final Color color;
@@ -17,14 +16,7 @@ class StackedSeries {
   const StackedSeries({required this.label, required this.color, required this.values});
 }
 
-/// A small stacked-area chart: shows how a total splits across categories over
-/// time (e.g. net worth by Kontotyp across months), so allocation drift is
-/// visible in a way a single-month snapshot can't show.
-///
-/// Stacking is done by drawing each series' cumulative line filled to zero,
-/// back-to-front (largest cumulative first), so each visible band sits between
-/// its own cumulative and the one below it. Values are assumed non-negative
-/// (callers clamp), which keeps the stack monotonic.
+/// Stacked-area chart drawn as cumulative lines filled to zero, back-to-front; values must be non-negative.
 class AppStackedAreaChart extends StatelessWidget {
   const AppStackedAreaChart({
     super.key,
@@ -40,8 +32,7 @@ class AppStackedAreaChart extends StatelessWidget {
   final double height;
   final String currency;
 
-  /// Adds a mouse-hover crosshair + tooltip listing every active series'
-  /// value at the hovered period — mirrors [AppLineChart.showHover].
+  /// Adds a hover crosshair + tooltip listing every active series at that period.
   final bool showHover;
 
   @override
@@ -79,8 +70,7 @@ class AppStackedAreaChart extends StatelessWidget {
     final maxY = totals.reduce((a, b) => a > b ? a : b);
     final axisMaxY = maxY <= 0 ? 1.0 : maxY * 1.08;
 
-    // Back-to-front: largest cumulative first so smaller ones paint on top,
-    // leaving each band's own colour visible between two cumulative lines.
+    // Largest cumulative first so the smaller bands paint on top and stay visible.
     final bars = <LineChartBarData>[];
     for (var j = active.length - 1; j >= 0; j--) {
       final color = active[j].color;
@@ -91,8 +81,7 @@ class AppStackedAreaChart extends StatelessWidget {
           color: color,
           barWidth: 1,
           dotData: const FlDotData(show: false),
-          // Solid fill via a single-colour gradient — matches AppLineChart's
-          // belowBarData usage, which is known to work with this fl_chart.
+          // Solid fill via a single-color gradient — the same belowBarData usage that works in AppLineChart.
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(colors: [color.withValues(alpha: 0.9), color.withValues(alpha: 0.9)]),
@@ -115,9 +104,7 @@ class AppStackedAreaChart extends StatelessWidget {
       ),
     );
 
-    // The legend below already lists every series as real text (with its
-    // latest-period share) — this label covers only the graphic itself,
-    // which the legend doesn't: the overall span and current total.
+    // The legend already lists every series, so this label covers only the span and current total.
     final latestTotal = currency.isEmpty ? totals.last.toStringAsFixed(0) : fmtMoney(totals.last, currency);
     final areaSemanticLabel =
         'Zusammensetzung über Zeit von ${periodLabels.first} bis ${periodLabels.last}, '
@@ -162,8 +149,7 @@ class AppStackedAreaChart extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        // Legend: colour swatch, label, and the latest-period share — stays
-        // readable on its own even with showHover off.
+        // Legend stays readable on its own even with showHover off.
         Wrap(
           spacing: 16,
           runSpacing: 8,
@@ -181,13 +167,7 @@ class AppStackedAreaChart extends StatelessWidget {
   }
 }
 
-/// Mouse-hover crosshair + multi-series tooltip for [AppStackedAreaChart],
-/// built the same way as [AppLineChart]'s own hover layer (`MouseRegion` +
-/// `setState`, not fl_chart's touch system — see that file's rationale,
-/// which applies here too since this is also a continuous x-position).
-/// Unlike the line chart there's no single y-value to anchor to (multiple
-/// stacked bands), so the tooltip's vertical position is fixed near the top
-/// and only its horizontal position follows the cursor.
+/// Hover layer as in [AppLineChart]; with no single y-value to anchor to, the tooltip stays near the top.
 class _StackedHoverLayer extends StatefulWidget {
   const _StackedHoverLayer({
     required this.width,
@@ -203,9 +183,7 @@ class _StackedHoverLayer extends StatefulWidget {
   final List<String> periodLabels;
   final List<StackedSeries> active;
 
-  /// Cumulative total per period (same order/length as [periodLabels]) —
-  /// the tooltip's per-series share is each series' value at the hovered
-  /// period divided by this.
+  /// Cumulative total per period — the denominator for the tooltip shares.
   final List<double> totals;
   final String currency;
 
@@ -288,10 +266,7 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
                     style: TextStyle(color: kTextPrimary, fontSize: 12, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
-                  // Value and percent each get a fixed-width, right-aligned
-                  // column so both line up across rows regardless of label
-                  // length — a bare trailing Text after a flexible label
-                  // left a ragged, row-to-row-varying gap instead.
+                  // INFO: fixed right-aligned columns keep the numbers aligned across rows, see dev/ai/ui-conventions.md.
                   for (final s in rows)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -346,9 +321,7 @@ class _StackedHoverLayerState extends State<_StackedHoverLayer> {
   }
 }
 
-/// A "colour swatch + label + trailing value" row — the compact, hover-free
-/// legend shared by the dashboard's small inline charts (this one,
-/// [AppDonutChart]) so both present categorical color keys identically.
+/// Colour swatch + label + trailing value, shared by the dashboard's inline chart legends.
 class ChartLegendItem extends StatelessWidget {
   const ChartLegendItem({super.key, required this.color, required this.label, required this.trailing});
 

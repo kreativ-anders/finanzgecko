@@ -18,10 +18,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// **What belongs here — and what does not.** Only claims that are
 /// *mechanically decidable*: a value stated in two files, a hostname the app
 /// can reach, a phrase that became false on a known date. Anything needing
-/// judgement stays a human rule in CLAUDE.md. A doc linter that cries wolf
+/// judgement stays a human rule in dev/ai/website.md. A doc linter that cries wolf
 /// gets muted, and then it protects nothing.
 ///
-/// **How to extend it.** Every prose "keep these in sync" warning in CLAUDE.md
+/// **How to extend it.** Every prose "keep these in sync" warning in dev/ai/website.md
 /// is a candidate. When one of them bites again, convert it into a test here
 /// instead of only fixing the text — that is the whole point.
 void main() {
@@ -75,7 +75,7 @@ void main() {
 
     // Tripwire, deliberately exact. It is not "two is the right number"; it is
     // "if this number changes, five documents and a privacy claim need a human
-    // decision". CLAUDE.md lists them.
+    // decision". dev/ai/website.md lists them.
     test('die Anzahl externer Endpunkte ist unverändert (sonst: fünf Dokumente prüfen)', () {
       expect(
         endpointsInCode(),
@@ -83,7 +83,7 @@ void main() {
         reason:
             'Die Menge der externen Hosts hat sich geändert.\n'
             'Bei jeder Änderung müssen mitgezogen werden: docs/datenschutz.html, docs/privacy.html, '
-            'docs/llms.txt, docs/index.html und AI_MASTER.md — dort steht jeweils die Aussage, '
+            'docs/llms.txt, docs/index.html und dev/ai/stack.md — dort steht jeweils die Aussage, '
             'welche Verbindungen die App überhaupt aufbauen kann.',
       );
     });
@@ -126,12 +126,12 @@ void main() {
   });
 
   group('Der dokumentierte Datenpfad stimmt mit dem Code überein', () {
-    test('AI_MASTER.md und dev/setup.md nennen den aktuellen macOS-Pfad', () {
+    test('dev/ai/persistence.md und dev/setup.md nennen den aktuellen macOS-Pfad', () {
       final source = read('lib/data/app_store.dart');
       final macDirName = RegExp(r"_macOsDirectoryName = '([^']+)'").firstMatch(source)?.group(1);
       expect(macDirName, isNotNull, reason: '_macOsDirectoryName nicht mehr in app_store.dart gefunden.');
 
-      for (final doc in ['AI_MASTER.md', 'dev/setup.md']) {
+      for (final doc in ['dev/ai/persistence.md', 'dev/setup.md']) {
         expect(
           read(doc).contains('Application Support/$macDirName'),
           isTrue,
@@ -380,6 +380,62 @@ void main() {
               'darüber entscheiden, ob die App ins Netz geht.',
         );
       }
+    });
+  });
+
+  group('Export-Compliance-Erklärung deckt sich mit dem Code', () {
+    // Why this is mechanical: `ITSAppUsesNonExemptEncryption = false` is a
+    // legal statement about which implementation performs the encryption, and
+    // the code it rests on sits three directories away from the file that
+    // states it. Removing the native path is a one-line change; noticing that
+    // the change invalidated a filed declaration is not.
+    //
+    // What it can and cannot decide: it checks that the native paths are still
+    // wired in. Whether they are actually *reached* is unanswerable here —
+    // `flutter test` runs without a plugin registrant, so cryptography_flutter
+    // always reports its Dart fallback — and is covered by the smoke test in
+    // dev/app-store.md §4a.
+    test('ohne native Krypto-Pfade darf die Info.plist keine Ausnahme behaupten', () {
+      final plist = read('macos/Runner/Info.plist');
+      final declaresExempt = RegExp(r'<key>ITSAppUsesNonExemptEncryption</key>\s*<false\s*/>').hasMatch(plist);
+      if (!declaresExempt) {
+        // No key, no committed claim: App Store Connect then asks the question
+        // interactively and there is nothing here to keep honest.
+        return;
+      }
+
+      const because =
+          'macos/Runner/Info.plist meldet ITSAppUsesNonExemptEncryption = false. '
+          'Das behauptet gegenüber Apple, dass ausschließlich die Verschlüsselung des '
+          'Betriebssystems benutzt wird — siehe dev/ai/persistence.md und dev/native-libraries.md.';
+
+      expect(
+        read('pubspec.yaml').contains('cryptography_flutter:'),
+        isTrue,
+        reason: '$because\nOhne cryptography_flutter läuft AES-GCM wieder in Dart.',
+      );
+      expect(
+        exists('lib/data/apple_pbkdf2.dart'),
+        isTrue,
+        reason: '$because\nOhne lib/data/apple_pbkdf2.dart läuft PBKDF2 auf Apple-Plattformen wieder in Dart.',
+      );
+      expect(
+        read('lib/data/backup_crypto.dart').contains('ApplePbkdf2.deriveKey'),
+        isTrue,
+        reason: '$because\nDie Backup-Schlüsselableitung benutzt den nativen Pfad nicht mehr.',
+      );
+      expect(
+        read('lib/data/crypto_platform.dart').contains('CryptographyChannelPolicy'),
+        isTrue,
+        reason:
+            '$because\nOhne die ausdrückliche CryptographyChannelPolicy verschlüsselt FlutterAesGcm '
+            'kleine Datenbanken wieder in Dart — genau der Fall, den die Erklärung ausschließt.',
+      );
+      expect(
+        exists('dev/native-libraries.md'),
+        isTrue,
+        reason: '$because\nDie Begründung dazu ist nirgends mehr dokumentiert.',
+      );
     });
   });
 }

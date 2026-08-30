@@ -15,10 +15,7 @@ import 'views/entries_view.dart';
 import 'views/settings_view.dart';
 import 'views/subscriptions_view.dart';
 
-/// The app's navigation shell: top navigation across the six views, in-app
-/// replacement for a "File" menu, and global keyboard shortcuts. The backup
-/// flow itself lives in `backup_actions.dart` and is only wired up here
-/// (feature `navigation` vs. `backup_restore`).
+/// Navigation shell: top nav across the six views, the in-app "Datei" area, and global shortcuts.
 class NavigationShell extends StatefulWidget {
   const NavigationShell({super.key});
 
@@ -29,14 +26,10 @@ class NavigationShell extends StatefulWidget {
 class _NavigationShellState extends State<NavigationShell> {
   AppView _view = AppView.dashboard;
 
-  /// Set only by [_openAccountEntry]: the account [EntriesView] should scroll
-  /// to and focus next build. Deliberately *not* threaded through [_navigate],
-  /// which stays a plain `ValueChanged<AppView>` — widening it would touch six
-  /// views for one caller.
+  // Deliberately not threaded through [_navigate] — widening it would touch six views for one caller.
   int? _focusAccountId;
 
-  /// Any ordinary navigation clears the pending focus, so returning to
-  /// "Einträge" via the top bar later doesn't re-focus a stale account.
+  // Clears any pending focus, so returning to "Einträge" later does not re-focus a stale account.
   void _navigate(AppView view) => setState(() {
     _view = view;
     _focusAccountId = null;
@@ -156,13 +149,8 @@ class _NavButton extends StatelessWidget {
       child: TextButton(
         onPressed: onTap,
         style: TextButton.styleFrom(foregroundColor: active ? kPrimaryText : kMuted),
-        // noSelect: without it the app-wide SelectionArea (main.dart) claims
-        // the hover with a text cursor, which sits deeper than the button's
-        // own clickable cursor and therefore wins — the pointer would never
-        // turn into a hand over the main navigation. See AI_MASTER §5.
-        child: noSelect(
-          Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
-        ),
+        // INFO: noSelect keeps the pointer a hand here, see dev/ai/ui-conventions.md.
+        child: noSelect(Text(view.label, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.normal))),
       ),
     );
   }

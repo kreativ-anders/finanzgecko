@@ -68,11 +68,16 @@ List<String> generateLinuxIcons({String master = masterPath, Map<String, int> ta
 /// which Explorer/taskbar/Start-Menü for a shortcut/exe render blank instead
 /// of downscaling — hence generating this ourselves instead of relying on
 /// its Windows target (disabled in pubspec.yaml).
-String generateWindowsIcon({String master = masterPath, String out = windowsIconPath, List<int> sizes = windowsIconSizes}) {
+String generateWindowsIcon({
+  String master = masterPath,
+  String out = windowsIconPath,
+  List<int> sizes = windowsIconSizes,
+}) {
   final decoded = img.decodePng(File(master).readAsBytesSync());
   if (decoded == null) throw StateError('Konnte $master nicht dekodieren.');
   final frames = [
-    for (final size in sizes) img.copyResize(decoded, width: size, height: size, interpolation: img.Interpolation.average),
+    for (final size in sizes)
+      img.copyResize(decoded, width: size, height: size, interpolation: img.Interpolation.average),
   ];
   File(out).writeAsBytesSync(img.IcoEncoder().encodeImages(frames));
   return out;

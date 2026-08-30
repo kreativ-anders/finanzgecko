@@ -87,7 +87,7 @@ jobs:
           # Pinned, not floating: `channel: stable` alone means a Flutter release
           # can change what a tagged build produces without a commit here. Raise
           # this deliberately, after `flutter analyze`/`flutter test` and a signed
-          # DMG have been checked locally on the new version (AI_MASTER §6).
+          # DMG have been checked locally on the new version (dev/ai/platform.md).
           flutter-version: '3.47.0'
 
       - run: flutter pub get
@@ -192,7 +192,7 @@ jobs:
           # Pinned, not floating: `channel: stable` alone means a Flutter release
           # can change what a tagged build produces without a commit here. Raise
           # this deliberately, after `flutter analyze`/`flutter test` and a signed
-          # DMG have been checked locally on the new version (AI_MASTER §6).
+          # DMG have been checked locally on the new version (dev/ai/platform.md).
           flutter-version: '3.47.0'
 
       - name: Linux-Toolchain installieren
@@ -254,7 +254,7 @@ jobs:
           # Pinned, not floating: `channel: stable` alone means a Flutter release
           # can change what a tagged build produces without a commit here. Raise
           # this deliberately, after `flutter analyze`/`flutter test` and a signed
-          # DMG have been checked locally on the new version (AI_MASTER §6).
+          # DMG have been checked locally on the new version (dev/ai/platform.md).
           flutter-version: '3.47.0'
 
       - name: Version ermitteln
@@ -346,7 +346,7 @@ jobs:
           # Pinned, not floating: `channel: stable` alone means a Flutter release
           # can change what a tagged build produces without a commit here. Raise
           # this deliberately, after `flutter analyze`/`flutter test` and a signed
-          # DMG have been checked locally on the new version (AI_MASTER §6).
+          # DMG have been checked locally on the new version (dev/ai/platform.md).
           flutter-version: '3.47.0'
 
       - name: Version ermitteln

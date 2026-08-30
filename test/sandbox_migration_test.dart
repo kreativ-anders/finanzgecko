@@ -44,10 +44,7 @@ void main() {
 
     test('returns null for a different app\'s container', () {
       expect(
-        SandboxMigration.realHomeFromContainerHome(
-          '/Users/manuel/Library/Containers/com.example.other/Data',
-          bundleId,
-        ),
+        SandboxMigration.realHomeFromContainerHome('/Users/manuel/Library/Containers/com.example.other/Data', bundleId),
         isNull,
       );
     });

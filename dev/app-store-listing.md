@@ -103,7 +103,7 @@ telemetry, no account. The only outbound call is an anonymous exchange-rate requ
 
 Required sizes: 1280×800, 1440×900, 2560×1600 or 2880×1800. Existing crops in
 `docs/assets/screenshots/` are the right shots but likely the wrong dimensions — re-export via
-`tool/capture_screenshots.sh` (see CLAUDE.md "Regenerating the website screenshots").
+`tool/capture_screenshots.sh` (see [ai/screenshots.md](ai/screenshots.md)).
 
 **Use `demo/finanzgecko-demo.json` — never real finances.** Suggested order, strongest first:
 

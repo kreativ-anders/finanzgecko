@@ -1,4 +1,5 @@
-# Source: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_schema.dart, lib/constants.dart, lib/data/sandbox_migration.dart
+# Source: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_schema.dart, lib/constants.dart,
+#   lib/data/sandbox_migration.dart, lib/data/crypto_platform.dart, lib/data/apple_pbkdf2.dart
 # Implementation: lib/data/app_store.dart
 @security @persistence
 Feature: Data storage, encryption, and integrity
@@ -110,6 +111,32 @@ Feature: Data storage, encryption, and integrity
     Then the exchange-rate cache lives in its own file "finanzgecko-rates.json" next to the main database
     And a parse error in this file is silently ignored (rates can be fetched again anytime, no risk of
       data loss)
+
+  Scenario: Encryption runs in the operating system's implementation, not a bundled one
+    Given the app runs on macOS, iOS or Android
+    Then AES-256-GCM is performed by the OS implementation (CryptoKit/CommonCrypto resp. javax.crypto)
+    And this holds for every payload size — there is no threshold below which a bundled implementation
+      takes over, because a small database would otherwise be encrypted by the very implementation the
+      App Store export-compliance declaration says is not used
+    And PBKDF2-HMAC-SHA256 for backups is performed by CommonCrypto on macOS and iOS, since the plugin
+      covers that algorithm natively on Android only
+    And if the OS function cannot be reached at all, the app fails loudly rather than quietly falling back —
+      a silent fallback would turn a filed declaration into a false one
+    Given the app runs on Windows or Linux
+    Then no OS implementation exists for these algorithms and the bundled one is used, off the UI isolate
+
+  Scenario: Switching implementations changes no file
+    Given a data file or a password-protected backup written by a version before this change
+    Then it is read unchanged afterwards — same envelope fields, same KDF parameters, same key fingerprint
+    And a backup written on macOS opens on Windows and Linux, and one written there opens on macOS
+    And nothing is re-encrypted or rewritten on account of this change
+
+  Scenario: Which implementation is live can be checked on a real build
+    Given the app starts
+    Then it writes one line to the OS log naming the implementation in use for AES-GCM and for PBKDF2
+    And that line contains no path and no key material
+    And it is the only way to verify this on a signed, sandboxed build: an automated test runs without a
+      plugin registrant and would always report the fallback
 
   Scenario: macOS — the keychain variant depends on the delivery form
     Given the app was shipped as a DMG (Developer ID build, the default case)

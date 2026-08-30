@@ -46,10 +46,7 @@ class _AppDonutChartState extends State<AppDonutChart> {
     final hoverIndex = _hoverIndex;
     final hovered = (hoverIndex != null && hoverIndex < positive.length) ? positive[hoverIndex] : null;
 
-    // The itemized legend below is already real, readable text — this label
-    // just replaces the purely graphical wedge rendering with the one figure
-    // the visual gives at a glance (the largest share) rather than repeating
-    // the full legend a second time.
+    // The legend below is already readable text, so the semantic label only names the largest share.
     final largest = positive.reduce((a, b) => a.value > b.value ? a : b);
     final pieSemanticLabel =
         'Verteilung nach Kontotyp, größter Anteil: ${largest.label} mit ${fmtPercent(largest.value / total * 100)}.';
@@ -81,12 +78,7 @@ class _AppDonutChartState extends State<AppDonutChart> {
                     ],
                     centerSpaceRadius: 40,
                     sectionsSpace: 1,
-                    // A PieChart's touch resolution is a discrete "which wedge
-                    // was hit", not a continuous position — none of the
-                    // interpolation drift that made AppLineChart hand-roll its
-                    // own hover instead of fl_chart's, so fl_chart's own touch
-                    // system is used directly here. The center space left by
-                    // centerSpaceRadius doubles as the hovered segment's label.
+                    // INFO: fl_chart touch is fine here — wedge hit tests are discrete, unlike the drift that broke AppLineChart.
                     pieTouchData: PieTouchData(
                       touchCallback: (event, response) {
                         final index = response?.touchedSection?.touchedSectionIndex;

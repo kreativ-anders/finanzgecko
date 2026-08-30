@@ -11,16 +11,29 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Records `show()` calls instead of touching a real OS notification center —
 /// used to test the episode-based firing logic in [AppState] without any
-/// platform dependency.
+/// platform dependency. [grant] stands in for the macOS authorization answer,
+/// so the denied path is testable without an OS dialog.
 class _FakeNotificationService extends NotificationService {
+  _FakeNotificationService({this.grant = true});
+
+  final bool grant;
   final List<String> shown = [];
+  final List<int> shownIds = [];
+  int permissionRequests = 0;
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<void> show({required String title, required String body}) async {
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return grant;
+  }
+
+  @override
+  Future<void> show({required int id, required String title, required String body}) async {
     shown.add(body);
+    shownIds.add(id);
   }
 }
 
@@ -277,11 +290,15 @@ void main() {
         final store1 = AppStore(dataDirectory: tempDir);
         await store1.ensureInitialized();
         await store1.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderRepeatDays + 1)));
+        // Opt-in since the toggle became default-off; persisted, so the
+        // relaunches further down inherit it.
+        await store1.setNotificationsEnabled(true);
 
         final fake1 = _FakeNotificationService();
         await AppState(store1, notificationService: fake1).init();
         expect(fake1.shown, hasLength(1));
         expect(fake1.shown.single, contains('Zeit für ein neues Backup'));
+        expect(fake1.shownIds, [kBackupNotificationId]);
 
         // Reopening the app (fresh AppState/AppStore over the same directory)
         // must not refire while the episode is unresolved.
@@ -306,6 +323,8 @@ void main() {
       final store = AppStore(dataDirectory: tempDir);
       await store.ensureInitialized();
       await store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderRepeatDays + 1)));
+      // Explicit rather than relying on the default-off, so this stays a test
+      // of the suppression and not of the default.
       await store.setNotificationsEnabled(false);
 
       final fake = _FakeNotificationService();
@@ -332,11 +351,13 @@ void main() {
       // Isolate the asset notification from the (unrelated) backup reminder,
       // which would otherwise also fire on a never-exported fresh store.
       await store1.setLastExportAt(DateTime.now());
+      await store1.setNotificationsEnabled(true);
 
       final fake1 = _FakeNotificationService();
       await AppState(store1, notificationService: fake1).init();
       expect(fake1.shown, hasLength(1));
       expect(fake1.shown.single, contains('Auto'));
+      expect(fake1.shownIds, [kAssetNotificationId]);
 
       final fake2 = _FakeNotificationService();
       final state2 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake2);
@@ -349,6 +370,76 @@ void main() {
       final state3 = AppState(AppStore(dataDirectory: tempDir), notificationService: fake3);
       await state3.init();
       expect(fake3.shown, isEmpty, reason: 'freshly re-evaluated, no longer overdue');
+    });
+
+    test('opt-in: an overdue reminder stays silent until the toggle is switched on', () async {
+      final store = AppStore(dataDirectory: tempDir);
+      await store.ensureInitialized();
+      await store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderRepeatDays + 1)));
+
+      final fake = _FakeNotificationService();
+      final state = AppState(store, notificationService: fake);
+      await state.init();
+      expect(state.notificationsEnabled, isFalse, reason: 'default off since notifications became opt-in');
+      expect(fake.shown, isEmpty, reason: 'overdue, but nobody has opted in');
+      expect(fake.permissionRequests, 0, reason: 'no OS dialog for a user who never asked for the feature');
+
+      expect(await state.setNotificationsEnabled(true), isTrue);
+      expect(fake.permissionRequests, 1, reason: 'the OS is asked exactly when the user opts in');
+      expect(state.notificationsEnabled, isTrue);
+      expect(fake.shown, hasLength(1), reason: 'the still-unresolved episode fires as soon as it may');
+    });
+
+    test('a denied OS authorization leaves the toggle off', () async {
+      final store = AppStore(dataDirectory: tempDir);
+      await store.ensureInitialized();
+      await store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderRepeatDays + 1)));
+
+      final fake = _FakeNotificationService(grant: false);
+      final state = AppState(store, notificationService: fake);
+      await state.init();
+
+      expect(await state.setNotificationsEnabled(true), isFalse);
+      expect(state.notificationsEnabled, isFalse, reason: 'a toggle the OS overrules must not look switched on');
+      expect(fake.shown, isEmpty);
+    });
+
+    test('switching the toggle off never asks the OS', () async {
+      final store = AppStore(dataDirectory: tempDir);
+      await store.ensureInitialized();
+
+      final fake = _FakeNotificationService();
+      final state = AppState(store, notificationService: fake);
+      await state.init();
+
+      expect(await state.setNotificationsEnabled(false), isFalse);
+      expect(fake.permissionRequests, 0);
+    });
+
+    test('a backup and a Vermögenswerte notification in one cycle keep separate ids', () async {
+      final past = DateTime.now().subtract(const Duration(days: kAssetReevaluationDays + 1)).toIso8601String();
+      final store = AppStore(dataDirectory: tempDir);
+      await store.ensureInitialized();
+      await store.importAllData({
+        'schemaVersion': currentSchemaVersion,
+        'baseCurrency': 'EUR',
+        'accounts': <Map<String, dynamic>>[],
+        'balances': <Map<String, dynamic>>[],
+        'assets': [
+          {'id': 1, 'name': 'Auto', 'value': 1000, 'createdAt': past, 'lastEvaluatedAt': past},
+        ],
+        'subscriptions': <Map<String, dynamic>>[],
+      });
+      await store.setLastExportAt(DateTime.now().subtract(const Duration(days: kBackupReminderRepeatDays + 1)));
+      await store.setNotificationsEnabled(true);
+
+      final fake = _FakeNotificationService();
+      await AppState(store, notificationService: fake).init();
+
+      expect(fake.shownIds, [
+        kBackupNotificationId,
+        kAssetNotificationId,
+      ], reason: 'a shared id would let the second notification silently replace the first');
     });
   });
 }

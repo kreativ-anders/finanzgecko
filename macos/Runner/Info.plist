@@ -24,6 +24,30 @@
 	     steuert sie nur, unter welcher Kategorie der Finder die App führt. -->
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.finance</string>
+	<!-- Export compliance. Answering here rather than in App Store Connect keeps
+	     the answer versioned next to the code it describes.
+
+	     `false` means "no non-exempt encryption", claimed on Apple's first case:
+	     encryption limited to that within the operating system. Since v1.10 that
+	     is what the app does — AES-256-GCM through cryptography_flutter
+	     (CryptoKit/CommonCrypto) and PBKDF2-HMAC-SHA256 through CommonCrypto
+	     (lib/data/apple_pbkdf2.dart). Before that the same algorithms ran in a
+	     bundled Dart implementation, which is Apple's second case and would have
+	     required a French encryption declaration.
+
+	     Known and deliberately accepted residue: the Flutter engine links
+	     BoringSSL for dart:io's TLS, so the exchange-rate request does not go
+	     through the OS TLS stack. No app code calls BoringSSL directly, and
+	     Apple's guidance treats an app's HTTPS use as exempt — but this is a
+	     judgement, not a certainty. The reasoning and the alternative
+	     (cupertino_http/NSURLSession) are written out in dev/native-libraries.md.
+
+	     The claim only holds while the OS implementations are the ones actually
+	     running: cryptography_flutter falls back silently. main() logs which one
+	     is in use on every start; the smoke test in dev/app-store.md reads it.
+	     See AI_MASTER 4.1 "Export compliance". -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>

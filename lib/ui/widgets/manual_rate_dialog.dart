@@ -3,13 +3,7 @@ import 'package:flutter/material.dart';
 import '../../utils/formatting.dart';
 import '../theme.dart';
 
-/// Asks the user for a manual "1 [from] = ? [to]" rate when neither the live
-/// API nor the local cache has one. Returns null if cancelled or the input
-/// isn't a valid positive number.
-///
-/// [reason] names the actual cause — the dialog used to guess "(offline?)"
-/// even when the real reason was a missing opt-in, which sent people looking
-/// for a network problem that wasn't there.
+/// Asks for a manual "1 [from] = ? [to]" rate; [reason] names the real cause instead of guessing "(offline?)".
 Future<double?> promptManualRate(
   BuildContext context, {
   required String from,
