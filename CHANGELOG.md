@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.10.0 - 2026-08-30
+
+- 🔖 Version 1.10.0+20 (fd3ed5b)
+- Feature/native implementations (#17) (768f754)
+- 👷 Bundle VC++ runtime DLLs with the Windows installer (b2d23d1)
+- 📌 Regenerate pubspec.lock dependencies (c9fa296)
+- 📝 Add bilingual privacy policy pages and checks (59ffb8d)
+- 🧑‍💻 Translate AI specs and Gherkin docs to English (490434c)
+- 🧑‍💻 Relax winget failures and English release text (3d8a163)
+- 🧐 Export CSV as 4 domain-specific tables (c75e5f0)
+- 📝 Changelog für v1.9.0 (4f76156)
+
+
 ## v1.9.0 - 2026-08-16
 
 - 🔖 Version 1.9.0+19 (3aa2b0d)
