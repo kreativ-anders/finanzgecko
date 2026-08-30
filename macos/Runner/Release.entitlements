@@ -6,7 +6,7 @@
   Die App-Sandbox war hier bis v1.7 bewusst AUS, weil sie $HOME virtualisiert und
   die Datendatei bestehender Installationen damit unerreichbar macht. Diese
   Entscheidung wurde bewusst umgekehrt: Ziel ist ein einziger sandboxed
-  macOS-Build (siehe AI_MASTER §4.1 und ROADMAP). Möglich wird das durch die
+  macOS-Build (siehe dev/ai/persistence.md und ROADMAP). Möglich wird das durch die
   einmalige Migration in lib/data/sandbox_migration.dart — die beim ersten Start
   eines sandboxed Builds die Dateien aus dem alten Pfad in den Container KOPIERT
   (nicht verschiebt, nicht löscht).

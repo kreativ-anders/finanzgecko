@@ -32,17 +32,21 @@ class AppState extends ChangeNotifier {
   AppState(this.store, {NotificationService? notificationService, UpdateService? updateService})
     : currencyService = CurrencyService(store),
       notificationService = notificationService ?? NotificationService(),
-      updateService = updateService ?? UpdateService();
+      // WARNING: null in the App Store build on purpose — Guideline 2.4.5 forbids a second update channel.
+      // WARNING: it must stay UNREFERENCED there, or the tree shaker keeps the class and its GitHub URL.
+      updateService = updateService ?? (kIsMacAppStore ? null : UpdateService());
 
   final AppStore store;
   final CurrencyService currencyService;
   final NotificationService notificationService;
-  final UpdateService updateService;
+
+  /// `null` in the App Store build — see dev/ai/persistence.md "macOS specifics".
+  final UpdateService? updateService;
 
   @override
   void dispose() {
     // Releases the HTTP connection pools; both services hold a long-lived client.
-    updateService.dispose();
+    updateService?.dispose();
     currencyService.dispose();
     super.dispose();
   }

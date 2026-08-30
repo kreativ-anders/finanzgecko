@@ -4,19 +4,22 @@
 # App Store Connect.
 #
 # Das ist bewusst ein ZWEITES Skript neben build_dmg.sh und kein Schalter darin.
-# Die beiden Builds unterscheiden sich in Sandbox, Keychain-Variante, Signatur-
-# Zertifikat, Verpackung und Update-Weg — praktisch alles außer dem Dart-Code.
-# Ein gemeinsames Skript mit fünf `if`-Zweigen wäre schwerer zu lesen als zwei
-# kurze, und der DMG-Weg ist der, der nicht kaputtgehen darf.
+# Die beiden Builds unterscheiden sich in Keychain-Variante, Signatur-Zertifikat,
+# Verpackung und Update-Weg — praktisch alles außer dem Dart-Code. Ein gemeinsames
+# Skript mit fünf `if`-Zweigen wäre schwerer zu lesen als zwei kurze, und der
+# DMG-Weg ist der, der nicht kaputtgehen darf.
 #
-# WICHTIG — die beiden Builds teilen sich keine Daten:
-#   Der sandboxed Build sieht $HOME als ~/Library/Containers/de.finanzgecko.app/
-#   Data. Wer die DMG-Version benutzt und die App-Store-Version installiert,
-#   startet dort mit einer leeren Datenbank. Das ist kein Bug, sondern der Grund,
-#   warum die DMG-Version unsandboxed bleibt statt umgestellt zu werden: es gibt
-#   keinen Migrationspfad, der ohne Datenverlust auskommt. Der Weg von der einen
-#   zur anderen Version führt über "Backup exportieren…" und "Backup
-#   importieren…" — siehe AI_MASTER §4.1.
+# WICHTIG — beide Builds teilen sich den Container, aber NICHT den Schlüssel:
+#   Seit 2026-08-13 ist auch der DMG-Build sandboxed, beide sehen also dasselbe
+#   ~/Library/Containers/de.finanzgecko.app/Data und damit dieselbe Datendatei.
+#   Lesen kann sie trotzdem nur einer: der DMG-Build legt seinen Schlüssel in der
+#   Login-Keychain ab, der App-Store-Build in der Data-Protection-Keychain
+#   (usesDataProtectionKeychain: kIsMacAppStore). Der jeweils andere Build findet
+#   die Datei, erkennt am keyId-Fingerprint, dass sie nicht zu seinem Schlüssel
+#   gehört, und zeigt den Erklärungsbildschirm — er überschreibt, verschiebt und
+#   löscht nichts. Der Weg von der einen zur anderen Version führt über
+#   "Backup exportieren…" und "Backup importieren…"
+#   — siehe dev/ai/persistence.md.
 #
 # Aufruf:
 #   ./packaging/macos/build_appstore.sh              # baut selbst
@@ -126,6 +129,42 @@ codesign --verify --strict --verbose=2 "$STAGED_APP"
 codesign -d --entitlements :- "$STAGED_APP" 2>/dev/null | grep -q "app-sandbox" \
   || die "Die signierte App trägt kein app-sandbox-Entitlement."
 
+# Belegt, dass --dart-define=FINANZGECKO_MAS=true wirklich angekommen ist. Ohne
+# diese Prüfung ist der gefährlichste Fehlerfall ein Build, der sandboxed und
+# von Apple signiert ist, intern aber noch kIsMacAppStore=false hat: er zeigt den
+# Update-Eintrag (Guideline 2.4.5) und greift auf die LOGIN-Keychain statt auf
+# die Data-Protection-Keychain zu — der einzige Weg, auf dem ein App-Store-Build
+# den Schlüssel eines DMG-Builds anfassen könnte.
+#
+# Geprüft wird die von `flutter build` geschriebene xcconfig, nicht das Binary:
+# die dart-defines stecken im AOT-Snapshot und sind dort nicht verlässlich
+# greppbar. Im Normalfall lief der Build zwei Schritte weiter oben, die Datei ist
+# also frisch. Mit SKIP_BUILD=1 beschreibt sie den LETZTEN Build — deshalb dort
+# nur eine Warnung statt eines Abbruchs.
+XCCONFIG="$REPO_ROOT/macos/Flutter/ephemeral/Flutter-Generated.xcconfig"
+mas_define_present() {
+  [ -f "$XCCONFIG" ] || return 1
+  local defines
+  defines="$(sed -n 's/^DART_DEFINES=//p' "$XCCONFIG")"
+  [ -n "$defines" ] || return 1
+  # Jeder Eintrag ist einzeln base64-kodiert und durch Kommas getrennt.
+  # INFO: -D ist BSD/macOS, -d GNU — je nach Toolchain im PATH kann beides auftauchen.
+  echo "$defines" | tr ',' '\n' | while IFS= read -r entry; do
+    echo "$entry" | base64 -D 2>/dev/null || echo "$entry" | base64 -d 2>/dev/null || true
+    echo
+  done | grep -qx "FINANZGECKO_MAS=true"
+}
+
+if mas_define_present; then
+  echo "kIsMacAppStore ist gesetzt (FINANZGECKO_MAS=true)."
+elif [ "${SKIP_BUILD:-0}" = "1" ]; then
+  echo "WARNUNG: FINANZGECKO_MAS=true steht nicht in $XCCONFIG." >&2
+  echo "         Mit SKIP_BUILD=1 ist das nicht beweisend, aber ein Warnsignal:" >&2
+  echo "         prüfe, dass das übergebene Bundle wirklich ein MAS-Build ist." >&2
+else
+  die "FINANZGECKO_MAS=true fehlt in $XCCONFIG — der Build lief ohne den dart-define."
+fi
+
 echo "App signiert und sandboxed."
 
 # --------------------------------------------------------- .pkg bauen ----
@@ -138,6 +177,12 @@ productbuild --component "$STAGED_APP" /Applications --sign "$PKG_SIGN_IDENTITY"
 echo
 echo "Fertig: $OUT_FILE"
 echo
+echo "Vor dem Upload — der Krypto-Smoketest aus dev/app-store.md 4a:"
+echo "  Build starten, in Console.app auf 'FinanzGecko crypto' filtern. Erwartet:"
+echo "    AES-256-GCM = OS (cryptography_flutter), PBKDF2-HMAC-SHA256 = OS (CommonCrypto)"
+echo "  Steht dort '= Dart', ist der Fallback aktiv und die Exportbestimmungs-"
+echo "  Angabe in der Info.plist waere falsch. Dann NICHT hochladen."
+echo
 echo "Naechster Schritt — erst pruefen, dann hochladen:"
 echo "  xcrun altool --validate-app -f \"$OUT_FILE\" -t macos \\"
 echo "    --apiKey \"\$APPLE_API_KEY_ID\" --apiIssuer \"\$APPLE_API_ISSUER_ID\""
@@ -147,8 +192,8 @@ echo "(--upload-app ist deprecated, deshalb --upload-package. Alternativ die"
 echo " Transporter-App aus dem Mac App Store, wenn es klicken statt tippen sein soll.)"
 echo
 echo "Nicht vergessen, einmalig in App Store Connect:"
-echo "  - Exportbestimmungen: die App verschluesselt lokale Daten mit AES-256"
-echo "    (Paket 'cryptography', nicht das OS). Ob das unter die Ausnahme faellt,"
-echo "    ist eine rechtliche Einschaetzung — deshalb steht hier bewusst kein"
-echo "    ITSAppUsesNonExemptEncryption in der Info.plist."
+echo "  - Exportbestimmungen: fragt App Store Connect nicht mehr ab. Die Antwort"
+echo "    steht als ITSAppUsesNonExemptEncryption = false in der Info.plist und"
+echo "    beruht darauf, dass AES-GCM und PBKDF2 aus dem OS kommen (seit v1.10)."
+echo "    Begruendung und Audit: dev/native-libraries.md."
 echo "  - Datenschutzangaben ('Nutzung von Daten'): keine Datenerfassung."

@@ -179,8 +179,11 @@ Feature: Einstellungen
       exist in this build; it's a privacy claim and must not assert anything that doesn't happen
     And this isn't a matter of taste: a second self-update path alongside the App Store violates App
       Review Guideline 2.4.5
-    And because kIsMacAppStore is a compile-time constant, the tree shaker removes the download path from
-      the binary, rather than just hiding the button
+    And AppState.updateService is null in this build, so UpdateService is never constructed and nothing
+      references it — that, not the hidden button, is what lets the tree shaker drop the class and the
+      api.github.com URL from the binary
+    And _checkForUpdates returns immediately on that null, so a re-added UI entry cannot start a download
+      by accident
 
   Scenario: Resetting the app requires a typed confirmation phrase
     When I click "App zurücksetzen…" in the red-bordered "Zurücksetzen" section

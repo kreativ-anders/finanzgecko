@@ -510,10 +510,13 @@ Future<void> _openIssueTracker() async {
 const _downloadPageUrl = 'https://finanzgecko.app/download.html';
 
 /// Manual, user-triggered update check ([UpdateService]) — never automatic; the file is verified, never run.
+// INFO: unreachable in the App Store build; the null guard is the second lock, the missing UI entry the first.
 Future<void> _checkForUpdates(BuildContext context) async {
   final appState = context.read<AppState>();
+  final updater = appState.updateService;
+  if (updater == null) return;
   final info = await PackageInfo.fromPlatform();
-  final result = await appState.updateService.checkForUpdate(currentVersion: info.version);
+  final result = await updater.checkForUpdate(currentVersion: info.version);
   if (!context.mounted) return;
 
   switch (result.status) {
@@ -528,7 +531,7 @@ Future<void> _checkForUpdates(BuildContext context) async {
         latestVersion: result.latestVersion!,
       );
       if (confirmed != true || !context.mounted) return;
-      await _downloadUpdate(context, assets: result.assets);
+      await _downloadUpdate(context, updater: updater, assets: result.assets);
     case UpdateCheckStatus.failed:
       showErrorSnackBar(context, 'Update-Prüfung fehlgeschlagen — bitte später erneut versuchen.');
   }
@@ -558,7 +561,11 @@ Future<bool?> _showUpdateAvailableDialog(
 
 // INFO: the save dialog is deliberate — writing to ~/Downloads unprompted makes macOS raise its own prompt.
 /// Downloads the release file for this platform, verifies it and saves it where the user chose.
-Future<void> _downloadUpdate(BuildContext context, {required Map<String, String> assets}) async {
+Future<void> _downloadUpdate(
+  BuildContext context, {
+  required UpdateService updater,
+  required Map<String, String> assets,
+}) async {
   final assetName = selectAssetName(assets.keys, Platform.operatingSystem);
   // No asset for this platform: send the user to the download page rather than guess at a file.
   if (assetName == null) {
@@ -595,7 +602,7 @@ Future<void> _downloadUpdate(BuildContext context, {required Map<String, String>
     ),
   );
 
-  final result = await context.read<AppState>().updateService.downloadAndVerify(
+  final result = await updater.downloadAndVerify(
     assets: assets,
     assetName: assetName,
     targetPath: location.path,

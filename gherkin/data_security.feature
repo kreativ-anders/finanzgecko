@@ -1,5 +1,5 @@
 # Source: lib/data/app_store.dart, lib/data/secure_key_store.dart, lib/data/app_schema.dart, lib/constants.dart,
-#   lib/data/sandbox_migration.dart, lib/data/crypto_platform.dart, lib/data/apple_pbkdf2.dart
+#   lib/data/sandbox_migration.dart, lib/data/crypto_platform.dart, lib/data/apple_pbkdf2.dart, lib/main.dart
 # Implementation: lib/data/app_store.dart
 @security @persistence
 Feature: Data storage, encryption, and integrity
@@ -69,6 +69,14 @@ Feature: Data storage, encryption, and integrity
     And the explanation points to the path via "Backup exportieren" and "Backup importieren"
     Given the same machine gets its original key back
     Then the file opens normally again
+
+  Scenario: The App Store build explains a channel switch, not a different computer
+    Given the Mac App Store build (kIsMacAppStore) starts on the same Mac as the finanzgecko.app build
+    And the container holds a data file written by that other build, so the keyId doesn't match
+    When the app starts
+    Then the explanation names the other FinanzGecko version, never "ein anderer Computer"
+    And it points to "Backup exportieren" in the finanzgecko.app version and "Backup importieren" here
+    And nothing is written, moved or deleted, so reinstalling the other version restores full access
 
   Scenario: The key fingerprint is additive and doesn't break older app versions
     Given a newly written data file

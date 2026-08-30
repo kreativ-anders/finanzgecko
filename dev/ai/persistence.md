@@ -140,7 +140,20 @@
       file unreadable. Don't switch.
     - **App Store build (`true`):** the data-protection variant is mandatory, because a sandboxed app has no
       access to the classic keychain. Works there because `AppStore.entitlements` brings the matching access
-      group; those users are fresh installs without a legacy key.
+      group. Store→store updates are safe by construction: access is decided by the `keychain-access-groups`
+      entitlement (`<TeamID>.de.finanzgecko.app`), not by a per-item ACL, so Apple re-signing every version
+      changes nothing. Only a Team-ID change or an app transfer to another team would lose the items.
+  - **Channel switch (DMG ↔ App Store) — the two builds share the container, not the key.** Both are sandboxed
+    (below), so both read the same file at the same path. But the DMG build keeps its key in the login keychain
+    and the store build in the data-protection keychain, so each finds the other's file, sees a `keyId`
+    fingerprint that isn't its own, and throws `ForeignKeyDataException`. `main()` then shows `_ForeignDataApp`
+    and writes, moves and deletes **nothing** — the other channel keeps working if you go back. The route across
+    is *Backup exportieren…* / *Backup importieren…*, and `_ForeignDataApp` says so in wording branched on
+    `kIsMacAppStore`, because "another computer" is wrong when it is the same Mac.
+    - **Still open for the store build:** a user coming from ≤1.7 has no file in the container at all, and
+      `AppStore.entitlements` deliberately carries no temporary exception, so `SandboxMigration` cannot reach the
+      pre-sandbox path. That user lands in an empty app with no explanation. Close this before the first store
+      submission — see `dev/app-store.md`.
   - **App sandbox has been active in ALL macOS builds since v1.8** (`com.apple.security.app-sandbox = true` in
     `Release.entitlements`, `DebugProfile.entitlements`, and `AppStore.entitlements`). This is a **deliberate
     reversal** of the decision documented through v1.7; the old rationale ("otherwise macOS virtualizes `$HOME`
@@ -166,11 +179,19 @@
       Tested against a real existing installation: file hash in the container identical to the old path, the app
       showed all data without an import. **Not verifiable in CI** — on a change of signing identity (e.g. the
       App Store build, which Apple re-signs), this result explicitly does **not** hold and needs re-checking.
-  - The in-app update path (`UpdateService`, *Nach Updates suchen*) is entirely absent from the App Store build:
-    App Review Guideline 2.4.5 forbids a second update channel, and the App Store updates itself. Because
-    `kIsMacAppStore` is `const`, the tree shaker strips the path from the binary. The privacy paragraph in the
-    help section correspondingly loses its sentence about the GitHub releases API there (see
+  - The in-app update path (*Nach Updates suchen*) is absent from the App Store build: App Review
+    Guideline 2.4.5 forbids a second update channel, and the App Store updates itself. The privacy paragraph in
+    the help section correspondingly loses its sentence about the GitHub releases API there (see
     `gherkin/settings.feature`).
+    - **`AppState.updateService` is `UpdateService?` and is `null` when `kIsMacAppStore`.** That nullability is
+      the point, not an accident: as long as the field was non-nullable, `AppState`'s constructor referenced
+      `UpdateService()` unconditionally and the tree shaker had to keep the class — and the `api.github.com`
+      URL — in the store binary, however well hidden the button was. **Do not "simplify" it back to a
+      non-nullable field with a dummy instance.**
+    - `_checkForUpdates` returns immediately on that `null` (`lib/ui/views/settings_view.dart`), and
+      `_downloadUpdate` takes the resolved `UpdateService` as a parameter rather than reading it back off
+      `AppState`. Two locks: a re-added UI entry still cannot reach the network, and nothing in the store build
+      references the service by value.
 
 ## Schema (`lib/data/app_schema.dart`)
 

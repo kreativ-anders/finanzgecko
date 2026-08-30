@@ -48,9 +48,31 @@ At <https://developer.apple.com/account/resources>.
 
 **2a. App ID**
 Identifiers → `+` → App IDs → App → Description "FinanzGecko", Bundle ID **explicit** `de.finanzgecko.app`.
-No capabilities need enabling — the app uses none of the entitlement-gated services (no iCloud, no Push, no
-Sign in with Apple). Keychain sharing is covered by the `keychain-access-groups` entitlement in the build and
-does not require a capability here.
+
+The App ID editor has three tabs. **Tick nothing in any of them.**
+
+| Tab | What it is | FinanzGecko |
+|---|---|---|
+| Capabilities | Entitlement-gated Apple services (iCloud, Push, Sign in with Apple, Apple Pay, Game Center, Network Extensions, …) | none — the app uses no Apple service |
+| App Services | Opt-in services attached to the App ID (ad attribution and similar) | none |
+| Capability Requests | Application form for *managed* capabilities Apple must approve per account | nothing to request |
+
+Three that look like they might apply and do not:
+
+- **Keychain sharing** is not on this page at all, and does not need to be. Every App ID automatically has
+  keychain access; the `keychain-access-groups` entitlement in `AppStore.entitlements` uses the app's own
+  App ID prefix, which needs no capability. (Apple DTS states this explicitly.)
+- **App Sandbox** and **Hardened Runtime** appear in Apple's macOS capability reference, but they are entitlements
+  the build sets and `build_appstore.sh` asserts — not something to enable here.
+- **In-App Purchase** is for purchases *inside* the app. A paid-up-front app needs nothing; the price is set in
+  App Store Connect, not here.
+
+If a keychain error `-34018` ever shows up at runtime, the cause is the Team ID substitution in the entitlements
+(`build_appstore.sh` checks it), not a missing capability. Confirm what the profile actually grants with:
+
+```
+security cms -D -i FinanzGecko_Mac_App_Store.provisionprofile | plutil -p - | grep -A3 keychain-access-groups
+```
 
 **2b. Two new certificates**
 These are *different* from your Developer ID certificate and do not replace it:
@@ -108,8 +130,11 @@ and it is the single highest-value form on this page. Do it now.
 > [app-store-listing.md](app-store-listing.md).** Keep that file and `docs/index.html` in agreement — they make
 > the same promises to the same people.
 
-Apps → `+` → New App → macOS → name, primary language German, bundle ID `de.finanzgecko.app`, SKU (free-form,
-e.g. `finanzgecko-macos`).
+Apps → `+` → New App → macOS → name, primary language German, bundle ID `de.finanzgecko.app`, SKU.
+
+**SKU:** internal only — never shown to users, never part of a URL, and **permanent** once set. It identifies the
+app in financial and sales reports. Use `finanzgecko-macos`. Encode nothing that can change: no price, no version,
+no year, no "v2"; and don't reuse the bundle ID, which only invites confusing the two later.
 
 **Price** — one-time purchase: pick a tier. Apple's pricing is tier-based per storefront; you set the base and
 Apple derives the rest.
@@ -192,6 +217,21 @@ version. Steps 3 and 4 are the ones that would otherwise cost you data.
 
 ## 5. Build and upload
 
+**Version and build number come from `pubspec.yaml` alone.** `macos/Runner/Info.plist` maps
+`CFBundleShortVersionString` to `$(FLUTTER_BUILD_NAME)` and `CFBundleVersion` to `$(FLUTTER_BUILD_NUMBER)`, both
+derived from `version: <name>+<number>`. Nothing needs editing in Xcode.
+
+Two App Store rules that the DMG channel doesn't have:
+
+- **`CFBundleShortVersionString` must increase from one store version to the next.** Component-wise numeric
+  comparison, so `1.10.0` > `1.9.0` is fine.
+- **`CFBundleVersion` must increase with every *upload*, even for the same version.** A rejected or replaced
+  build cannot be re-uploaded under the same build number. So a resubmission goes `1.10.0+20` → `1.10.0+21`,
+  and the DMG channel just carries the higher number along at the next release.
+
+Don't submit a store version whose number never shipped anywhere else — keep the two channels on the same
+`pubspec.yaml` version so a support mail naming "1.10.0" means one thing.
+
 ```
 export TEAM_ID=XXXXXXXXXX
 export PROVISION_PROFILE=~/secure/FinanzGecko_Mac_App_Store.provisionprofile
@@ -223,9 +263,12 @@ Uploaded builds take 10–60 minutes to appear in App Store Connect. **No notari
 
 Ordered by how likely each is to actually bite:
 
-1. **Guideline 2.4.5(iv) — self-updating.** The in-app update check must not exist in this build. It is compiled
-   out via `kIsMacAppStore`, and the Hilfe section drops both the link and its sentence about the GitHub API.
-   Verify in the built app before uploading; this is the rejection most likely to happen twice.
+1. **Guideline 2.4.5(iv) — self-updating.** The in-app update check must not exist in this build. Three things
+   drop together via `kIsMacAppStore`: the *Nach Updates suchen* entry, the Hilfe section's sentence about the
+   GitHub API, and — since v1.10 — `UpdateService` itself, because `AppState.updateService` is `null` there and
+   nothing references the class. That last part is what actually keeps the `api.github.com` URL out of the
+   binary; the hidden button alone never did. Verify in the built app before uploading; this is the rejection
+   most likely to happen twice. See [ai/persistence.md](ai/persistence.md).
 2. **Sandbox actually active.** `build_appstore.sh` asserts this, because a build that merely *looks* like a
    store build otherwise fails at review instead of at build time.
 3. **Finance category scrutiny.** Reviewers may ask how the app handles financial data. The answer is short and
@@ -241,10 +284,14 @@ Ordered by how likely each is to actually bite:
 
 ## 7. After approval
 
-- The store version updates itself. Users who came from the DMG and switch will land in the **same sandbox
-  container** (`de.finanzgecko.app`), so their migrated data is already there — but the App Store build is signed
-  by Apple, not your Developer ID, so the **Keychain item may not carry over** and they may need *Backup
-  importieren…*. Verify this before telling anyone otherwise.
+- The store version updates itself, and store→store updates cannot lose data: keychain access is decided by the
+  `keychain-access-groups` entitlement, not by a per-item ACL, so Apple re-signing each version is harmless. Only
+  a Team-ID change or an app transfer to another team would break it.
+- **A DMG user who switches will need a Backup round trip, and that is not a maybe.** Both builds are sandboxed
+  into the same container (`de.finanzgecko.app`), so the store build finds the file — but its key lives in the
+  data-protection keychain and the DMG build's in the login keychain. The `keyId` fingerprint won't match, the
+  app shows `_ForeignDataApp` (App-Store-specific wording since v1.10) and writes nothing. Reinstalling the DMG
+  build restores full access. Say this plainly on the download page rather than letting people discover it.
 - Update the website: `docs/download.html` gains a Mac App Store option, and the "ist und bleibt kostenlos"
   framing on `docs/index.html` plus the Stripe support button need rewording so the free and paid channels do not
   read as contradictory.

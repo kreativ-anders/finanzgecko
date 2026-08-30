@@ -172,7 +172,7 @@ notarize() {
 # einmal IN die App und einmal in das DMG geheftet. Nur das DMG zu stapeln
 # genügt nicht — sobald die App herausgezogen ist, trägt sie selbst kein
 # Ticket mehr und Gatekeeper müsste beim ersten Start online bei Apple
-# nachfragen. Genau das soll der DMG-Weg ja vermeiden (siehe AI_MASTER §6).
+# nachfragen. Genau das soll der DMG-Weg ja vermeiden (siehe dev/ai/platform.md).
 if [ "$CAN_NOTARIZE" = 1 ]; then
   ZIP="$(mktemp -d)/FinanzGecko.zip"
   # ditto statt zip: erhält Resource-Forks/Extended-Attributes.

@@ -45,7 +45,7 @@
 	     The claim only holds while the OS implementations are the ones actually
 	     running: cryptography_flutter falls back silently. main() logs which one
 	     is in use on every start; the smoke test in dev/app-store.md reads it.
-	     See AI_MASTER 4.1 "Export compliance". -->
+	     See dev/ai/persistence.md "Export compliance". -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSMinimumSystemVersion</key>

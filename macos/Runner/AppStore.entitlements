@@ -2,15 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   Entitlements NUR für den Mac-App-Store-Build (packaging/macos/build_appstore.sh).
-  Der ausgelieferte DMG-Build benutzt weiterhin Release.entitlements und bleibt
-  unsandboxed — siehe AI_MASTER §4.1 "macOS-Spezifika". Diese Datei ersetzt jene
+  Der ausgelieferte DMG-Build benutzt weiterhin Release.entitlements. Beide sind
+  seit v1.8 sandboxed; die Unterschiede sind die Keychain-Variante, die
+  temporary-exception (nur Release) und die keychain-access-groups (nur hier)
+  — siehe dev/ai/persistence.md "macOS specifics". Diese Datei ersetzt jene
   nicht, sie steht daneben.
 
   Jeder Eintrag hier ist Pflicht, keiner ist "nice to have":
 
   - app-sandbox: Voraussetzung für den App Store. Virtualisiert $HOME auf
-    ~/Library/Containers/de.finanzgecko.app/Data — deshalb kann dieser Build die
-    Daten eines DMG-Builds nicht sehen und umgekehrt.
+    ~/Library/Containers/de.finanzgecko.app/Data. Der DMG-Build landet seit v1.8
+    im selben Container, sieht also dieselbe Datei — lesen kann sie trotzdem nur
+    der Build, dessen Keychain den passenden Schlüssel hält.
   - network.client: ohne das schlägt der Wechselkurs-Abruf (api.frankfurter.dev)
     still fehl. Bewusst KEIN network.server: die App nimmt keine Verbindungen an,
     und ein unbenutztes Entitlement ist im App Review eine Rückfrage wert.

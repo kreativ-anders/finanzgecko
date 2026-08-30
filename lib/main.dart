@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'constants.dart';
 import 'data/app_schema.dart';
 import 'data/app_store.dart';
 import 'data/crypto_platform.dart';
@@ -97,6 +98,8 @@ Future<void> main() async {
 }
 
 /// Explains in everyday language — without "key", "keychain" or "encryption" — why a file from elsewhere won't open.
+// INFO: the store build hits this on the SAME Mac after a channel switch, where "anderer Computer" would be wrong.
+// INFO: why the two builds share a container but not a key: dev/ai/persistence.md "Channel switch".
 class _ForeignDataApp extends StatelessWidget {
   const _ForeignDataApp({required this.filePath});
 
@@ -122,21 +125,31 @@ class _ForeignDataApp extends StatelessWidget {
                   const Icon(Icons.info_outline, color: kPrimary, size: 40),
                   const SizedBox(height: 16),
                   const Text(
-                    'Diese Datei gehört zu einem anderen Computer',
+                    kIsMacAppStore
+                        ? 'Diese Daten gehören zur anderen FinanzGecko-Version'
+                        : 'Diese Datei gehört zu einem anderen Computer',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Deine Daten sind so gespeichert, dass nur der Computer sie lesen kann, auf dem sie '
-                    'angelegt wurden. Diese Datei wurde auf einem anderen Computer erstellt und lässt '
-                    'sich hier deshalb nicht öffnen.',
+                    kIsMacAppStore
+                        ? 'Deine Daten sind so gespeichert, dass nur die FinanzGecko-Version sie lesen kann, mit '
+                              'der du sie angelegt hast. Diese Daten stammen von der Version aus dem Download auf '
+                              'finanzgecko.app — die App-Store-Version kann sie deshalb nicht öffnen.'
+                        : 'Deine Daten sind so gespeichert, dass nur der Computer sie lesen kann, auf dem sie '
+                              'angelegt wurden. Diese Datei wurde auf einem anderen Computer erstellt und lässt '
+                              'sich hier deshalb nicht öffnen.',
                     style: TextStyle(color: kMuted, height: 1.5),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Um deine Daten hierher zu holen, öffne FinanzGecko auf dem ursprünglichen Computer, '
-                    'wähle dort "Backup exportieren" und lies die entstandene Datei hier über '
-                    '"Backup importieren" wieder ein.',
+                    kIsMacAppStore
+                        ? 'Um deine Daten hierher zu holen, öffne noch einmal die Version von finanzgecko.app, '
+                              'wähle dort "Backup exportieren" und lies die entstandene Datei hier über '
+                              '"Backup importieren" wieder ein.'
+                        : 'Um deine Daten hierher zu holen, öffne FinanzGecko auf dem ursprünglichen Computer, '
+                              'wähle dort "Backup exportieren" und lies die entstandene Datei hier über '
+                              '"Backup importieren" wieder ein.',
                     style: TextStyle(color: kMuted, height: 1.5),
                   ),
                   const SizedBox(height: 16),
