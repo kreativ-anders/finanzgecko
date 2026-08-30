@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.10.1 - 2026-08-30
+
+- 🔖 Version 1.10.1+22 (340b242)
+- 🚸 Fix macOS file manager actions in Settings (4d83f10)
+- 🔒️ Harden Mac App Store channel behavior (2bab7bb)
+- 📝 Changelog für v1.10.0 (2fd6e1c)
+
+
 ## v1.10.0 - 2026-08-30
 
 - 🔖 Version 1.10.0+20 (fd3ed5b)
