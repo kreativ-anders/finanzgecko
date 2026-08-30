@@ -376,6 +376,31 @@ same thing with a GUI if you prefer.
 
 Uploaded builds take 10–60 minutes to appear in App Store Connect. **No notarization step** — App Review covers it.
 
+**Upload trap, hit on 2026-08-30 with `1.10.1+22`:** the upload dies at validation with
+
+> Validation failed (409) — The installer package includes files that are only readable by the root user. This
+> will prevent verification of the application's code signature when your app is run.
+
+Nothing is wrong with the signature; the payload simply carries file modes that deny read to non-root.
+**The culprit was `Contents/embedded.provisionprofile`.** `cp` without `-p` keeps the source file's mode, and the
+profile is kept privately at `600`, so it entered the bundle unreadable — while the Flutter build output itself
+was clean (`umask` `022`, `find build/… ! -perm -0004` empty). `productbuild` then passes the modes straight
+into the `.pkg`.
+
+`build_appstore.sh` now runs `chmod -R a+rX` on the staged copy before signing and then **asserts** that nothing
+is left unreadable — deliberately blanket rather than only on the profile, because any other copied source file
+or a restrictive `umask` sets the same trap. It fails locally in a second instead of after an upload. To inspect
+the modes by hand:
+
+```
+find build/macos/Build/Products/Release/FinanzGecko.app ! -perm -0004 -exec ls -ld {} +
+umask
+```
+
+Note the validation ran *before* the package asset was uploaded and App Store Connect deleted its own build
+record (`BuildID … was deleted`), so the build number was most likely not consumed — reuse it, and bump only if
+the next attempt says the number is taken.
+
 ---
 
 ## 6. Review risk, specific to this app

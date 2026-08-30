@@ -127,6 +127,36 @@ security find-identity -v | grep -q "$PKG_SIGN_IDENTITY" \
 
 xattr -cr "$STAGED_APP"
 
+# App Store Connect lehnt ein .pkg ab, dessen Dateien nur root lesen kann:
+# "The installer package includes files that are only readable by the root user."
+# (409 STATE_ERROR.VALIDATION_ERROR, erlebt am 2026-08-30 mit 1.10.1+22). Der
+# Ausloeser war das oben kopierte .provisionprofile: `cp` ohne -p uebernimmt den
+# Modus der Quelldatei, und die liegt privat mit 600 — der Rest des Bundles war
+# sauber (umask 022, `find build/... ! -perm -0004` leer). productbuild reicht
+# die Rechte unveraendert ins .pkg weiter, und der Fehler faellt erst beim Upload
+# auf, also nach dem Signieren und nach einer verbrannten Minute.
+#
+# Trotzdem bewusst pauschal statt nur auf dem Profil: dieselbe Falle stellt jede
+# weitere kopierte Quelldatei und jede restriktive umask im Build-Shell.
+#
+# a+rX ist bewusst additiv: Leserecht fuer alle, Ausfuehrungsrecht nur dort, wo es
+# schon gesetzt ist oder wo es ein Verzeichnis braucht. Es nimmt nichts weg.
+# Muss VOR dem Signieren laufen — ein chmod danach wuerde die Signatur nicht
+# ungueltig machen, aber es gibt keinen Grund, sich darauf zu verlassen.
+chmod -R a+rX "$STAGED_APP"
+
+# Beweis statt Vertrauen: findet die Pruefung noch etwas, ist das chmod oben an
+# einem Sonderfall vorbeigelaufen, und der Upload wuerde erneut scheitern.
+# Bewusst OHNE Pipe nach find — `| grep -q` beendet sich beim ersten Treffer und
+# macht `set -o pipefail` aus dem Erfolgsfall einen Fehlschlag (dieselbe Falle
+# wie bei `strings` weiter unten). Oktal statt a+rX, weil -perm mit symbolischen
+# Modi zwischen BSD und GNU auseinandergeht: 0004 = o+r, 0001 = o+x.
+UNREADABLE="$(find "$STAGED_APP" \( ! -perm -0004 -o \( -type d ! -perm -0001 \) \) -print)"
+if [ -n "$UNREADABLE" ]; then
+  echo "$UNREADABLE" >&2
+  die "Diese Eintraege sind nicht fuer alle lesbar — App Store Connect lehnt das .pkg sonst ab."
+fi
+
 # Inside-out und ohne --deep, aus denselben Gründen wie in build_dmg.sh: nur das
 # äußere Bundle bekommt die Entitlements, die eingebetteten Teile nicht.
 sign_one() {
