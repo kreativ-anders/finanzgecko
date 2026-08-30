@@ -61,3 +61,10 @@ app.*.map.json
 # Generiert von tool/generate_corporate_design_pdf.sh aus CORPORATE_DESIGN.md —
 # Artefakt, nicht committen.
 /CORPORATE_DESIGN.pdf
+
+# Lokale Signatur-Konfiguration für den Mac-App-Store-Build (Team-ID + Pfad zur
+# Team-Identität). Vorlage: packaging/macos/appstore.env.example.
+/packaging/macos/appstore.env
+
+# Vom Mac-App-Store-Build erzeugtes Upload-Paket — Artefakt, nicht committen.
+/FinanzGecko-mac-appstore.pkg

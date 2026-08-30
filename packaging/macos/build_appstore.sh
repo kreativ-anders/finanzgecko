@@ -55,7 +55,23 @@ ENTITLEMENTS_TEMPLATE="$REPO_ROOT/macos/Runner/AppStore.entitlements"
 
 die() { echo "Fehler: $*" >&2; exit 1; }
 
-[ -n "${TEAM_ID:-}" ] || die "TEAM_ID ist nicht gesetzt (zehnstellige Apple-Team-ID)."
+# Bequemlichkeit statt drei exports pro Shell: appstore.env wird eingelesen,
+# wenn sie existiert. Sie ist gitignored (Team-ID + Pfad zur Team-Identitaet);
+# die Vorlage daneben heisst appstore.env.example.
+# Bereits gesetzte Variablen gewinnen, damit ein einmaliges
+# `TEAM_ID=… ./build_appstore.sh` die Datei uebersteuert.
+ENV_FILE="$SCRIPT_DIR/appstore.env"
+if [ -f "$ENV_FILE" ]; then
+  _team_id_before="${TEAM_ID:-}"
+  _profile_before="${PROVISION_PROFILE:-}"
+  # shellcheck source=/dev/null
+  . "$ENV_FILE"
+  [ -z "$_team_id_before" ] || TEAM_ID="$_team_id_before"
+  [ -z "$_profile_before" ] || PROVISION_PROFILE="$_profile_before"
+  echo "Konfiguration aus $ENV_FILE gelesen."
+fi
+
+[ -n "${TEAM_ID:-}" ] || die "TEAM_ID ist nicht gesetzt — entweder exportieren oder packaging/macos/appstore.env anlegen (Vorlage: appstore.env.example)."
 
 # ----------------------------------------------------------------- Bauen --
 
@@ -90,10 +106,17 @@ fi
 # $(AppIdentifierPrefix) ersetzt sonst nur Xcode. Beim direkten codesign-Aufruf
 # landet der Platzhalter wörtlich in der Signatur, die Access Group passt dann zu
 # nichts und der Keychain-Zugriff scheitert erst zur Laufzeit beim Nutzer.
+# $(TeamIdentifierPrefix) ist dieselbe ID OHNE Punkt — daher zwei getrennte
+# Ersetzungen, und die laengere zuerst waere hier egal, weil die Muster sich
+# nicht ueberschneiden.
 ENTITLEMENTS="$WORK/AppStore.resolved.entitlements"
-sed "s/\$(AppIdentifierPrefix)/${TEAM_ID}./g" "$ENTITLEMENTS_TEMPLATE" > "$ENTITLEMENTS"
+sed -e "s/\$(AppIdentifierPrefix)/${TEAM_ID}./g" \
+    -e "s/\$(TeamIdentifierPrefix)/${TEAM_ID}/g" \
+    "$ENTITLEMENTS_TEMPLATE" > "$ENTITLEMENTS"
 grep -q "${TEAM_ID}.de.finanzgecko.app" "$ENTITLEMENTS" \
   || die "Team-ID konnte nicht in die Entitlements eingesetzt werden."
+grep -q "com.apple.application-identifier" "$ENTITLEMENTS" \
+  || die "application-identifier fehlt in den Entitlements (TestFlight-Warnung 90886)."
 
 # ------------------------------------------------------------ Signieren --
 
@@ -129,41 +152,46 @@ codesign --verify --strict --verbose=2 "$STAGED_APP"
 codesign -d --entitlements :- "$STAGED_APP" 2>/dev/null | grep -q "app-sandbox" \
   || die "Die signierte App trägt kein app-sandbox-Entitlement."
 
+# Ohne application-identifier IN DER SIGNATUR laedt der Build zwar hoch, ist aber
+# fuer TestFlight unbrauchbar (Warnung 90886) — und das erfaehrt man erst im
+# Delivery-Log, nachdem man eine Build-Nummer verbrannt hat. Xcode setzt den Key
+# automatisch, unser manueller codesign-Aufruf nur ueber die Entitlements-Datei.
+codesign -d --entitlements :- "$STAGED_APP" 2>/dev/null | grep -q "${TEAM_ID}.de.finanzgecko.app" \
+  || die "Die Signatur enthält keinen application-identifier ${TEAM_ID}.de.finanzgecko.app — der Build wäre für TestFlight unbrauchbar (90886)."
+
 # Belegt, dass --dart-define=FINANZGECKO_MAS=true wirklich angekommen ist. Ohne
-# diese Prüfung ist der gefährlichste Fehlerfall ein Build, der sandboxed und
+# diese Pruefung ist der gefaehrlichste Fehlerfall ein Build, der sandboxed und
 # von Apple signiert ist, intern aber noch kIsMacAppStore=false hat: er zeigt den
 # Update-Eintrag (Guideline 2.4.5) und greift auf die LOGIN-Keychain statt auf
 # die Data-Protection-Keychain zu — der einzige Weg, auf dem ein App-Store-Build
-# den Schlüssel eines DMG-Builds anfassen könnte.
+# den Schluessel eines DMG-Builds anfassen koennte.
 #
-# Geprüft wird die von `flutter build` geschriebene xcconfig, nicht das Binary:
-# die dart-defines stecken im AOT-Snapshot und sind dort nicht verlässlich
-# greppbar. Im Normalfall lief der Build zwei Schritte weiter oben, die Datei ist
-# also frisch. Mit SKIP_BUILD=1 beschreibt sie den LETZTEN Build — deshalb dort
-# nur eine Warnung statt eines Abbruchs.
-XCCONFIG="$REPO_ROOT/macos/Flutter/ephemeral/Flutter-Generated.xcconfig"
-mas_define_present() {
-  [ -f "$XCCONFIG" ] || return 1
-  local defines
-  defines="$(sed -n 's/^DART_DEFINES=//p' "$XCCONFIG")"
-  [ -n "$defines" ] || return 1
-  # Jeder Eintrag ist einzeln base64-kodiert und durch Kommas getrennt.
-  # INFO: -D ist BSD/macOS, -d GNU — je nach Toolchain im PATH kann beides auftauchen.
-  echo "$defines" | tr ',' '\n' | while IFS= read -r entry; do
-    echo "$entry" | base64 -D 2>/dev/null || echo "$entry" | base64 -d 2>/dev/null || true
-    echo
-  done | grep -qx "FINANZGECKO_MAS=true"
-}
+# Geprueft wird das AOT-Snapshot selbst, nicht die xcconfig: Flutter schreibt die
+# dart-defines dort nicht (mehr) hinein — eine fruehere Version dieser Pruefung
+# ist genau daran gescheitert. Weil kIsMacAppStore const ist, faltet der Compiler
+# beide Zweige weg, und die zwei Marker unten sind direkt beobachtbar:
+#   - der MAS-Satz aus settings_view.dart existiert nur, wenn der define gesetzt war
+#   - api.github.com verschwindet, weil AppState.updateService dann null ist und
+#     nichts mehr UpdateService referenziert (2.4.5)
+# Funktioniert auch mit SKIP_BUILD=1, weil es das uebergebene Bundle prueft.
+APP_BINARY="$STAGED_APP/Contents/Frameworks/App.framework/Versions/A/App"
+[ -f "$APP_BINARY" ] || die "App.framework-Binary nicht gefunden: $APP_BINARY"
 
-if mas_define_present; then
-  echo "kIsMacAppStore ist gesetzt (FINANZGECKO_MAS=true)."
-elif [ "${SKIP_BUILD:-0}" = "1" ]; then
-  echo "WARNUNG: FINANZGECKO_MAS=true steht nicht in $XCCONFIG." >&2
-  echo "         Mit SKIP_BUILD=1 ist das nicht beweisend, aber ein Warnsignal:" >&2
-  echo "         prüfe, dass das übergebene Bundle wirklich ein MAS-Build ist." >&2
-else
-  die "FINANZGECKO_MAS=true fehlt in $XCCONFIG — der Build lief ohne den dart-define."
-fi
+# WARNUNG: erst in eine Datei, dann greppen — NICHT `strings … | grep -q`.
+# `grep -q` beendet sich beim ersten Treffer, `strings` bekommt SIGPIPE (141),
+# und `set -o pipefail` macht daraus einen Fehlschlag. Der Erfolgsfall saehe
+# dann aus wie der Fehlerfall; genau daran ist die erste Fassung gescheitert.
+APP_STRINGS="$WORK/app-strings.txt"
+strings "$APP_BINARY" > "$APP_STRINGS"
+
+grep -q "den App Store" "$APP_STRINGS" \
+  || die "Der MAS-Marker fehlt im Binary — der Build lief ohne --dart-define=FINANZGECKO_MAS=true."
+
+grep -q "api.github.com" "$APP_STRINGS" \
+  && die "api.github.com steckt noch im Binary — UpdateService wurde nicht wegoptimiert (Guideline 2.4.5)." \
+  || true
+
+echo "kIsMacAppStore ist wirksam: MAS-Marker vorhanden, api.github.com nicht im Binary."
 
 echo "App signiert und sandboxed."
 

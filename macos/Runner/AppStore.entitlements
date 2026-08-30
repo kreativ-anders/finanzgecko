@@ -20,6 +20,14 @@
   - files.user-selected.read-write: Backup exportieren/importieren und CSV-Export
     laufen über file_selector (NSOpenPanel/Powerbox). Ohne das liefert der Dialog
     einen Pfad, auf den die App dann nicht schreiben darf.
+  - application-identifier: <TeamID>.<BundleID>. Xcode setzt den Key beim
+    Signieren automatisch; beim manuellen codesign NICHT — und ohne ihn lehnt
+    App Store Connect den Build fuer TestFlight ab (Warnung 90886: "signature
+    ... is missing an application identifier but has an application identifier
+    in the provisioning profile"). Der Upload selbst gelingt trotzdem, deshalb
+    prueft build_appstore.sh das jetzt vor dem Verpacken.
+  - developer.team-identifier: gehoert zum selben Paar und wird von Apple
+    zusammen mit application-identifier erwartet.
   - keychain-access-groups: der sandboxed Build muss die Data-Protection-Keychain
     benutzen (SecureKeyStore, kIsMacAppStore), und die verlangt eine Access Group
     mit Team-ID-Präfix. $(AppIdentifierPrefix) wird von Xcode ersetzt — beim
@@ -34,6 +42,10 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
+	<key>com.apple.application-identifier</key>
+	<string>$(AppIdentifierPrefix)de.finanzgecko.app</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>$(TeamIdentifierPrefix)</string>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)de.finanzgecko.app</string>

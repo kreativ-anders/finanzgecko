@@ -97,6 +97,38 @@ security find-identity -v -p codesigning | grep "3rd Party Mac Developer Applica
 security find-identity -v              | grep "3rd Party Mac Developer Installer"
 ```
 
+**If those print nothing, the certificates are almost certainly fine and the intermediate is missing.**
+`find-identity -v` lists only *valid* identities, and a certificate whose issuer chain can't be built is not
+valid — so it is silently omitted, which reads exactly like "the certificate didn't install". Keychain Access
+tells the truth: under *login → My Certificates* the entry is there in red, "certificate is not trusted".
+
+The cause is that these chain through **Apple Worldwide Developer Relations CA**, while the Developer ID
+certificate used for the DMG chains through a different intermediate you already have — so DMG signing keeps
+working and only the store certificates look broken. Apple publishes five WWDR generations; installing all of
+them is harmless:
+
+```
+cd ~/Downloads
+for g in G2 G3 G4 G5 G6; do
+  curl -sO "https://www.apple.com/certificateauthority/AppleWWDRCA$g.cer"
+  security import "AppleWWDRCA$g.cer" -k ~/Library/Keychains/login.keychain-db
+done
+security find-identity -v
+```
+
+Do **not** revoke or regenerate the certificates over this — nothing is wrong with them, and a new CSR would
+just produce two more untrusted certificates.
+
+**Duplicate entries.** `find-identity` may list the same SHA-1 twice (one per keychain the certificate reached).
+Harmless in itself, but `codesign` can refuse a name that matches more than one identity as ambiguous. If that
+happens, pass the fingerprints instead of the names — `build_appstore.sh` greps its identity variable against
+`find-identity` output, so a hash works verbatim:
+
+```
+export APP_SIGN_IDENTITY=<sha1 of the Application cert>
+export PKG_SIGN_IDENTITY=<sha1 of the Installer cert>
+```
+
 **2c. Provisioning profile**
 Profiles → `+` → **Mac App Store** distribution → App ID `de.finanzgecko.app` → the Mac App Distribution
 certificate → name it e.g. `FinanzGecko Mac App Store`. Download the `.provisionprofile`.
@@ -245,11 +277,11 @@ Mac App Store provisioning profile, and an App Store Connect app record with bun
 You can create the record before the Paid Apps Agreement is signed — you just cannot set a *price* until it is,
 so leave the pricing untouched for now.
 
-**The build to upload is not a public release.** Do not cut a version to the DMG channel for this. The TestFlight
-binary never reaches a customer, and if the test tells you something needs fixing you would only have to release
-again. Bump the build number only — `1.10.0+21` — so the store hardening is included, and cut the real public
-version once this run has told you what it needs to say. Every re-upload after that bumps the build number again
-(`+22`, `+23`); App Store Connect rejects a repeat.
+**The build must contain the store hardening.** The `v1.10.0` tag sits one commit before it, so a TestFlight
+build can never come from that tag. Cut a patch release first and build from it — both channels then mean the
+same thing by a version number, which is worth more than saving a release.
+Every re-upload bumps the build number (`+22`, `+23`); App Store Connect rejects a repeat, even for the same
+version string.
 
 Build and upload exactly as in §5, then in App Store Connect: TestFlight → Internal Testing → new group → add
 yourself → attach the build once processing finishes (10–60 minutes, you get an email). Install
