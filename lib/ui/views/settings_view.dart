@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../constants.dart';
 import '../../services/update_service.dart';
 import '../../state/app_state.dart';
+import '../../utils/file_manager.dart';
 import '../../utils/formatting.dart';
 import '../../utils/update_assets.dart';
 import '../app_view.dart';
@@ -391,15 +392,23 @@ String _keyStoreLabel() {
   return 'Betriebssystem-Schlüsselspeicher';
 }
 
-/// Opens [path] in the OS file manager via a file:// URI — url_launcher maps that to the native call.
+// INFO: no parent detour any more — the macOS data dir was renamed from "de.finanzgecko.app" to
+// "FinanzGecko" on 2026-08-14, so LaunchServices no longer mistakes it for an app bundle.
+/// Opens the app's own data directory. Only for container paths on macOS — see [openFolderInFileManager].
 Future<void> _openInFileManager(BuildContext context, String path) async {
-  // WARNING: on macOS open the PARENT — the data dir ends in ".app", so LaunchServices tries to launch it.
-  // INFO: measured 2026-08-13 — a trailing slash does not help; renaming the dir would orphan existing data.
-  final target = Platform.isMacOS ? Directory(path).parent.path : path;
-  final uri = Uri.directory(target, windows: Platform.isWindows);
-  final opened = await launchUrl(uri);
+  final opened = await openFolderInFileManager(path, Platform.operatingSystem);
   if (!opened && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ordner konnte nicht geöffnet werden.')));
+  }
+}
+
+/// Shows a downloaded file in the file manager. Deliberately the FILE, not its folder: the sandbox grants
+/// access to what the user picked in the save dialog, and asking for the folder instead is what produced
+/// the macOS "keine Berechtigung, den Ordner zu öffnen" alert with nothing to grant.
+Future<void> _revealInFileManager(BuildContext context, String filePath) async {
+  final shown = await revealFileInFileManager(filePath, Platform.operatingSystem);
+  if (!shown && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datei konnte nicht angezeigt werden.')));
   }
 }
 
@@ -655,7 +664,7 @@ Future<void> _showDownloadDoneDialog(BuildContext context, {required String file
         ElevatedButton(
           onPressed: () {
             Navigator.of(dialogContext).pop();
-            _openInFileManager(context, File(filePath).parent.path);
+            _revealInFileManager(context, filePath);
           },
           child: noSelect(const Text('Im Ordner zeigen')),
         ),

@@ -61,6 +61,8 @@ finanzgecko/
 │   │   ├── analysis.dart         # Pure, UI-free computations (trend, projection, anomaly check, Kennzahlen, Zeitraum filter) — unit-testable
 │   │   ├── csv_export.dart       # Pure CSV builders, one table per domain (Konten, Kontostände, Fixposten,
 │   │   │                             #   Vermögenswerte) + file names (lossy, no re-import)
+│   │   ├── file_manager.dart     # Reveal a file / open a folder in the OS file manager; on macOS via the
+│   │   │                             #   native `de.finanzgecko.app/finder` channel, because the sandbox refuses file: URLs
 │   │   ├── formatting.dart       # Money/percent/date formatting, number parsing, period helpers, hex→Color
 │   │   └── update_assets.dart    # Pure update logic: pick the release asset per platform, parse SHA256SUMS,
 │   │                             #   compare digests — network- and filesystem-free, hence specified as executable
@@ -97,6 +99,8 @@ finanzgecko/
 │                                  #   AppStore.entitlements, 3rd-Party-Mac-Developer certificates) → .pkg for
 │                                  #   App Store Connect; aborts HARD on a missing signature, unlike build_dmg.sh
 ├── linux/ macos/ windows/         # Native Flutter desktop runners (boilerplate, generally not edited by hand)
+│                                  #   EXCEPTION macos/Runner/MainFlutterWindow.swift: hosts the `finder` method
+│                                  #   channel (reveal file / open folder) — see [platform.md](platform.md)
 ├── docs/                          # Static website (GitHub Pages, no build step, plain HTML/CSS)
 │   ├── CNAME                      # Custom domain: finanzgecko.app — **every** absolute URL (canonical, og:url,
 │   │                               #   og:image, twitter:image, sitemap.xml, robots.txt, llms.txt, README.md, and

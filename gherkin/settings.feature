@@ -1,4 +1,4 @@
-# Source: lib/ui/views/settings_view.dart, lib/ui/backup_actions.dart, lib/utils/csv_export.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart, lib/services/update_service.dart, lib/utils/update_assets.dart
+# Source: lib/ui/views/settings_view.dart, lib/ui/backup_actions.dart, lib/utils/csv_export.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/data/app_schema.dart, lib/ui/theme.dart, lib/constants.dart, lib/ui/widgets/reset_confirm_dialog.dart, lib/services/currency_service.dart, lib/services/update_service.dart, lib/utils/update_assets.dart, lib/utils/file_manager.dart
 # Implementation: lib/ui/views/settings_view.dart
 @settings
 Feature: Einstellungen
@@ -42,13 +42,13 @@ Feature: Einstellungen
 
   Scenario: Open the storage location in the file manager
     When I click the "Im Dateimanager öffnen" button next to the storage location
-    Then the OS's native file manager opens at the data directory
-    And on macOS, the PARENT directory is deliberately opened instead: the data directory is named after
-      the application ID and thus ends in ".app", which macOS treats as an app bundle — it then tries to
-      launch the folder and reports "beschädigt oder unvollständig". A trailing slash does NOT help here
-      (measured on 2026-08-13), opening the parent directory does
-    And on Linux and Windows, the data directory itself keeps opening directly — there, ".app" isn't a
-      special suffix
+    Then the OS's native file manager opens at the data directory itself, on every platform
+    And on macOS this goes through the native "openFolder" channel (NSWorkspace.open), not through a
+      file:// URL — url_launcher's route is refused under the App Sandbox
+    And no parent directory is opened any more: that detour existed only because the data directory used
+      to be named "de.finanzgecko.app" and macOS treats a trailing ".app" as an app bundle (measured on
+      2026-08-13; a trailing slash did not help). The directory was renamed to "FinanzGecko" on
+      2026-08-14, so the detour became a bug — it landed the user in the home directory
     Given opening it fails (e.g. no file manager registered)
     Then an error snackbar "Ordner konnte nicht geöffnet werden." appears
 
@@ -147,6 +147,12 @@ Feature: Einstellungen
       chosen folder
     Then a dialog "Update geladen und geprüft" shows the platform-dependent next step plus an
       "Im Ordner zeigen" button
+    And that button shows the downloaded FILE selected in the file manager, not the folder around it: the
+      sandbox grants access to what the user picked in the save dialog and to nothing else, so asking for
+      the folder produced a macOS alert ("keine Berechtigung, den Ordner zu öffnen") that offers nothing
+      to grant, because NSWorkspace never raises a Powerbox prompt
+    Given showing it fails
+    Then an error snackbar "Datei konnte nicht angezeigt werden." appears
     And this dialog first asks to quit FinanzGecko before installing the new version (replacing a running
       app leads to errors) — deliberately worded once for all platforms, not per platform, so the hint
       can't be missing on any of them

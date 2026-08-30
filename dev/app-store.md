@@ -8,8 +8,12 @@ Everything code-side is already in place: `kIsMacAppStore` (`lib/constants.dart`
 happens in Apple's web UIs and cannot be scripted or tested from this repo.
 
 > **Order matters more than usual here.** Certificates depend on the App ID, the provisioning profile depends on
-> both, the build depends on the profile, and the upload depends on a finished agreement. Doing step 5 before
+> both, the build depends on the profile, and selling depends on a finished agreement. Doing step 5 before
 > step 2 means redoing step 5.
+>
+> **Working through this the first time? The route is §3 in parallel with §2 → §4 → [§4b TestFlight](#4b-testflight-first--do-this-before-submitting-anything) → §5.**
+> TestFlight needs neither the agreements nor App Review, and it is the only way to observe this app's keychain
+> and crypto behaviour under App Store signing before committing to a submission.
 
 ---
 
@@ -106,6 +110,10 @@ after a year — a failed upload a year from now is usually this.
 
 App Store Connect → Business (formerly "Agreements, Tax, and Banking"). **Nothing paid can ship until this is
 green**, and the tax review takes days, so start it before you build.
+
+It gates *selling*, not testing: TestFlight (§4b) runs under the Apple Developer Program License Agreement you
+already have. You can also create the app record without it — you just cannot set a price until it is signed.
+So start this now and get on with §2 and §4b while it clears.
 
 Strict order, because Apple only reveals each step after the previous one:
 
@@ -215,6 +223,85 @@ version. Steps 3 and 4 are the ones that would otherwise cost you data.
 8. **The update path is still absent from the App Store build.** Unchanged by this work, but it shares the build
    script and it is the rejection most likely to happen twice — see §6.1.
 
+## 4b. TestFlight first — do this before submitting anything
+
+TestFlight is not a nicety here. Three things about this app can only be observed on a build that Apple has
+signed and sandboxed: whether the OS crypto still runs, what a DMG user actually sees when they switch channels,
+and whether `UpdateService` really left the binary. A TestFlight build goes through the **identical** signing and
+packaging pipeline as a store submission, so it reproduces all three on your own Mac — without publishing
+anything, and without App Review seeing it.
+
+**What TestFlight does *not* need:**
+
+- **No Paid Apps Agreement, no bank account, no tax forms.** Those gate *selling*. The Apple Developer Program
+  License Agreement you already have covers beta distribution. Do start the Business paperwork in parallel
+  (§3) — it has the longest lead time — but it does not block this.
+- **No Beta App Review**, because you are your own *internal* tester. Internal testing is immediate; only
+  external testers (up to 10,000) need the one-time review of a first build.
+- **No price, no screenshots, no listing copy.** Set those later.
+
+**What it does need**, and this is the whole of §2 plus a record: the App ID, both distribution certificates, the
+Mac App Store provisioning profile, and an App Store Connect app record with bundle ID `de.finanzgecko.app`.
+You can create the record before the Paid Apps Agreement is signed — you just cannot set a *price* until it is,
+so leave the pricing untouched for now.
+
+**The build to upload is not a public release.** Do not cut a version to the DMG channel for this. The TestFlight
+binary never reaches a customer, and if the test tells you something needs fixing you would only have to release
+again. Bump the build number only — `1.10.0+21` — so the store hardening is included, and cut the real public
+version once this run has told you what it needs to say. Every re-upload after that bumps the build number again
+(`+22`, `+23`); App Store Connect rejects a repeat.
+
+Build and upload exactly as in §5, then in App Store Connect: TestFlight → Internal Testing → new group → add
+yourself → attach the build once processing finishes (10–60 minutes, you get an email). Install
+**TestFlight from the Mac App Store** and install FinanzGecko from there. Builds expire after 90 days.
+
+### What this run has to answer
+
+Run these in order on your own Mac. Steps 2–4 are the ones that were argued about from first principles for two
+weeks; this is where they get settled.
+
+**Before you start:** copy your real data file somewhere safe, and keep an encrypted backup written by the DMG
+build. Steps 3 and 4 are the ones that would otherwise cost you data.
+
+1. **The full §4a crypto smoke test, on the TestFlight build.** Console.app must show
+   `AES-256-GCM = OS (cryptography_flutter), PBKDF2-HMAC-SHA256 = OS (CommonCrypto)`. This is the first time
+   those paths run under App Store signing and the sandbox together — §4a step 2 exists precisely for this.
+
+2. **`UpdateService` is really gone from the binary.** The nullable `AppState.updateService` is supposed to let
+   the tree shaker drop the class and its URL. Verify rather than trust:
+
+   ```
+   strings /Applications/FinanzGecko.app/Contents/Frameworks/App.framework/Versions/A/App | grep -c api.github.com
+   ```
+
+   Expect **0** on the TestFlight build. Run the same command against the DMG build's bundle for contrast — it
+   should be non-zero there. A non-zero count on the store build means something still references the service;
+   the build is not wrong, but Guideline 2.4.5 gets harder to argue and the cause is worth finding.
+
+3. **The channel switch, with your real data.** With the DMG build's data file in the container, launch the
+   TestFlight build. Expected: the `_ForeignDataApp` screen with the **App Store wording** ("andere
+   FinanzGecko-Version", not "anderer Computer"), no `.unreadable-*` file appearing beside the data, no keychain
+   password prompt. Then quit, reinstall the DMG build, and confirm all data is back untouched. That round trip
+   is the claim in §7; this is the only way to know it holds.
+
+4. **The backup route across channels.** Export a password-protected backup from the DMG build, import it into
+   the TestFlight build. It must open with its original password. This is the path you will be telling switchers
+   to use, so it has to work before you tell anyone.
+
+5. **A store→store update keeps data.** Upload `+22`, update through TestFlight, confirm the data written by
+   `+21` still opens with no prompt. This is the claim that Apple's re-signing is harmless because access hangs
+   off `keychain-access-groups` rather than a per-item ACL — cheap to verify here, expensive to get wrong later.
+
+6. **The ≤1.7 case, deliberately reproduced.** Move the container aside so only a pre-sandbox
+   `~/Library/Application Support/de.finanzgecko.app/` remains, then launch the TestFlight build. Expected —
+   and this is the known open gap — an empty app with no explanation, because `AppStore.entitlements` has no
+   temporary exception and `SandboxMigration` cannot reach the old path. Look at it, decide whether it ships
+   like that, and fix it before the real submission rather than after.
+
+If steps 1–5 pass and step 6 gets whatever treatment you choose, the submission in §5 onwards is a formality.
+
+---
+
 ## 5. Build and upload
 
 **Version and build number come from `pubspec.yaml` alone.** `macos/Runner/Info.plist` maps
@@ -265,8 +352,8 @@ Ordered by how likely each is to actually bite:
 
 1. **Guideline 2.4.5(iv) — self-updating.** The in-app update check must not exist in this build. Three things
    drop together via `kIsMacAppStore`: the *Nach Updates suchen* entry, the Hilfe section's sentence about the
-   GitHub API, and — since v1.10 — `UpdateService` itself, because `AppState.updateService` is `null` there and
-   nothing references the class. That last part is what actually keeps the `api.github.com` URL out of the
+   GitHub API, and `UpdateService` itself, because `AppState.updateService` is `null` there and nothing
+   references the class. That last part is what actually keeps the `api.github.com` URL out of the
    binary; the hidden button alone never did. Verify in the built app before uploading; this is the rejection
    most likely to happen twice. See [ai/persistence.md](ai/persistence.md).
 2. **Sandbox actually active.** `build_appstore.sh` asserts this, because a build that merely *looks* like a
@@ -290,7 +377,7 @@ Ordered by how likely each is to actually bite:
 - **A DMG user who switches will need a Backup round trip, and that is not a maybe.** Both builds are sandboxed
   into the same container (`de.finanzgecko.app`), so the store build finds the file — but its key lives in the
   data-protection keychain and the DMG build's in the login keychain. The `keyId` fingerprint won't match, the
-  app shows `_ForeignDataApp` (App-Store-specific wording since v1.10) and writes nothing. Reinstalling the DMG
+  app shows `_ForeignDataApp`, in wording branched for the store build, and writes nothing. Reinstalling the DMG
   build restores full access. Say this plainly on the download page rather than letting people discover it.
 - Update the website: `docs/download.html` gains a Mac App Store option, and the "ist und bleibt kostenlos"
   framing on `docs/index.html` plus the Stripe support button need rewording so the free and paid channels do not

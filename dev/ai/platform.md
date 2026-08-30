@@ -153,7 +153,19 @@
      (`selectAssetName`, `lib/utils/update_assets.dart`).
   3. Download, then a comparison against `SHA256SUMS` from the same release. **Only written after the check
      passes** — an unverified file must never sit in the target folder looking installable.
-  4. Then a dialog with the platform-dependent next step and "Im Ordner zeigen".
+  4. Then a dialog with the platform-dependent next step and "Im Ordner zeigen". That button **reveals the
+     file**, it does not open its folder — on macOS via the `de.finanzgecko.app/finder` channel
+     (`macos/Runner/MainFlutterWindow.swift`, Dart side `lib/utils/file_manager.dart`) calling
+     `NSWorkspace.activateFileViewerSelecting`. **Why the native detour:** under the App Sandbox a `file:`
+     URL through `url_launcher` ends in `NSWorkspace.open`, which reads properties of the URL and is
+     refused for anything outside the container. macOS then shows "… hat keine Berechtigung, den Ordner
+     „Downloads“ zu öffnen" — and since `NSWorkspace`, unlike a file dialog, never raises a Powerbox
+     prompt, the user has nothing to grant and the app appears broken (reported 2026-08-30).
+     `activateFileViewerSelecting` is Apple DTS's sandbox-safe answer: it works on any URL the app already
+     holds an extension for, which the file just written through `NSSavePanel` is. The same channel's
+     `openFolder` serves the storage-location button, which points **inside** the container and is
+     therefore allowed. Do not collapse the two into one call, and do not "fix" this with a
+     `files.downloads.read-write` entitlement — that would be a new App Review question for a button.
      The app **doesn't execute the file** and doesn't replace itself: on Windows that would mean "start the
      installer" — launching a freshly downloaded executable file. The hint to **quit** FinanzGecko first appears
      once for all platforms in the dialog (previously worded per platform — and forgotten under Linux), mirrored
