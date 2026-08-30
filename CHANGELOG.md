@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.10.2 - 2026-08-30
+
+- 🔖 Version 1.10.2+23 (12cf04b)
+- 🐛 Fix App Store pkg file permission validation (58d4c1a)
+- 🧑‍💻 Fix MAS build: entitlements, env file, checks (468748e)
+- 📝 Changelog für v1.10.1 (7213df9)
+
+
 ## v1.10.1 - 2026-08-30
 
 - 🔖 Version 1.10.1+22 (340b242)
