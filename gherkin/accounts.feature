@@ -29,6 +29,16 @@ Feature: Manage Konten
     And I see the confirmation "Angelegt."
     And the form is empty again (Bank/Name cleared, Typ/Währung reset to their defaults)
 
+  Scenario: Enter submits the "Neues Konto" form
+    Given I am on the "Konten" view in the "Neues Konto" form with all required fields filled in
+    When I press Enter in the Bank field or the Name field
+    Then this has the same effect as clicking "Konto anlegen"
+
+  Scenario: Enter submits the Konto edit form
+    Given a Konto is currently being edited
+    When I press Enter in the Bank field or the Name field
+    Then this has the same effect as clicking "Speichern"
+
   Scenario: The bank field only allows known banks
     Given I am on the "Konten" view in the "Neues Konto" form
     When I enter text in the bank field that matches no bank from the known list

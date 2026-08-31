@@ -15,6 +15,11 @@ Feature: Manage Vermögenswerte (Sachwerte)
     And I see the confirmation "Angelegt."
     And the form is cleared
 
+  Scenario: Enter submits the "Neuer Vermögenswert" form
+    Given I am in the "Neuer Vermögenswert" form with label and value filled in
+    When I press Enter in the label or value field
+    Then this has the same effect as clicking "Anlegen"
+
   Scenario: Required fields when creating
     Given I am in the "Neuer Vermögenswert" form
     When I leave the label empty or enter a value that can't be parsed as a number
@@ -62,4 +67,5 @@ Feature: Manage Vermögenswerte (Sachwerte)
 
   Scenario: List sorting
     Given several Vermögenswerte exist
-    Then the list is sorted alphabetically by label
+    Then the list is sorted by value, highest first
+    And Vermögenswerte of equal value are ordered alphabetically by label as a tiebreak

@@ -124,7 +124,7 @@ class _EntriesViewState extends State<EntriesView> {
     for (final acc in app.accounts) {
       final raw = _controllers[acc.id]?.text.trim() ?? '';
       if (raw.isEmpty) continue;
-      final amount = parseInputNumber(raw);
+      final amount = evaluateInputExpression(raw);
       if (amount == null) continue;
       final prev = previousFor(acc.id);
       final rate = _rateEstimate(app, acc, prev);
@@ -154,7 +154,7 @@ class _EntriesViewState extends State<EntriesView> {
       final ctrl = _controllers[acc.id];
       final raw = ctrl?.text.trim() ?? '';
       if (raw.isEmpty) continue;
-      final amount = parseInputNumber(raw);
+      final amount = evaluateInputExpression(raw);
       if (amount == null) {
         invalid++;
         continue;
@@ -484,7 +484,7 @@ class _EntryRow extends StatelessWidget {
     final prev = app.previousBalance(account.id, period);
 
     // INFO: order-of-magnitude guard against a mistyped digit; deliberately non-blocking.
-    final entered = parseInputNumber(controller.text.trim());
+    final entered = evaluateInputExpression(controller.text.trim());
     final prevAmount = prev?.amountOriginal;
     String? anomaly;
     if (entered != null && prevAmount != null && isBalanceAnomaly(entered, prevAmount)) {
@@ -534,7 +534,18 @@ class _EntryRow extends StatelessWidget {
                   autofocus: autofocus,
                   onChanged: (_) => onChanged(),
                   textInputAction: nextFocusNode != null ? TextInputAction.next : TextInputAction.done,
-                  onSubmitted: (_) {
+                  onSubmitted: (value) {
+                    // INFO: +, -, * and / are evaluated as a sum (see evaluateInputExpression) — e.g. two
+                    // sub-balances of the same broker combined into one Kontostand. Reject anything else here
+                    // instead of letting it fall through to "invalid, skipped" on save.
+                    final raw = value.trim();
+                    if (raw.isNotEmpty && evaluateInputExpression(raw) == null) {
+                      showErrorSnackBar(
+                        context,
+                        'Ungültige Eingabe — nur Zahlen und Rechenzeichen (+ - * /) sind erlaubt.',
+                      );
+                      return;
+                    }
                     final next = nextFocusNode;
                     if (next != null) {
                       next.requestFocus();

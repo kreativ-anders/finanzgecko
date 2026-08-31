@@ -59,6 +59,55 @@ void main() {
     });
   });
 
+  group('evaluateInputExpression', () {
+    test('a plain number behaves exactly like parseInputNumber', () {
+      expect(evaluateInputExpression('1234'), 1234);
+      expect(evaluateInputExpression('1.234,56'), closeTo(1234.56, 1e-9));
+      expect(evaluateInputExpression('-50'), -50);
+      expect(evaluateInputExpression(''), isNull);
+    });
+
+    test('adds two amounts, e.g. combining a depot and cash balance', () {
+      expect(evaluateInputExpression('1300,12 +5201.75'), closeTo(6501.87, 1e-9));
+    });
+
+    test('supports -, * and /', () {
+      expect(evaluateInputExpression('100 - 30'), closeTo(70, 1e-9));
+      expect(evaluateInputExpression('10 * 3'), closeTo(30, 1e-9));
+      expect(evaluateInputExpression('10 / 4'), closeTo(2.5, 1e-9));
+    });
+
+    test('* and / bind tighter than + and -', () {
+      expect(evaluateInputExpression('10 + 2 * 3'), closeTo(16, 1e-9));
+      expect(evaluateInputExpression('20 - 10 / 2'), closeTo(15, 1e-9));
+    });
+
+    test('evaluates left to right within the same precedence level', () {
+      expect(evaluateInputExpression('100 - 20 - 10'), closeTo(70, 1e-9));
+      expect(evaluateInputExpression('100 / 10 / 2'), closeTo(5, 1e-9));
+    });
+
+    test('a leading minus is a sign, not a dangling operator', () {
+      expect(evaluateInputExpression('-50 + 20'), closeTo(-30, 1e-9));
+    });
+
+    test('returns null for text containing letters', () {
+      expect(evaluateInputExpression('abc'), isNull);
+      expect(evaluateInputExpression('100x50'), isNull);
+      expect(evaluateInputExpression('1300,12 +abc'), isNull);
+    });
+
+    test('returns null for a dangling or doubled operator', () {
+      expect(evaluateInputExpression('100 +'), isNull);
+      expect(evaluateInputExpression('+ 100'), isNull);
+      expect(evaluateInputExpression('100 * / 2'), isNull);
+    });
+
+    test('returns null for division by zero', () {
+      expect(evaluateInputExpression('10 / 0'), isNull);
+    });
+  });
+
   group('fmtPercent', () {
     test('formats with one decimal and a German comma', () {
       expect(fmtPercent(7.3), '7,3%');

@@ -24,10 +24,13 @@ Future<void> _openSuggestionMail() async {
 
 /// Bank field with a color preview and per-suggestion swatches from [kBanks].
 class _BankField extends StatefulWidget {
-  const _BankField({required this.controller, required this.fallbackColorHex});
+  const _BankField({required this.controller, required this.fallbackColorHex, this.onSubmit});
 
   final TextEditingController controller;
   final String fallbackColorHex;
+
+  /// Called on Enter, in addition to Autocomplete's own field-submit (which finalizes the selection).
+  final VoidCallback? onSubmit;
 
   @override
   State<_BankField> createState() => _BankFieldState();
@@ -99,7 +102,7 @@ class _BankFieldState extends State<_BankField> {
               ),
             );
           },
-          fieldViewBuilder: (context, controller, focusNode, onSubmit) {
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
             return TextFormField(
               controller: controller,
               focusNode: focusNode,
@@ -116,6 +119,10 @@ class _BankFieldState extends State<_BankField> {
                 ),
               ),
               validator: (v) => isKnownBank(v) ? null : 'Bitte eine Bank aus der Liste auswählen',
+              onFieldSubmitted: (_) {
+                onFieldSubmitted();
+                widget.onSubmit?.call();
+              },
             );
           },
         ),
@@ -186,6 +193,7 @@ class _AccountFormFields extends StatelessWidget {
     required this.currencyOptions,
     required this.onTagChanged,
     required this.onCurrencyChanged,
+    this.onSubmit,
   });
 
   final TextEditingController nameCtrl;
@@ -199,17 +207,21 @@ class _AccountFormFields extends StatelessWidget {
   final ValueChanged<String?> onTagChanged;
   final ValueChanged<String?> onCurrencyChanged;
 
+  /// Called on Enter in the Bank or Name field, so the surrounding Form can be submitted without a click.
+  final VoidCallback? onSubmit;
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _BankField(controller: bankCtrl, fallbackColorHex: fallbackColorHex),
+        _BankField(controller: bankCtrl, fallbackColorHex: fallbackColorHex, onSubmit: onSubmit),
         const SizedBox(height: 14),
         TextFormField(
           controller: nameCtrl,
           decoration: const InputDecoration(labelText: 'Name', hintText: 'z.B. Gehaltskonto, Trading'),
           validator: (v) => (v == null || v.trim().isEmpty) ? 'Pflichtfeld' : null,
+          onFieldSubmitted: (_) => onSubmit?.call(),
         ),
         const SizedBox(height: 14),
         Row(
@@ -342,6 +354,7 @@ class _AccountsViewState extends State<AccountsView> {
                     currencyOptions: kCurrencies,
                     onTagChanged: (v) => setState(() => _tag = v ?? _tag),
                     onCurrencyChanged: (v) => setState(() => _currency = v ?? _currency),
+                    onSubmit: _submitNew,
                   ),
                   const SizedBox(height: 18),
                   ElevatedButton(onPressed: _submitNew, child: noSelect(const Text('Konto anlegen'))),
@@ -485,6 +498,7 @@ class _AccountEditFormState extends State<_AccountEditForm> {
                 currencyOptions: {...kCurrencies, _currency},
                 onTagChanged: (v) => setState(() => _tag = v ?? _tag),
                 onCurrencyChanged: (v) => setState(() => _currency = v ?? _currency),
+                onSubmit: _save,
               ),
               const SizedBox(height: 16),
               Row(

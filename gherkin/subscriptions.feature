@@ -21,6 +21,11 @@ Feature: Manage Fixposten (recurring income/expenses)
     And I fill in the form and save
     Then a Fixposten is saved with a positive amount
 
+  Scenario: Enter submits the "Neuer Fixposten" form
+    Given I am in the "Neuer Fixposten" form with name, currency, and amount filled in
+    When I press Enter in the name, currency, or amount field
+    Then this has the same effect as clicking "Anlegen"
+
   Scenario: Required fields and amount validation
     Given I am in the "Neuer Fixposten" form
     When the name is empty or the amount can't be parsed as a positive number
@@ -67,7 +72,9 @@ Feature: Manage Fixposten (recurring income/expenses)
 
   Scenario: The list groups income before expenses
     Given both income and expense Fixposten exist
-    Then all income items are shown first (alphabetically), then all expense items (alphabetically)
+    Then all income items are shown first, then all expense items
+    And within each group, items are ordered by monthly-equivalent amount, highest first
+    And Fixposten of equal monthly amount are ordered alphabetically as a tiebreak
 
   Scenario: Totals overview
     Given several Fixposten exist

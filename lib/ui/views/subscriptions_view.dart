@@ -93,10 +93,14 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final income = app.subscriptions.where((s) => s.amountOriginal > 0).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-    final expense = app.subscriptions.where((s) => s.amountOriginal < 0).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    // Descending by monthly equivalent (in Basiswährung, so mixed currencies stay comparable); name breaks ties.
+    int byMonthlyDesc(Subscription a, Subscription b) {
+      final cmp = app.monthlyEquivalent(b).abs().compareTo(app.monthlyEquivalent(a).abs());
+      return cmp != 0 ? cmp : a.name.compareTo(b.name);
+    }
+
+    final income = app.subscriptions.where((s) => s.amountOriginal > 0).toList()..sort(byMonthlyDesc);
+    final expense = app.subscriptions.where((s) => s.amountOriginal < 0).toList()..sort(byMonthlyDesc);
     final entries = [...income, ...expense];
 
     return SingleChildScrollView(
@@ -135,6 +139,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                     controller: _nameCtrl,
                     decoration: const InputDecoration(labelText: 'Name', hintText: 'z.B. Netflix, Gehalt, Dividenden'),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Pflichtfeld' : null,
+                    onFieldSubmitted: (_) => _submit(app),
                   ),
                   const SizedBox(height: 14),
                   Row(
@@ -156,6 +161,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                         child: TextFormField(
                           controller: _currencyCtrl,
                           decoration: const InputDecoration(labelText: 'Währung'),
+                          onFieldSubmitted: (_) => _submit(app),
                         ),
                       ),
                     ],
@@ -172,6 +178,7 @@ class _SubscriptionsViewState extends State<SubscriptionsView> {
                             controller: _magnitudeCtrl,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             decoration: const InputDecoration(labelText: 'Betrag', hintText: '0,00'),
+                            onFieldSubmitted: (_) => _submit(app),
                           ),
                         ),
                       ],

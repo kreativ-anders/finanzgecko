@@ -54,7 +54,12 @@ class _AssetsViewState extends State<AssetsView> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final reminder = app.getAssetReminder();
-    final assets = [...app.assets]..sort((a, b) => a.name.compareTo(b.name));
+    // Descending by value, so the biggest Vermögenswert leads; name breaks ties.
+    final assets = [...app.assets]
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        return cmp != 0 ? cmp : a.name.compareTo(b.name);
+      });
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -93,6 +98,7 @@ class _AssetsViewState extends State<AssetsView> {
                     controller: _nameCtrl,
                     decoration: const InputDecoration(labelText: 'Bezeichnung', hintText: 'z.B. MacBook Pro'),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Pflichtfeld' : null,
+                    onFieldSubmitted: (_) => _submit(app),
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -100,6 +106,7 @@ class _AssetsViewState extends State<AssetsView> {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(labelText: 'Wert (${app.baseCurrency})', hintText: '0,00'),
                     validator: (v) => (parseInputNumber(v ?? '') == null) ? 'Ungültiger Wert' : null,
+                    onFieldSubmitted: (_) => _submit(app),
                   ),
                   const SizedBox(height: 18),
                   ElevatedButton(onPressed: () => _submit(app), child: noSelect(const Text('Anlegen'))),

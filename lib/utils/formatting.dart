@@ -48,6 +48,84 @@ double? parseInputNumber(String raw) {
   return double.tryParse(trimmed);
 }
 
+/// Splits an arithmetic expression into number/operator tokens for [evaluateInputExpression].
+/// A `-` counts as part of a number (a sign) at the start or right after another operator, and as the
+/// binary minus operator everywhere else. Returns null for any character outside `[0-9.,+\-*/ ]`.
+List<String>? _tokenizeExpression(String trimmed) {
+  final tokens = <String>[];
+  final buf = StringBuffer();
+  var expectOperand = true;
+  for (var i = 0; i < trimmed.length; i++) {
+    final c = trimmed[i];
+    if (c == ' ' || c == '\t') continue;
+    final isBinaryOperator = (c == '+' || c == '*' || c == '/' || c == '-') && !expectOperand;
+    if (isBinaryOperator) {
+      if (buf.isEmpty) return null;
+      tokens.add(buf.toString());
+      tokens.add(c);
+      buf.clear();
+      expectOperand = true;
+    } else if (c == '-' && expectOperand) {
+      buf.write(c);
+    } else if (RegExp(r'[0-9.,]').hasMatch(c)) {
+      buf.write(c);
+      expectOperand = false;
+    } else {
+      return null;
+    }
+  }
+  if (buf.isEmpty) return null;
+  tokens.add(buf.toString());
+  return tokens;
+}
+
+/// Evaluates a simple arithmetic expression typed into an amount field (e.g. "1300,12 +5201.75"), so
+/// several sub-amounts (e.g. depot + cash of the same broker) can be combined into one Kontostand without
+/// a separate calculator. Operands use [parseInputNumber]'s notation; `*`/`/` bind tighter than `+`/`-`,
+/// evaluated left to right within each precedence level (no parentheses). A superset of [parseInputNumber]:
+/// a plain number with no operator evaluates the same as calling that directly.
+/// Returns null for anything that isn't a valid expression (stray characters, an unparseable operand, a
+/// dangling operator, or division by zero) — the caller must not silently save 0 or a garbage result.
+double? evaluateInputExpression(String raw) {
+  final tokens = _tokenizeExpression(raw.trim());
+  if (tokens == null) return null;
+
+  final numbers = <double>[];
+  final operators = <String>[];
+  for (var i = 0; i < tokens.length; i++) {
+    if (i.isEven) {
+      final n = parseInputNumber(tokens[i]);
+      if (n == null) return null;
+      numbers.add(n);
+    } else {
+      operators.add(tokens[i]);
+    }
+  }
+
+  // Pass 1: fold * and / into the running operand, left to right.
+  final terms = <double>[numbers.first];
+  final termOperators = <String>[];
+  for (var i = 0; i < operators.length; i++) {
+    final op = operators[i];
+    final next = numbers[i + 1];
+    if (op == '*' || op == '/') {
+      if (op == '/' && next == 0) return null;
+      final last = terms.removeLast();
+      terms.add(op == '*' ? last * next : last / next);
+    } else {
+      termOperators.add(op);
+      terms.add(next);
+    }
+  }
+
+  // Pass 2: fold + and - left to right.
+  var result = terms.first;
+  for (var i = 0; i < termOperators.length; i++) {
+    result = termOperators[i] == '+' ? result + terms[i + 1] : result - terms[i + 1];
+  }
+  return result;
+}
+
 /// "2025-03" -> "Mär 2025"
 String periodLabel(String period) {
   final parts = period.split('-');

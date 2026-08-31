@@ -57,6 +57,21 @@ Feature: Record monthly Kontostände
     Given I leave "Einträge" and return later via the nav bar
     Then the earlier card click has no lasting effect — focus is on the first Konto again
 
+  Scenario: Calculate a combined value directly in the amount field
+    Given I am entering a Kontostand
+    When I type a simple arithmetic expression using +, -, * or / instead of a plain number
+      (e.g. "1300,12 +5201.75" to combine a broker's depot and cash balance into one Konto)
+    Then the expression is evaluated (× and ÷ bind tighter than + and −, left to right, no parentheses)
+    And the resulting sum is what gets saved as the Kontostand on "Alle speichern"
+    And the live running total and the anomaly hint already use the computed value while typing
+
+  Scenario: Invalid input in the amount field is rejected, not silently skipped
+    Given I am entering a Kontostand
+    When I type text that isn't a valid number or arithmetic expression (e.g. contains letters, or a
+      dangling operator) and press Enter
+    Then focus does not move to the next Konto and nothing is saved for this Konto
+    And a toast "Ungültige Eingabe — nur Zahlen und Rechenzeichen (+ - * /) sind erlaubt." appears
+
   Scenario: Show only missing Konten
     Given a value has already been recorded for some of the Konten in the chosen month
     When I turn on the "Nur fehlende anzeigen" toggle
