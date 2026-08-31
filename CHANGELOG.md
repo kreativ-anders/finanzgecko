@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.11.0 - 2026-08-31
+
+- 🔖 Version 1.11.0+24 (3304887)
+- 🚸 Add in-field arithmetic, Enter-to-submit, list ordering (28b85e3)
+- 📝 Changelog für v1.10.2 (2637c02)
+
+
 ## v1.10.2 - 2026-08-30
 
 - 🔖 Version 1.10.2+23 (12cf04b)
