@@ -69,8 +69,7 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  Finder byNameFieldText(String name) =>
-      find.byWidgetPredicate((w) => w is TextField && w.controller?.text == name);
+  Finder byNameFieldText(String name) => find.byWidgetPredicate((w) => w is TextField && w.controller?.text == name);
 
   Finder byLabel(String label) => find.byWidgetPredicate((w) => w is TextField && w.decoration?.labelText == label);
 

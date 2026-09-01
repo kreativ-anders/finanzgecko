@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,9 +12,11 @@ import 'data/app_store.dart';
 import 'data/crypto_platform.dart';
 import 'services/notification_service.dart';
 import 'state/app_state.dart';
+import 'ui/backup_actions.dart';
 import 'ui/navigation_shell.dart';
 import 'ui/splash_screen.dart';
 import 'ui/theme.dart';
+import 'ui/widgets/app_snackbar.dart';
 
 /// Persists window size + maximized state (best-effort, debounced) so the app reopens as it was left.
 class _WindowPrefsSaver with WindowListener {
@@ -55,35 +58,7 @@ Future<void> main() async {
   try {
     final store = AppStore();
     await store.ensureInitialized();
-    final windowPrefs = store.windowPrefs;
-
-    // WARNING: must precede WindowOptions — its backgroundColor reads kBackground, still the dark default here.
-    primeThemeBrightness(store.themeMode);
-
-    await windowManager.ensureInitialized();
-    final windowOptions = WindowOptions(
-      size: Size(windowPrefs.width, windowPrefs.height),
-      minimumSize: const Size(960, 640),
-      center: true,
-      title: 'FinanzGecko',
-      backgroundColor: kBackground,
-    );
-    await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      if (windowPrefs.maximized) {
-        await windowManager.maximize();
-      }
-      await windowManager.show();
-      await windowManager.focus();
-    });
-    windowManager.addListener(_WindowPrefsSaver(store));
-
-    final notificationService = NotificationService();
-    await notificationService.init();
-
-    final appState = AppState(store, notificationService: notificationService);
-    await appState.init();
-
-    runApp(FinanzGeckoApp(appState: appState));
+    await _startApp(store);
   } on ForeignKeyDataException catch (err) {
     // INFO: debug-gated unlike the case below: debugPrint reaches the OS log, and this line carries the data path.
     if (kDebugMode) {
@@ -97,13 +72,106 @@ Future<void> main() async {
   }
 }
 
-/// Explains in everyday language — without "key", "keychain" or "encryption" — why a file from elsewhere won't open.
+/// The single path into the real UI: window, notifications and [AppState] on top of an initialized [AppStore].
+// INFO: also called from [_ForeignDataApp] once the user resolved a foreign data file, hence not inlined in main().
+Future<void> _startApp(AppStore store) async {
+  final windowPrefs = store.windowPrefs;
+
+  // WARNING: must precede WindowOptions — its backgroundColor reads kBackground, still the dark default here.
+  primeThemeBrightness(store.themeMode);
+
+  await windowManager.ensureInitialized();
+  final windowOptions = WindowOptions(
+    size: Size(windowPrefs.width, windowPrefs.height),
+    minimumSize: const Size(960, 640),
+    center: true,
+    title: 'FinanzGecko',
+    backgroundColor: kBackground,
+  );
+  await windowManager.waitUntilReadyToShow(windowOptions, () async {
+    if (windowPrefs.maximized) {
+      await windowManager.maximize();
+    }
+    await windowManager.show();
+    await windowManager.focus();
+  });
+  windowManager.addListener(_WindowPrefsSaver(store));
+
+  final notificationService = NotificationService();
+  await notificationService.init();
+
+  final appState = AppState(store, notificationService: notificationService);
+  await appState.init();
+
+  runApp(FinanzGeckoApp(appState: appState));
+}
+
+/// Explains in everyday language — without "key", "keychain" or "encryption" — why a file from elsewhere won't
+/// open, and offers the two ways on: import a backup, or start empty. Never a dead end.
 // INFO: the store build hits this on the SAME Mac after a channel switch, where "anderer Computer" would be wrong.
 // INFO: why the two builds share a container but not a key: dev/ai/persistence.md "Channel switch".
-class _ForeignDataApp extends StatelessWidget {
+class _ForeignDataApp extends StatefulWidget {
   const _ForeignDataApp({required this.filePath});
 
   final String filePath;
+
+  @override
+  State<_ForeignDataApp> createState() => _ForeignDataAppState();
+}
+
+class _ForeignDataAppState extends State<_ForeignDataApp> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _importBackup() async {
+    final file = await openFile(acceptedTypeGroups: backupTypeGroups);
+    if (file == null || !mounted) return; // dialog cancelled
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final raw = await file.readAsString();
+      if (!mounted) return;
+      final payload = await decodeBackupPayload(context, raw);
+      if (payload == null) {
+        // Password dialog cancelled — back to the explanation, nothing touched.
+        if (mounted) setState(() => _busy = false);
+        return;
+      }
+      await _resumeWith(payload);
+    } catch (err) {
+      _failed(err);
+    }
+  }
+
+  Future<void> _startEmpty() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await _resumeWith(null);
+    } catch (err) {
+      _failed(err);
+    }
+  }
+
+  /// Boots the app on a store that leaves the foreign file alone; [payload] is imported before the first frame.
+  Future<void> _resumeWith(Map<String, dynamic>? payload) async {
+    final store = AppStore(ignoreForeignData: true);
+    await store.ensureInitialized();
+    if (payload != null) await store.importAllData(payload);
+    await _startApp(store);
+  }
+
+  void _failed(Object err) {
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error = describeError(err);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,21 +212,44 @@ class _ForeignDataApp extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     kIsMacAppStore
-                        ? 'Um deine Daten hierher zu holen, öffne noch einmal die Version von finanzgecko.app, '
-                              'wähle dort "Backup exportieren" und lies die entstandene Datei hier über '
-                              '"Backup importieren" wieder ein.'
-                        : 'Um deine Daten hierher zu holen, öffne FinanzGecko auf dem ursprünglichen Computer, '
-                              'wähle dort "Backup exportieren" und lies die entstandene Datei hier über '
-                              '"Backup importieren" wieder ein.',
+                        ? 'So holst du sie hierher: Öffne noch einmal die Version von finanzgecko.app und wähle '
+                              'dort "Backup exportieren". Die entstandene Datei liest du hier unten über "Backup '
+                              'importieren" ein.'
+                        : 'So holst du sie hierher: Öffne FinanzGecko auf dem ursprünglichen Computer und wähle '
+                              'dort "Backup exportieren". Die entstandene Datei liest du hier unten über "Backup '
+                              'importieren" ein.',
                     style: TextStyle(color: kMuted, height: 1.5),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: _busy ? null : _importBackup,
+                        child: noSelect(const Text('Backup importieren…')),
+                      ),
+                      TextButton(
+                        onPressed: _busy ? null : _startEmpty,
+                        child: noSelect(const Text('Ohne Daten starten')),
+                      ),
+                      if (_busy)
+                        const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                    ],
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!, style: TextStyle(color: kDangerText, height: 1.5)),
+                  ],
+                  const SizedBox(height: 20),
                   Text(
-                    'Es wurde nichts verändert und nichts gelöscht. Die Datei liegt unverändert hier:',
+                    'Es wird nichts verändert und nichts gelöscht — auch nicht, wenn du ohne Daten startest. Die '
+                    'Datei liegt unverändert hier:',
                     style: TextStyle(color: kMuted, height: 1.5),
                   ),
                   const SizedBox(height: 6),
-                  SelectableText(filePath, style: const TextStyle(fontSize: 12)),
+                  SelectableText(widget.filePath, style: const TextStyle(fontSize: 12)),
                 ],
               ),
             ),

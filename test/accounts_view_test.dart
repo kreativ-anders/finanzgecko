@@ -56,7 +56,10 @@ void main() {
 
   Widget wrap(AppState appState) {
     return MaterialApp(
-      home: ChangeNotifierProvider.value(value: appState, child: Scaffold(body: AccountsView(onNavigate: (_) {}))),
+      home: ChangeNotifierProvider.value(
+        value: appState,
+        child: Scaffold(body: AccountsView(onNavigate: (_) {})),
+      ),
     );
   }
 

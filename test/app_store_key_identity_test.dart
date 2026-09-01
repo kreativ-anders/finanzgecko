@@ -48,6 +48,7 @@ class _FakeSecureStorage {
 
 const String _keyName = 'finanzgecko_dek';
 const String _storeFilename = 'finanzgecko-data.json';
+const String _appStoreFilename = 'finanzgecko-data-appstore.json';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -67,11 +68,19 @@ void main() {
 
   File storeFile() => File('${tempDir.path}${Platform.pathSeparator}$_storeFilename');
 
-  Future<AppStore> openStore() async {
-    final store = AppStore(dataDirectory: tempDir);
+  File appStoreFile() => File('${tempDir.path}${Platform.pathSeparator}$_appStoreFilename');
+
+  Future<AppStore> openStore({bool appStoreChannel = false, bool ignoreForeignData = false}) async {
+    final store = AppStore(
+      dataDirectory: tempDir,
+      appStoreChannel: appStoreChannel,
+      ignoreForeignData: ignoreForeignData,
+    );
     await store.ensureInitialized();
     return store;
   }
+
+  List<String> siblingNames() => tempDir.listSync().map((e) => e.path.split(Platform.pathSeparator).last).toList();
 
   /// Simulates a different machine: same folder, but a freshly generated
   /// key in the (fake) key store.
@@ -115,7 +124,7 @@ void main() {
 
       // The actual point of the feature: the file is left untouched.
       expect(await storeFile().readAsBytes(), bytesBefore, reason: 'Die Datei darf nicht überschrieben werden');
-      final siblings = tempDir.listSync().map((e) => e.path.split(Platform.pathSeparator).last).toList();
+      final siblings = siblingNames();
       expect(
         siblings.where((n) => n.contains('unreadable')),
         isEmpty,
@@ -177,6 +186,80 @@ void main() {
 
       final other = await AppStore.keyFingerprint(SecretKey(List<int>.filled(32, 8)));
       expect(other, isNot(a));
+    });
+  });
+
+  // The two macOS builds share one container but not one key, so they must not share one file either —
+  // dev/ai/persistence.md "Channel switch". Everything here runs on an injected channel flag, since
+  // kIsMacAppStore is compile-time and always false under `flutter test`.
+  group('Kanalwechsel zwischen DMG- und App-Store-Build', () {
+    test('der Store-Build schreibt in eine eigene Datei und lässt die des anderen Kanals liegen', () async {
+      final dmg = await openStore();
+      await dmg.setBaseCurrency('CHF');
+      final bytesBefore = await storeFile().readAsBytes();
+
+      // The store build keeps its key in a different keychain, so it never finds the DMG build's.
+      replaceMachineKey();
+
+      final store = await openStore(appStoreChannel: true, ignoreForeignData: true);
+      await store.setBaseCurrency('USD');
+
+      expect(appStoreFile().existsSync(), isTrue, reason: 'Der Store-Build braucht eine eigene Datei');
+      expect(await storeFile().readAsBytes(), bytesBefore, reason: 'Die Datei des anderen Kanals bleibt unberührt');
+      expect(
+        siblingNames().where((n) => n.contains('unreadable') || n.contains('foreign')),
+        isEmpty,
+        reason: 'Was nicht am eigenen Pfad liegt, wandert auch nicht in Quarantäne',
+      );
+    });
+
+    test('ohne Zustimmung endet der erste Start des Store-Builds in ForeignKeyDataException', () async {
+      final dmg = await openStore();
+      await dmg.setBaseCurrency('CHF');
+      replaceMachineKey();
+
+      await expectLater(openStore(appStoreChannel: true), throwsA(isA<ForeignKeyDataException>()));
+      expect(appStoreFile().existsSync(), isFalse, reason: 'Vor der Entscheidung des Nutzers wird nichts angelegt');
+    });
+
+    test('ein Backup-Import beim Start ersetzt den Umweg über eine leere App', () async {
+      final dmg = await openStore();
+      await dmg.setBaseCurrency('CHF');
+      final backup = dmg.exportAllData();
+      final bytesBefore = await storeFile().readAsBytes();
+      replaceMachineKey();
+
+      final store = await openStore(appStoreChannel: true, ignoreForeignData: true);
+      await store.importAllData(backup);
+
+      expect(store.baseCurrency, 'CHF');
+      expect(await storeFile().readAsBytes(), bytesBefore, reason: 'Der Import fasst die fremde Datei nicht an');
+    });
+
+    test('eine Datei mit dem eigenen Schlüssel wird einmalig unter den neuen Namen übernommen', () async {
+      // The case of a store build that ran before the channel-specific name existed: same key, classic name.
+      final earlier = await openStore();
+      await earlier.setBaseCurrency('NOK');
+
+      final adopted = await openStore(appStoreChannel: true);
+
+      expect(adopted.baseCurrency, 'NOK', reason: 'Die eigenen Daten dürfen bei der Umbenennung nicht verloren gehen');
+      expect(storeFile().existsSync(), isTrue, reason: 'Kopieren, nicht verschieben — ältere Builds lesen den Namen');
+    });
+
+    test('der DMG-Build sichert eine fremde Datei am eigenen Pfad, bevor er leer startet', () async {
+      final dmg = await openStore();
+      await dmg.setBaseCurrency('CHF');
+      replaceMachineKey();
+
+      final restarted = await openStore(ignoreForeignData: true);
+
+      expect(restarted.baseCurrency, 'EUR', reason: 'Der Neustart beginnt mit den Standardwerten');
+      expect(
+        siblingNames().where((n) => n.contains('.foreign-')),
+        isNotEmpty,
+        reason: 'Am eigenen Pfad wird überschrieben — vorher muss eine Kopie liegen',
+      );
     });
   });
 }

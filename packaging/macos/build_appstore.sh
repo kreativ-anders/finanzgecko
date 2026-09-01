@@ -11,15 +11,16 @@
 #
 # WICHTIG — beide Builds teilen sich den Container, aber NICHT den Schlüssel:
 #   Seit 2026-08-13 ist auch der DMG-Build sandboxed, beide sehen also dasselbe
-#   ~/Library/Containers/de.finanzgecko.app/Data und damit dieselbe Datendatei.
-#   Lesen kann sie trotzdem nur einer: der DMG-Build legt seinen Schlüssel in der
-#   Login-Keychain ab, der App-Store-Build in der Data-Protection-Keychain
-#   (usesDataProtectionKeychain: kIsMacAppStore). Der jeweils andere Build findet
-#   die Datei, erkennt am keyId-Fingerprint, dass sie nicht zu seinem Schlüssel
-#   gehört, und zeigt den Erklärungsbildschirm — er überschreibt, verschiebt und
-#   löscht nichts. Der Weg von der einen zur anderen Version führt über
-#   "Backup exportieren…" und "Backup importieren…"
-#   — siehe dev/ai/persistence.md.
+#   ~/Library/Containers/de.finanzgecko.app/Data. Lesen kann eine Datendatei
+#   trotzdem nur einer: der DMG-Build legt seinen Schlüssel in der Login-Keychain
+#   ab, der App-Store-Build in der Data-Protection-Keychain
+#   (usesDataProtectionKeychain: kIsMacAppStore). Deshalb hat jeder Kanal seine
+#   EIGENE Datei im selben Ordner (finanzgecko-data.json bzw.
+#   finanzgecko-data-appstore.json) — der Wechsel hin und zurück ist nur noch
+#   ein Start der anderen App, es wird nichts umbenannt oder verschoben.
+#   Findet der Store-Build beim allerersten Start nur die Datei des anderen
+#   Kanals, zeigt er den Erklärungsbildschirm mit "Backup importieren…" und
+#   "Ohne Daten starten" — siehe dev/ai/persistence.md "Channel switch".
 #
 # Aufruf:
 #   ./packaging/macos/build_appstore.sh              # baut selbst

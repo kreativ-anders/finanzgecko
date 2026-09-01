@@ -70,13 +70,34 @@ Feature: Data storage, encryption, and integrity
     Given the same machine gets its original key back
     Then the file opens normally again
 
+  Scenario: The explanation is a way on, not a dead end
+    Given the app shows the explanation for a data file it can't read
+    Then the screen itself offers "Backup importieren…" and "Ohne Daten starten" — the advice it gives can
+      be followed right here, without the app I'm being sent to being the one that won't start
+    And "Backup importieren…" asks for the file, asks for its password if it has one, and starts the app
+      with the imported data
+    And "Ohne Daten starten" starts the app empty
+    And in both cases the file that couldn't be read is preserved: untouched when it belongs to the other
+      delivery channel, and as a copy under "<dateiname>.foreign-<Zeitstempel>" when it sits at exactly the
+      path this build writes to
+    And a cancelled file or password dialog changes nothing and returns to the explanation
+
+  Scenario: The two macOS delivery channels don't share one data file
+    Given both macOS builds are sandboxed and therefore see the same container
+    But each keeps its key in its own keychain, so neither can read the other's file
+    Then the App Store build writes "finanzgecko-data-appstore.json" and the finanzgecko.app build keeps
+      "finanzgecko-data.json" — one file per channel, so a switch never means one overwriting the other
+    And switching back and forth is just launching the other app: both files stay where they are
+
   Scenario: The App Store build explains a channel switch, not a different computer
     Given the Mac App Store build (kIsMacAppStore) starts on the same Mac as the finanzgecko.app build
-    And the container holds a data file written by that other build, so the keyId doesn't match
+    And no App Store data file exists yet, but the container holds one written by that other build
     When the app starts
     Then the explanation names the other FinanzGecko version, never "ein anderer Computer"
     And it points to "Backup exportieren" in the finanzgecko.app version and "Backup importieren" here
     And nothing is written, moved or deleted, so reinstalling the other version restores full access
+    Given the file in the container was written by an earlier App Store build (its own key opens it)
+    Then it is copied to the App Store name once, without an explanation and without deleting the original
 
   Scenario: The key fingerprint is additive and doesn't break older app versions
     Given a newly written data file

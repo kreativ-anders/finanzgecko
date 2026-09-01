@@ -5,6 +5,9 @@
 ## Persistence (`lib/data/app_store.dart`)
 
 - **One file per installation**, no DB server: `finanzgecko-data.json` in the OS data directory (`AppStore.resolveDataDirectory()`).
+  The **macOS App Store build writes `finanzgecko-data-appstore.json`** instead, in the same directory — the two
+  macOS channels share a container but not a key, and a shared filename would make them fight over one file
+  (`AppStore.appStoreChannel`, defaulting to `kIsMacAppStore`; see "Channel switch" below).
   - Linux: `~/.local/share/de.finanzgecko.app/` (or `$XDG_DATA_HOME`)
   - macOS: `~/Library/Containers/de.finanzgecko.app/Data/Library/Application Support/FinanzGecko/`
     (sandbox container from v1.8 on; before that `~/Library/Application Support/de.finanzgecko.app/` — the
@@ -27,7 +30,8 @@
   decryption — and the intact foreign file would run into quarantine + a blank start. If `keyId` doesn't match,
   the store throws `ForeignKeyDataException`; it **must** bypass the `catch (_)` in `ensureInitialized()`
   (`on ForeignKeyDataException { rethrow; }`), otherwise exactly the safety net that would be fatal here kicks in.
-  `main()` then shows `_ForeignDataApp` — nothing gets moved and **nothing gets written**.
+  `main()` then shows `_ForeignDataApp` — nothing gets moved and **nothing gets written** until the user picks one
+  of its two actions (*Backup importieren…* / *Ohne Daten starten*, both via `AppStore(ignoreForeignData: true)`).
   **`v` stays at 1**: `keyId` is additive, `_isEnvelope` only checks the four known fields, so older app versions
   keep reading new files. A version bump would have broken that. Files without `keyId` (written before the
   feature existed) unchangedly take the previous path.
@@ -144,16 +148,33 @@
       entitlement (`<TeamID>.de.finanzgecko.app`), not by a per-item ACL, so Apple re-signing every version
       changes nothing. Only a Team-ID change or an app transfer to another team would lose the items.
   - **Channel switch (DMG ↔ App Store) — the two builds share the container, not the key.** Both are sandboxed
-    (below), so both read the same file at the same path. But the DMG build keeps its key in the login keychain
-    and the store build in the data-protection keychain, so each finds the other's file, sees a `keyId`
-    fingerprint that isn't its own, and throws `ForeignKeyDataException`. `main()` then shows `_ForeignDataApp`
-    and writes, moves and deletes **nothing** — the other channel keeps working if you go back. The route across
-    is *Backup exportieren…* / *Backup importieren…*, and `_ForeignDataApp` says so in wording branched on
-    `kIsMacAppStore`, because "another computer" is wrong when it is the same Mac.
-    - **Still open for the store build:** a user coming from ≤1.7 has no file in the container at all, and
-      `AppStore.entitlements` deliberately carries no temporary exception, so `SandboxMigration` cannot reach the
-      pre-sandbox path. That user lands in an empty app with no explanation. Close this before the first store
-      submission — see `dev/app-store.md`.
+    (below), so both see the same directory. The DMG build keeps its key in the login keychain and the store
+    build in the data-protection keychain, so neither can read the other's file. **Therefore each channel owns
+    its own filename** (`_storeFilename` / `_appStoreFilename`): both files sit side by side, and switching back
+    and forth is nothing but launching the other app. Nothing is renamed, moved or deleted, ever.
+    - On the store build's **first** start there is no `finanzgecko-data-appstore.json` yet, so
+      `_adoptOrReportLegacyFile()` looks at the classic name next door — **before** the normal read, and this is
+      the only place that looks at it:
+      - it decrypts with our key (an earlier store build wrote it, before this channel had its own name) → the
+        file is **copied** to the store name, silently. Copy, never move: the classic name is what the other
+        channel and older builds look for.
+      - it is an envelope this build can't open (the DMG build's file) → `ForeignKeyDataException` with **that**
+        path, so `_ForeignDataApp` names the file the user is actually looking at.
+      - anything else (no file, unparsable, not an envelope) → ignored and left alone. A file that isn't at our
+        path is never quarantined; it isn't ours to clean up.
+    - `_ForeignDataApp` is **not** a dead end: it explains the situation and offers *Backup importieren…* and
+      *Ohne Daten starten*, both of which continue into the real app via `AppStore(ignoreForeignData: true)` and
+      `_startApp()`. Without those buttons the screen's own advice ("read the backup back in here") was
+      unfollowable — the app holding the import button was the one that wouldn't start. Wording stays branched on
+      `kIsMacAppStore`, because "another computer" is wrong when it is the same Mac.
+    - `ignoreForeignData` only ever bypasses the *check*, never the safety: at the store build's first start the
+      foreign file isn't at the path being written, so it stays byte-identical; in the DMG case ("another
+      computer", same filename) `_quarantineFile(file, 'foreign')` takes a copy before defaults overwrite it.
+    - **Still open, and NOT solved by the screen above:** a user coming from ≤1.7 has no file in the container at
+      all, and `AppStore.entitlements` deliberately carries no temporary exception, so the store build cannot
+      even *see* the pre-sandbox path — there is nothing to detect and no screen to show. That user lands in an
+      empty app with no explanation. The fix has to be an empty-state hint ("coming from an older version? import
+      your backup"), not a startup check. Close this before the first store submission — see `dev/app-store.md`.
   - **App sandbox has been active in ALL macOS builds since v1.8** (`com.apple.security.app-sandbox = true` in
     `Release.entitlements`, `DebugProfile.entitlements`, and `AppStore.entitlements`). This is a **deliberate
     reversal** of the decision documented through v1.7; the old rationale ("otherwise macOS virtualizes `$HOME`

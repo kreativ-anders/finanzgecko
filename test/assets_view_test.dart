@@ -56,7 +56,10 @@ void main() {
 
   Widget wrap(AppState appState) {
     return MaterialApp(
-      home: ChangeNotifierProvider.value(value: appState, child: Scaffold(body: AssetsView(onNavigate: (_) {}))),
+      home: ChangeNotifierProvider.value(
+        value: appState,
+        child: Scaffold(body: AssetsView(onNavigate: (_) {})),
+      ),
     );
   }
 
@@ -96,7 +99,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(byLabel('Bezeichnung'), 'Fernseher');
-    await tester.enterText(find.byWidgetPredicate((w) => w is TextField && (w.decoration?.labelText ?? '').startsWith('Wert')), '600');
+    await tester.enterText(
+      find.byWidgetPredicate((w) => w is TextField && (w.decoration?.labelText ?? '').startsWith('Wert')),
+      '600',
+    );
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 

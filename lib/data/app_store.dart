@@ -20,6 +20,9 @@ const String _applicationId = 'de.finanzgecko.app';
 const String _macOsDirectoryName = 'FinanzGecko';
 
 const String _storeFilename = 'finanzgecko-data.json';
+// WARNING: both macOS builds share one container but not one key — a shared filename would make them fight
+// over the same file. The store build writes its own; see dev/ai/persistence.md "Channel switch".
+const String _appStoreFilename = 'finanzgecko-data-appstore.json';
 // INFO: rates are public ECB data in their own unencrypted file, so a fresh rate never re-encrypts the database.
 const String _ratesFilename = 'finanzgecko-rates.json';
 const int _envelopeVersion = 1;
@@ -71,10 +74,18 @@ class AccountImportRejectedException implements Exception {
 /// Persists the whole app database as one AES-256-GCM encrypted JSON file — see dev/ai/persistence.md.
 class AppStore {
   // WARNING: widget tests need [persistToDisk] false — real file I/O never completes under their fake-async clock.
-  AppStore({Directory? dataDirectory, this.persistToDisk = true}) : _dataDirectoryOverride = dataDirectory;
+  AppStore({Directory? dataDirectory, this.persistToDisk = true, this.ignoreForeignData = false, bool? appStoreChannel})
+    : _dataDirectoryOverride = dataDirectory,
+      appStoreChannel = appStoreChannel ?? kIsMacAppStore;
 
   final Directory? _dataDirectoryOverride;
   final bool persistToDisk;
+
+  /// Which delivery channel's data file this store owns; injectable because [kIsMacAppStore] is compile-time.
+  final bool appStoreChannel;
+
+  /// Set only by the startup screen after the user chose import or an empty start — see [ForeignKeyDataException].
+  final bool ignoreForeignData;
   AppSchema? _data;
   String? _filePath;
   String? _ratesFilePath;
@@ -250,9 +261,14 @@ class AppStore {
       );
     }
 
-    _filePath = p.join(dir.path, _storeFilename);
+    _filePath = p.join(dir.path, appStoreChannel ? _appStoreFilename : _storeFilename);
     _ratesFilePath = p.join(dir.path, _ratesFilename);
     final file = File(_filePath!);
+
+    // INFO: store build only — the other channel's file sits in the same container under the classic name.
+    if (appStoreChannel && !await file.exists()) {
+      await _adoptOrReportLegacyFile(File(p.join(dir.path, _storeFilename)), file);
+    }
     final tmpFile = File('${file.path}.tmp');
 
     // Clean up any leftover temp file from a previous crash.
@@ -271,12 +287,14 @@ class AppStore {
         await _quarantineFile(file, 'unreadable');
         _data = AppSchema.defaults();
         await _persist();
-      } else {
+      } else if (await _hasForeignKeyId(decoded as Map)) {
         // INFO: without this check a foreign file looks exactly like a corrupt one; see dev/ai/persistence.md.
-        final storedKeyId = (decoded as Map)['keyId'];
-        if (storedKeyId is String && storedKeyId != await keyFingerprint(_requireKey)) {
-          throw ForeignKeyDataException(_filePath!);
-        }
+        if (!ignoreForeignData) throw ForeignKeyDataException(_filePath!);
+        // The user chose to continue here, and this path is the one we're about to write — keep a copy first.
+        await _quarantineFile(file, 'foreign');
+        _data = AppSchema.defaults();
+        await _persist();
+      } else {
         final parsed = jsonDecode(await _decryptEnvelope(decoded));
         final onDiskVersion = (parsed is Map && parsed['schemaVersion'] is num) ? parsed['schemaVersion'] as num : null;
         final validated = AppSchema.fromDynamic(parsed);
@@ -320,6 +338,37 @@ class AppStore {
     }
 
     _initialized = true;
+  }
+
+  /// True when the envelope names a key fingerprint that isn't this installation's.
+  Future<bool> _hasForeignKeyId(Map decoded) async {
+    final storedKeyId = decoded['keyId'];
+    return storedKeyId is String && storedKeyId != await keyFingerprint(_requireKey);
+  }
+
+  /// Store build, first start: decides what the classic-name file next door means — ours, theirs, or neither.
+  ///
+  /// Own file (an earlier store build wrote it before this channel had its own name) → copied over once. The
+  /// other channel's file → [ForeignKeyDataException], so the startup screen can offer an import. Anything
+  /// else stays untouched: a file this build can't read is never quarantined when it isn't even at our path.
+  Future<void> _adoptOrReportLegacyFile(File legacy, File target) async {
+    if (!await legacy.exists()) return;
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(await legacy.readAsString());
+    } catch (_) {
+      return; // Unreadable and not ours to clean up.
+    }
+    if (!_isEnvelope(decoded)) return;
+    try {
+      await _decryptEnvelope(decoded as Map);
+    } catch (_) {
+      // Only a successful decryption proves the key is ours — older files carry no keyId to compare.
+      if (!ignoreForeignData) throw ForeignKeyDataException(legacy.path);
+      return;
+    }
+    // WARNING: copy, never move — the classic name is what the other channel and older builds look for.
+    await legacy.copy(target.path);
   }
 
   /// Loads the standalone rate cache; a missing or corrupt file just means "nothing cached yet".

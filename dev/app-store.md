@@ -312,9 +312,12 @@ build. Steps 3 and 4 are the ones that would otherwise cost you data.
 
 3. **The channel switch, with your real data.** With the DMG build's data file in the container, launch the
    TestFlight build. Expected: the `_ForeignDataApp` screen with the **App Store wording** ("andere
-   FinanzGecko-Version", not "anderer Computer"), no `.unreadable-*` file appearing beside the data, no keychain
-   password prompt. Then quit, reinstall the DMG build, and confirm all data is back untouched. That round trip
-   is the claim in §7; this is the only way to know it holds.
+   FinanzGecko-Version", not "anderer Computer") **and its two buttons**, no `.unreadable-*` file appearing
+   beside the data, no keychain password prompt. Take the *Backup importieren…* route (step 4) or *Ohne Daten
+   starten*; either way `finanzgecko-data.json` must still be byte-identical afterwards and a new
+   `finanzgecko-data-appstore.json` must sit next to it. Then quit, launch the DMG build again, and confirm all
+   data is back untouched — no screen, no prompt. That round trip is the claim in §7; this is the only way to
+   know it holds.
 
 4. **The backup route across channels.** Export a password-protected backup from the DMG build, import it into
    the TestFlight build. It must open with its original password. This is the path you will be telling switchers

@@ -16,9 +16,35 @@ import 'widgets/backup_passphrase_dialog.dart';
 
 /// Export/import flow for backups; persistence, schema checks and encryption live in [AppState].
 
-const _backupTypeGroups = [
+const backupTypeGroups = [
   XTypeGroup(label: 'JSON-Backup', extensions: ['json']),
 ];
+
+/// Turns a backup file's raw JSON into the payload to import, asking for the password when the file is protected.
+///
+/// Returns null when the password dialog was cancelled. Shared with the startup screen in `main.dart`, which
+/// offers the same import before any [AppState] exists.
+Future<Map<String, dynamic>?> decodeBackupPayload(BuildContext context, String raw) async {
+  final decoded = jsonDecode(raw);
+
+  // Encrypted backups are recognised by their structure, not by file extension or name.
+  if (isEncryptedBackup(decoded)) {
+    var wasWrong = false;
+    while (true) {
+      if (!context.mounted) return null;
+      final passphrase = await promptExistingBackupPassphrase(context, wasWrong: wasWrong);
+      if (passphrase == null) return null; // cancelled: nothing was changed
+      try {
+        return await decryptBackup(decoded as Map, passphrase);
+      } on WrongBackupPassphraseException {
+        // Ask again instead of aborting — a typo should not cost the whole flow.
+        wasWrong = true;
+      }
+    }
+  }
+  if (decoded is Map<String, dynamic>) return decoded;
+  throw const FormatException('Backup-JSON ist kein Objekt');
+}
 
 Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
@@ -29,7 +55,7 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
   final passphrase = await promptNewBackupPassphrase(context);
   if (passphrase == null) return;
 
-  final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: _backupTypeGroups);
+  final location = await getSaveLocation(suggestedName: suggestedName, acceptedTypeGroups: backupTypeGroups);
   if (location == null) return; // dialog cancelled
 
   try {
@@ -106,7 +132,7 @@ Future<void> exportCsvTables(BuildContext context, ValueChanged<AppView> onNavig
 
 Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate) async {
   final appState = context.read<AppState>();
-  final file = await openFile(acceptedTypeGroups: _backupTypeGroups);
+  final file = await openFile(acceptedTypeGroups: backupTypeGroups);
   if (file == null) return; // dialog cancelled
 
   if (!context.mounted) return;
@@ -125,28 +151,9 @@ Future<void> importBackup(BuildContext context, ValueChanged<AppView> onNavigate
 
   try {
     final raw = await file.readAsString();
-    final decoded = jsonDecode(raw);
-
-    // Encrypted backups are recognised by their structure, not by file extension or name.
-    Map<String, dynamic>? payload;
-    if (isEncryptedBackup(decoded)) {
-      var wasWrong = false;
-      while (payload == null) {
-        if (!context.mounted) return;
-        final passphrase = await promptExistingBackupPassphrase(context, wasWrong: wasWrong);
-        if (passphrase == null) return; // cancelled: nothing was changed
-        try {
-          payload = await decryptBackup(decoded as Map, passphrase);
-        } on WrongBackupPassphraseException {
-          // Ask again instead of aborting — a typo should not cost the whole flow.
-          wasWrong = true;
-        }
-      }
-    } else if (decoded is Map<String, dynamic>) {
-      payload = decoded;
-    } else {
-      throw const FormatException('Backup-JSON ist kein Objekt');
-    }
+    if (!context.mounted) return;
+    final payload = await decodeBackupPayload(context, raw);
+    if (payload == null) return; // password dialog cancelled: nothing was changed
 
     await appState.importAllData(payload);
     if (!context.mounted) return;

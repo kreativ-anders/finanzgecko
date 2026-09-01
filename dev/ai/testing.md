@@ -18,7 +18,7 @@ feature file names its `# Source:`). `test/gherkin_sync_test.dart` enforces that
 | `gherkin/settings.feature` | Basiswährung, security, backup export/import, CSV export, help (version/system info/support), reset | Unit (`csv_export_test`) |
 | `gherkin/notifications.feature` | OS notifications for backup/asset reminders, episode-based, opt-in + denied authorization, distinct ids | Unit (`app_state_test`, `app_store_ops_test`) |
 | `gherkin/backup_restore.feature` | Export/import (JSON), schema check, bank→color on import, fault tolerance | Unit (`app_store_ops_test`, `backup_hardening_test`) |
-| `gherkin/data_security.feature` | AES-256-GCM, OS keychain, quarantine, schema parsing | Unit (`app_schema_test`, `app_store_encryption_test`) |
+| `gherkin/data_security.feature` | AES-256-GCM, OS keychain, quarantine, schema parsing, macOS channel switch (one data file per delivery channel) | Unit (`app_schema_test`, `app_store_encryption_test`, `app_store_key_identity_test`) |
 | `gherkin/currency_exchange.feature` | Opt-in for rate fetching (`RateFetchConsent`), exchange rates (frankfurter.dev), cache, offline fallback, manual rate | `test/rate_consent_test.dart` (only the gate + cache path, no network); the HTTP call itself stays UI/integration |
 | `gherkin/window.feature` | Window size/maximized state, default/minimum size, splash | UI/integration only (no unit test) |
 | `gherkin/navigation.feature` | Top navigation (6 views), banner jumps, in-app Datei menu, keyboard shortcuts, text selection | UI/integration only (no unit test) |
@@ -63,6 +63,7 @@ is listed in `# Source:`.
 | `test/app_schema_test.dart` | Schema parsing, fault tolerance, export shape | `gherkin/data_security.feature` |
 | `test/app_state_test.dart` | AppState CRUD & derived values (reminders, totals) | several features |
 | `test/app_store_encryption_test.dart` | Envelope encryption, quarantine of unreadable files | `gherkin/data_security.feature` |
+| `test/app_store_key_identity_test.dart` | Key fingerprint (`keyId`), foreign file left untouched, and the macOS channel switch: own file per channel, adoption of an own-key file, import/empty start via `ignoreForeignData` | `gherkin/data_security.feature` |
 | `test/app_store_ops_test.dart` | Store CRUD, export/import, schema version check, import bank→color rule | `gherkin/backup_restore.feature` |
 | `test/account_color_test.dart` | `resolveAccountColor` (known bank → brand color, empty → Kontotyp, unknown → error) | `gherkin/accounts.feature`, `gherkin/backup_restore.feature` |
 | `test/accounts_view_test.dart` | Enter in the "Neues Konto" form submits it | `gherkin/accounts.feature` |
