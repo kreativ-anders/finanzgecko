@@ -946,9 +946,15 @@ class AppStore {
 
   /// Replaces ALL data with an imported backup and returns a snapshot of the previous state.
   Future<Map<String, dynamic>> importAllData(Map<String, dynamic> imported) async {
-    // Reject backups from a newer schema: importing could silently drop or misread unknown fields.
+    // A genuine export always carries a numeric schemaVersion (toExportJson()); anything without one — the
+    // store's own encrypted envelope (v/keyId/nonce/cipherText), an unrelated JSON file — isn't a backup at
+    // all and must not be treated as one that just happens to import as empty.
     final importedVersion = imported['schemaVersion'];
-    if (importedVersion is num && importedVersion > currentSchemaVersion) {
+    if (importedVersion is! num) {
+      throw const FormatException('Datei hat nicht die Struktur eines FinanzGecko-Backups.');
+    }
+    // Reject backups from a newer schema: importing could silently drop or misread unknown fields.
+    if (importedVersion > currentSchemaVersion) {
       throw UnsupportedBackupVersionException(importedVersion: importedVersion, supportedVersion: currentSchemaVersion);
     }
 

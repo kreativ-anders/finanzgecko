@@ -64,7 +64,7 @@ Future<void> main() async {
     if (kDebugMode) {
       debugPrint('FinanzGecko: data file belongs to a different installation: ${err.filePath}');
     }
-    runApp(_ForeignDataApp(filePath: err.filePath));
+    runApp(const _ForeignDataApp());
   } catch (err, stack) {
     // INFO: deliberately not debug-gated — the one message an "it won't start" report needs, carrying no user data.
     debugPrint('FinanzGecko startup failed: $err\n$stack');
@@ -111,9 +111,7 @@ Future<void> _startApp(AppStore store) async {
 // INFO: the store build hits this on the SAME Mac after a channel switch, where "anderer Computer" would be wrong.
 // INFO: why the two builds share a container but not a key: dev/ai/persistence.md "Channel switch".
 class _ForeignDataApp extends StatefulWidget {
-  const _ForeignDataApp({required this.filePath});
-
-  final String filePath;
+  const _ForeignDataApp();
 
   @override
   State<_ForeignDataApp> createState() => _ForeignDataAppState();
@@ -245,11 +243,9 @@ class _ForeignDataAppState extends State<_ForeignDataApp> {
                   const SizedBox(height: 20),
                   Text(
                     'Es wird nichts verändert und nichts gelöscht — auch nicht, wenn du ohne Daten startest. Die '
-                    'Datei liegt unverändert hier:',
+                    'andere Datei bleibt unangetastet an ihrem Platz, falls du sie später doch noch brauchst.',
                     style: TextStyle(color: kMuted, height: 1.5),
                   ),
-                  const SizedBox(height: 6),
-                  SelectableText(widget.filePath, style: const TextStyle(fontSize: 12)),
                 ],
               ),
             ),
