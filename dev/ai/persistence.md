@@ -86,7 +86,18 @@
   `resetAll()` and `importAllData()` additionally write an encrypted snapshot of the previous state **beforehand**
   (`pre-reset-backup-<timestamp>.json` resp. `pre-import-backup-<timestamp>.json`, shared helper
   `_writeSnapshotBackup`) — the app's only two one-way actions (see `gherkin/settings.feature` "Zurücksetzen" and
-  `gherkin/backup_restore.feature` "Import").
+  `gherkin/backup_restore.feature` "Import"). After each write, `_pruneOldSnapshots` keeps only the newest 10
+  files per label (`_maxSnapshotsPerLabel`) and deletes the rest — a reset or import roughly once a month, over
+  years, must not accumulate snapshots forever. Best-effort like the write itself, and counted separately per
+  label (10 `pre-import-backup-*` + 10 `pre-reset-backup-*`, not 10 combined).
+- **These snapshots are the last-resort recovery path when a user forgot their export password, or reset/imported
+  without ever exporting.** They're encrypted with the same device-bound key as the main data file, so restoring
+  one is a manual file operation, not something `importAllData()` can do (it only accepts an actual backup
+  export's structure — see the `schemaVersion` guard above): quit the app, rename the newest
+  `pre-reset-backup-<timestamp>.json` or `pre-import-backup-<timestamp>.json` to the exact filename the running
+  build reads (`_storeFilename`/`_appStoreFilename`, i.e. `finanzgecko-data.json` or
+  `finanzgecko-data-appstore.json`, replacing/backing up whatever sits there), then relaunch. Only works on the
+  same device/install that wrote the snapshot — the key never leaves the OS credential store.
 - **Errors from `AppStore` carry no German UI text:** slim exception types (`RecordNotFoundException`,
   `UnsupportedBackupVersionException`, `AccountImportRejectedException`) transport only structured data: which
   record is missing, which schema version was imported, which bank was unknown. The German user-facing wording

@@ -202,6 +202,8 @@ Feature: Einstellungen
     Then the previous data state is first saved as its own encrypted file
       "pre-reset-backup-<Zeitstempel>.json" in the data directory (like on import, see backup_restore.feature)
     And a failure in this backup must not prevent the actual reset (best effort)
+    And only the 10 most recent "pre-reset-backup-*.json" files are kept, counted separately from
+      "pre-import-backup-*.json" (see backup_restore.feature "Old snapshot backups are pruned automatically")
 
   Scenario: Successful reset
     Given I typed "ZURÜCKSETZEN" correctly and confirmed

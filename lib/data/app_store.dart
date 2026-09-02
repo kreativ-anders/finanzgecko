@@ -26,6 +26,8 @@ const String _appStoreFilename = 'finanzgecko-data-appstore.json';
 // INFO: rates are public ECB data in their own unencrypted file, so a fresh rate never re-encrypts the database.
 const String _ratesFilename = 'finanzgecko-rates.json';
 const int _envelopeVersion = 1;
+// INFO: caps disk growth from routine use (e.g. a reset or import once a month, for years) — see persistence.md.
+const int _maxSnapshotsPerLabel = 10;
 
 /// Thrown when the data file was encrypted by a *different* installation — its `keyId` doesn't match.
 class ForeignKeyDataException implements Exception {
@@ -414,6 +416,25 @@ class AppStore {
       final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
       final envelopeJson = await _encryptToEnvelope(jsonStr);
       await backupFile.writeAsString(envelopeJson, flush: true);
+    } catch (_) {}
+    await _pruneOldSnapshots(label);
+  }
+
+  /// Keeps only the newest [_maxSnapshotsPerLabel] `pre-$label-backup-*` files, deletes the rest; best-effort,
+  /// like the write above — years of monthly resets/imports must not accumulate snapshots forever.
+  Future<void> _pruneOldSnapshots(String label) async {
+    try {
+      final prefix = 'pre-$label-backup-';
+      final matches =
+          File(filePath).parent
+              .listSync()
+              .whereType<File>()
+              .where((f) => p.basename(f.path).startsWith(prefix) && f.path.endsWith('.json'))
+              .toList()
+            ..sort((a, b) => b.path.compareTo(a.path)); // newest first: the timestamp suffix sorts lexicographically
+      for (final old in matches.skip(_maxSnapshotsPerLabel)) {
+        await old.delete();
+      }
     } catch (_) {}
   }
 

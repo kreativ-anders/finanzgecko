@@ -96,6 +96,13 @@ Feature: Export and import a backup
       "pre-import-backup-<Zeitstempel>.json" in the data directory
     And a failure in this backup must not prevent the actual import (best effort)
 
+  Scenario: Old snapshot backups are pruned automatically
+    Given more than 10 "pre-import-backup-*.json" files already sit in the data directory
+    When a new one is written
+    Then only the 10 most recent survive, the older ones are deleted
+    And "pre-reset-backup-*.json" files (see settings.feature) are pruned the same way, counted separately
+    And a failure while pruning must not prevent the snapshot that was just written (best effort)
+
   Scenario: Import of a corrupted or invalid file
     Given the chosen file isn't valid JSON or doesn't have the expected structure
     Then the import is aborted

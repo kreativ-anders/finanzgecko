@@ -270,6 +270,20 @@ void main() {
     expect(reopened.exportAllData()['schemaVersion'], currentSchemaVersion);
   });
 
+  test('only the newest 10 pre-reset-backup files survive, pruned after each reset', () async {
+    _FakeSecureStorage(<String, String>{}).install();
+    final store = AppStore(dataDirectory: tempDir);
+    await store.ensureInitialized();
+
+    for (var i = 0; i < 12; i++) {
+      await store.addAccount(name: 'Konto $i', tag: 'giro', color: '#00c878');
+      await store.resetAll();
+    }
+
+    final snapshots = tempDir.listSync().where((f) => f.path.contains('pre-reset-backup-')).toList();
+    expect(snapshots.length, 10, reason: 'older snapshots must be pruned, not just the newest ones added');
+  });
+
   test('a tampered envelope is quarantined and the store falls back to defaults', () async {
     final keychain = <String, String>{};
     _FakeSecureStorage(keychain).install();
