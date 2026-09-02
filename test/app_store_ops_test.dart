@@ -90,6 +90,19 @@ void main() {
       expect(store.getAccounts().map((a) => a.name), ['Behalten']);
     });
 
+    test('rejects a file without backup structure and leaves data intact', () async {
+      final store = await bootStore();
+      await store.addAccount(name: 'Behalten', tag: 'giro', color: '#00c878');
+
+      // Shape of the store's own encrypted envelope (main data file, pre-import/-reset/-migrate backups) —
+      // must not be silently accepted as an "empty" backup.
+      await expectLater(
+        store.importAllData({'v': 1, 'keyId': 'x', 'nonce': 'y', 'cipherText': 'z'}),
+        throwsA(isA<FormatException>()),
+      );
+      expect(store.getAccounts().map((a) => a.name), ['Behalten']);
+    });
+
     test('replaces all data and recomputes id counters past the imported max', () async {
       final store = await bootStore();
       await store.addAccount(name: 'Alt', tag: 'giro', color: '#00c878');
