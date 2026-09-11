@@ -25,23 +25,36 @@ Hinweis darauf, dass ein *Kommentar* gemeint ist. `<typ>` ist `version`, `instal
 | `InstallerType: inno` | `finanzgecko.iss` ist Inno Setup. Mit `exe` kennt winget die stillen Schalter nicht und die Installation im Testlauf hängt. |
 | `ElevationRequirement: elevationRequired` | `finanzgecko.iss` installiert nach `{autopf}` (Programme) und setzt kein `PrivilegesRequired`, verlangt also immer Adminrechte. Die Pipeline startet Installer als normaler Benutzer; ohne diesen Eintrag scheitert sie. Nicht `elevatesSelf` — das gilt nur für Installer, die selbst entscheiden, ob sie Rechte anfordern. |
 | `Scope: machine` | Folgt aus `{autopf}`. Steht innerhalb des `Installers`-Eintrags, nicht auf oberster Ebene. |
-| `ReleaseDate` | Das Datum des Git-Tags, nicht das Datum des Einreichens. |
+| `ReleaseDate` | Das Datum der Veröffentlichung, nicht das Datum des Einreichens. `render.sh` holt es aus `published_at` des GitHub-Releases, damit ein nachgereichtes Manifest (siehe unten: 1.8.0 → 1.11.0) nicht den Einreichungstag nennt. |
 | `PrivacyUrl` | Die Policy-Prüfung von `winget-pkgs` verlangt sie für Anwendungen, die Finanzdaten speichern (Policies 1.5.1/1.5.5, PR [#417767](https://github.com/microsoft/winget-pkgs/pull/417767)). Pro Sprache eine Seite: de-DE auf `datenschutz.html`, en-US auf `privacy.html`. Beide erklären die App in **Teil B**, getrennt von der Website in Teil A — Prüfer wie Nutzer sollen nicht raten müssen, welcher Absatz für die App gilt. Beide Pfade stehen damit in einem veröffentlichten Manifest — Umbenennen ist ein Bruch. |
 
 **Bewusst nicht gesetzt:** `ProductCode`, `InstallModes` und `InstallerSwitches`. Alle drei sind optional, und
 winget ermittelt sie für Inno-Installer selbst. Ein geratener `ProductCode` führt zu
 `Version-Parameter-Mismatch`, also lieber weglassen als schätzen.
 
+**Ebenfalls bewusst nicht gesetzt: `Dependencies` auf `Microsoft.VCRedist.2015+.x64`.** Die
+Validierungs-Pipeline schlug bei 1.8.0 mit `Validation-Executable-Error` fehl, weil die App auf einer Maschine
+ohne VC++-Redistributable gar nicht startet (`STATUS_DLL_NOT_FOUND`, `0xC0000135`). Der naheliegende Weg wäre,
+das Redistributable als Paketabhängigkeit zu deklarieren — der Weg hier ist stattdessen, dass der Installer die
+drei Laufzeit-DLLs seit v1.10.0 selbst mitbringt (`release.yml`, Job `windows`; siehe `dev/ai/platform.md`). Das
+gilt dann auch für Downloads von der Website, nicht nur für winget. Wer die Abhängigkeit nachträglich einträgt,
+zwingt Nutzern eine ~25-MB-Installation auf, die sie nicht brauchen.
+
 ## Erste Einreichung (einmalig, von Hand)
 
 ```bash
-./packaging/windows/winget/render.sh 1.8.0
+./packaging/windows/winget/render.sh 1.11.0
 ```
 
 Holt die Prüfsumme aus der veröffentlichten `SHA256SUMS` des Releases — nicht neu berechnet, damit Manifest,
 Website und die In-App-Update-Prüfung denselben Wert nennen. Danach die vier Dateien nach
 `manifests/k/KreativAnders/FinanzGecko/<version>/` im eigenen Fork von `microsoft/winget-pkgs` kopieren,
 committen und als Pull Request einreichen.
+
+Eingereicht wurde zuerst 1.8.0 (PR [#417767](https://github.com/microsoft/winget-pkgs/pull/417767)); dieselbe
+PR trägt seit September 2026 **1.11.0**, weil erst dieser Build die VC++-Laufzeit mitbringt und damit die
+automatische Prüfung besteht. Eine Version pro PR — beim Wechsel wird der alte Versionsordner gelöscht, nicht
+zusätzlich ein neuer angelegt.
 
 Auf einem Windows-Rechner vorher prüfen (auf macOS/Linux nicht möglich):
 

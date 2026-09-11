@@ -32,7 +32,15 @@ if [ -z "$SHA256" ]; then
   exit 1
 fi
 
-RELEASE_DATE="$(date -u +%Y-%m-%d)"
+# Datum der Veröffentlichung, nicht des Einreichens (README): ein später
+# nachgereichtes Manifest trüge sonst ein Datum, an dem nichts erschienen ist.
+RELEASE_DATE="$(curl -fsSL "https://api.github.com/repos/kreativ-anders/finanzgecko/releases/tags/v${VERSION}" \
+  | sed -nE 's/.*"published_at" *: *"([0-9]{4}-[0-9]{2}-[0-9]{2}).*/\1/p' | head -1)"
+if [ -z "$RELEASE_DATE" ]; then
+  echo "Fehler: Veröffentlichungsdatum von v${VERSION} nicht ermittelbar." >&2
+  exit 1
+fi
+
 mkdir -p "$OUT_DIR"
 
 for template in "$SCRIPT_DIR"/KreativAnders.FinanzGecko*.yaml; do
