@@ -19,13 +19,14 @@ class SandboxMigration {
   /// INFO: every home-reporting API returns the container under the sandbox, so the real home is read back off it.
   /// INFO: `null` means [home] is not a container path — the normal, unsandboxed case, and no migration applies.
   static String? realHomeFromContainerHome(String home, String bundleId) {
-    final suffix = p.join('Library', 'Containers', bundleId, 'Data');
-    final normalised = home.endsWith(p.separator) ? home.substring(0, home.length - 1) : home;
+    // p.posix, not p.join: this parses macOS paths, so it must not follow the separator of whatever host runs it.
+    final suffix = p.posix.join('Library', 'Containers', bundleId, 'Data');
+    final normalised = home.endsWith(p.posix.separator) ? home.substring(0, home.length - 1) : home;
     if (!normalised.endsWith(suffix)) return null;
     final root = normalised.substring(0, normalised.length - suffix.length);
     if (root.isEmpty) return null;
     // Strip the separator that joined the two halves.
-    return root.endsWith(p.separator) ? root.substring(0, root.length - 1) : root;
+    return root.endsWith(p.posix.separator) ? root.substring(0, root.length - 1) : root;
   }
 
   /// The pre-sandbox data directory, or `null` when the process is not running sandboxed.
@@ -36,7 +37,7 @@ class SandboxMigration {
   }) {
     final realHome = realHomeFromContainerHome(home, bundleId);
     if (realHome == null) return null;
-    return p.join(realHome, 'Library', 'Application Support', legacyDirectoryName);
+    return p.posix.join(realHome, 'Library', 'Application Support', legacyDirectoryName);
   }
 
   /// Copies [filenames] into [targetDirectory], if and only if the target holds none of them yet.
