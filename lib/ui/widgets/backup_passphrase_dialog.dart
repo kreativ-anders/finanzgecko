@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../constants.dart';
+import '../../data/backup_crypto.dart';
 import '../theme.dart';
 
 /// Result of [promptNewBackupPassphrase]: empty string = deliberately no password, null = cancelled.
@@ -17,7 +19,7 @@ Future<BackupPassphraseChoice> promptNewBackupPassphrase(BuildContext context) a
           final pw = pwCtrl.text;
           final repeat = repeatCtrl.text;
           final mismatch = repeat.isNotEmpty && pw != repeat;
-          final canProtect = pw.isNotEmpty && pw == repeat;
+          final canProtect = isAcceptableNewBackupPassphrase(pw) && pw == repeat;
           return AlertDialog(
             title: const Text('Backup exportieren'),
             content: ConstrainedBox(
@@ -36,7 +38,10 @@ Future<BackupPassphraseChoice> promptNewBackupPassphrase(BuildContext context) a
                     controller: pwCtrl,
                     autofocus: true,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Passwort'),
+                    decoration: InputDecoration(
+                      labelText: 'Passwort',
+                      helperText: 'Mindestens $kBackupPassphraseMinLength Zeichen.',
+                    ),
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 10),

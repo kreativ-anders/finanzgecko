@@ -25,6 +25,15 @@
   `resolveDataDirectory()` and in plain language under Einstellungen → Sicherheit.
 - **Encryption:** AES-256-GCM "envelope" (`{v, keyId, nonce, cipherText, mac}`, `_envelopeVersion = 1`). The key
   comes from `SecureKeyStore` (OS keychain), generated once per installation on first start.
+- **A new key is stored late, never eagerly.** `SecureKeyStore` separates `readKey()`, `generateKey()` and
+  `storeKey()`. When `readKey()` returns nothing, `ensureInitialized()` generates a key in memory
+  (`_keyPendingStore`) and stores it only (a) right before the first envelope is encrypted with it
+  (`_encryptToEnvelope` → `_storePendingKey`) or (b) at the end of a successful start. Reason: a credential store
+  that returns nothing *once* (locked keyring, transient failure) would otherwise have the real key overwritten
+  by a fresh one, and the data file would be lost for good. A freshly generated key also makes any existing
+  envelope count as foreign — `keyId` or not, since that key can't have written it — so the user reaches
+  `_ForeignDataApp` instead of a silent quarantine + empty start, and the next launch finds the original key
+  again if the failure was transient.
 - **`keyId` detects foreign files** (8-byte SHA-256 of the key, plaintext, `AppStore.keyFingerprint`). Without
   this field, "file belongs to a different machine" can't be distinguished from "file is corrupt" — both fail at
   decryption — and the intact foreign file would run into quarantine + a blank start. If `keyId` doesn't match,
@@ -34,7 +43,8 @@
   of its two actions (*Backup importieren…* / *Ohne Daten starten*, both via `AppStore(ignoreForeignData: true)`).
   **`v` stays at 1**: `keyId` is additive, `_isEnvelope` only checks the four known fields, so older app versions
   keep reading new files. A version bump would have broken that. Files without `keyId` (written before the
-  feature existed) unchangedly take the previous path.
+  feature existed) unchangedly take the previous path, as long as the installation's key is found (see "A new
+  key is stored late" above).
 - **Export is the only device-independent path**, deliberately separate from the data file's envelope
   (`lib/data/backup_crypto.dart`): its key is derived via PBKDF2-HMAC-SHA256 from a **password**, not from the OS
   keychain — that's what lets it be read back in on any machine. The password is **optional**: without one, the
@@ -79,8 +89,15 @@
   `finanzgecko-rates.json` next to it — public ECB reference rates aren't a secret, and this way a newly cached
   rate never triggers a full re-encrypt of the whole DB. Migration: old stores with `ratesCache` in the DB get it
   moved into the standalone file automatically on first load.
-- **Atomic writes:** always write a temp file → delete the old file → rename the temp file (shared helper
+- **Atomic writes:** always write a temp file (flushed) → rename it over the old file (shared helper
   `_atomicWrite`, used by `_persistNow` and `_persistRatesNow`). Prevents a half-written file on a crash mid-write.
+  **The old file is never deleted first** — `File.rename` replaces an existing target on every platform
+  (MoveFileEx with replace-existing on Windows). Only if that rename throws on Windows (e.g. a scanner holding the
+  target) does it delete and retry, as a last resort. Two consequences are load-bearing:
+  - `_atomicWrite` never deletes the temp file while no data file exists — it is the only complete copy then.
+  - On startup, a `.tmp` next to an intact data file is a crash leftover and gets deleted; a `.tmp` **without** a
+    data file gets renamed into place and read normally. Before this, startup deleted every `.tmp`
+    unconditionally, which turned a crash inside the Windows delete-then-rename window into total data loss.
 - **Rollback on a failed write:** every mutating `AppStore` method holds onto the previous value before mutating
   and restores it if `_persist()`/`_persistRates()` throws — memory and disk never silently drift apart this way.
   `resetAll()` and `importAllData()` additionally write an encrypted snapshot of the previous state **beforehand**
@@ -110,6 +127,10 @@
   same temp file. A failed write doesn't poison the queue for later.
 - **Unreadable/foreign files are never silently overwritten** — they're first backed up under
   `*.unreadable-<timestamp>` (`_quarantineFile(file, 'unreadable')`), only then does the app start with defaults.
+  **`_quarantineFile` throws when the copy fails** (it used to swallow the error): every caller overwrites the
+  file next, so a silent miss would destroy the only copy. The failure propagates out of `ensureInitialized()` to
+  `_StartupErrorApp`, with the file untouched. The timestamp comes from an injectable clock
+  (`AppStore(clock:)`, `@visibleForTesting`) so a test can block the exact quarantine path.
 - **Schema-version guard on the load path (not just on import):** on startup, `ensureInitialized()` checks the
   decrypted data file's `schemaVersion` against `currentSchemaVersion`:
   - *Newer than this build* (downgrade) → the file is NOT read leniently (that would drop unknown fields and then
@@ -121,6 +142,18 @@
     `pre-migrate-backup-<timestamp>.json` (`_writePreMigrationBackup`), then the in-memory schema is stamped to
     `currentSchemaVersion` and written back immediately, so the file and the backup don't drift apart across
     restarts. A botched migration stays recoverable this way.
+- **Import skips entries the app couldn't handle** (`lib/data/import_validation.dart`, pure,
+  `dropInvalidImportEntries`, executable spec `gherkin/executable/import_validation.feature`). A backup can be
+  hand-written or AI-converted from `templates/import-template.json`, so its values are untrusted: a Kontostand
+  with period `"2025"` used to import fine and then crash `periodLabel`/`monthsBetweenPeriods` on every start.
+  Skipped: a period that isn't `YYYY-MM` with month 01–12, a currency outside `kCurrencies`, an interval outside
+  `kSubscriptionIntervals`, an amount/rate that isn't finite or exceeds `kMaxImportedAmount` (1e15), a second
+  entry with an already-seen id, and a second Kontostand for the same Konto and Monat. The Basiswährung is only
+  adopted when it is in `kCurrencies` (`importedBaseCurrency`), otherwise the current one stays. **Deliberately
+  not checked: the Kontotyp** — older versions offered "Festgeld" and "Kredit", and an unknown one only falls
+  back to a neutral color. None of the checked lists has changed since the first commit, so no backup this app
+  ever exported is affected. Skipping (not aborting) mirrors the existing per-entry fault tolerance; the check
+  runs on import only — the load path stays byte-faithful to the data file.
 - **Import enforces the bank→color rule:** in `importAllData`, `account.color` gets reset via
   `resolveAccountColor(bank, tag)` (`constants.dart`) — a known bank → its brand color, an empty bank
   (cash/crypto) → the Kontotyp color. An unknown, non-empty bank **aborts the whole import** (no silent injection
@@ -137,6 +170,10 @@
   gets suggested through the channels linked in the Konto form (GitHub issue or email, see
   `gherkin/accounts.feature`) and then manually added as another `Bank(name, colorHex)` entry (also update the
   FAQ list on the website then).
+- **Exports (backup JSON and CSV) are written crash-safe too** (`writeExportFile`, `lib/utils/file_manager.dart`):
+  on Linux and Windows via a sibling `.tmp` + rename, so an older backup at the same path survives a crash; on
+  Linux the temp file is `chmod 600`-ed **before** the content lands. **macOS writes in place** (flushed): the
+  sandbox grants exactly the file picked in the save panel, and a sibling temp file there is denied.
 - **File permissions as defense in depth:** `chmod 700`/`600` (Linux/macOS), `icacls` current-user-only (Windows)
   — in addition to encryption, not as a substitute for it.
 - **macOS specifics (important, don't revert by accident):**
@@ -274,6 +311,15 @@ before it ships.
   a compromise against the pure-Dart implementation on the UI isolate; it is deliberately **not** raised until
   Windows and Linux can follow, so the file format never depends on which machine wrote the backup. The
   parameters live in the file precisely so the number can be raised later, on all platforms at once.
+- **The iteration count read from a backup is bounded** (`kMinBackupKdfIterations` 100,000 …
+  `kMaxBackupKdfIterations` 10,000,000, `backup_crypto.dart`), and an empty salt is rejected — both **before** any
+  derivation. The count comes from an untrusted file; a crafted one (or a negative number, which the FFI call
+  reads as ~4 billion) otherwise froze the app, natively on the UI isolate. The ceiling leaves 50× headroom; a
+  future raise past it needs a newer app to read those backups, exactly like a format bump.
+- **A new export password needs at least `kBackupPassphraseMinLength` (8) characters** (counted as runes, not
+  UTF-16 units; `isAcceptableNewBackupPassphrase`). The export dialog is meant for files headed to clouds and USB
+  sticks, where 200,000 PBKDF2 iterations don't save a one-character password. Import is unaffected: older
+  backups protected with a shorter password still open.
 - **`ApplePbkdf2` binds `CCKeyDerivationPBKDF` through libSystem**, not through a plugin — no Podfile entry, which
   also keeps the build working past the CocoaPods registry going read-only. `deriveKey` is synchronous on
   purpose: native iterations cost far less than the pure-Dart path, and `Isolate.run` is the escape hatch if the

@@ -97,14 +97,17 @@ Feature: Einstellungen
     Then exactly one confirmation "Dateien überschreiben?" appears for the whole set
     And on "Abbrechen" not a single file is written
 
-  Scenario: CSV export neutralizes formula injection in free-text fields
-    Given a Konto name, a bank, a Fixposten name, or a Vermögenswert name starts with "=", "+", "-", or "@"
-      (e.g. from an imported backup)
+  Scenario: CSV export neutralizes formula injection in text fields
+    Given a text field — Konto name, bank, Kontotyp, Fixposten name, Intervall, Währung, or Vermögenswert
+      name — starts with "=", "+", "-", "@", a tab, or a carriage return (e.g. from an imported backup)
     When I export the data as CSV
     Then a leading "'" is prepended to the affected field, so spreadsheet apps (Excel/LibreOffice) don't
       interpret it as a formula/DDE command on open
-    And number/enum columns (Kontotyp, Intervall, Währung, Betrag) stay unchanged, so e.g. negative amounts
-      keep working normally in sum formulas
+    And for every Kontotyp, Intervall, and Währung the app itself offers this changes nothing
+    But the numeric Betrag columns stay unguarded, so e.g. negative amounts keep working normally in sum
+      formulas
+    And each CSV file is written the same crash-safe way as a backup export (see
+      gherkin/backup_restore.feature)
 
   Scenario: The Hilfe section shows app and system information
     Then the "Hilfe" section shows the installed version plus build number, read directly from the running

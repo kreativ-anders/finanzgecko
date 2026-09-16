@@ -21,15 +21,18 @@ class SecureKeyStore {
   /// One CSPRNG for all 32 bytes: `Random.secure()` inside the callback built a fresh instance per byte.
   static final Random _secureRandom = Random.secure();
 
-  /// WARNING: a failure here must propagate to the startup guard in `main()`; swallowing it starts a keyless app.
-  Future<SecretKey> getOrCreateKey() async {
+  // WARNING: a failure here must propagate to the startup guard in `main()`; swallowing it starts a keyless app.
+  /// The stored key, or null when this installation has none yet.
+  Future<SecretKey?> readKey() async {
     final existing = await _storage.read(key: _keyName);
-    if (existing != null) {
-      return SecretKey(base64Decode(existing));
-    }
+    return existing == null ? null : SecretKey(base64Decode(existing));
+  }
 
-    final bytes = Uint8List.fromList(List<int>.generate(32, (_) => _secureRandom.nextInt(256)));
-    await _storage.write(key: _keyName, value: base64Encode(bytes));
-    return SecretKey(bytes);
+  /// A fresh random key that is NOT stored yet — [storeKey] is a separate, deliberate step.
+  // INFO: split so a spuriously missing key never overwrites the real one, see dev/ai/persistence.md.
+  SecretKey generateKey() => SecretKey(Uint8List.fromList(List<int>.generate(32, (_) => _secureRandom.nextInt(256))));
+
+  Future<void> storeKey(SecretKey key) async {
+    await _storage.write(key: _keyName, value: base64Encode(await key.extractBytes()));
   }
 }

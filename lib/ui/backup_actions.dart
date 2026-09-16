@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../data/backup_crypto.dart';
 import '../state/app_state.dart';
 import '../utils/csv_export.dart';
+import '../utils/file_manager.dart';
 import '../utils/formatting.dart';
 import 'app_view.dart';
 import 'theme.dart';
@@ -63,7 +64,7 @@ Future<void> exportBackup(BuildContext context, ValueChanged<AppView> onNavigate
     final jsonStr = passphrase.isEmpty
         ? const JsonEncoder.withIndent('  ').convert(exportData)
         : await encryptBackup(exportData, passphrase);
-    await File(location.path).writeAsString(jsonStr);
+    await writeExportFile(location.path, jsonStr, Platform.operatingSystem);
     await appState.markExported();
     if (!context.mounted) return;
     showSavedSnackBar(
@@ -120,7 +121,7 @@ Future<void> exportCsvTables(BuildContext context, ValueChanged<AppView> onNavig
   try {
     for (var i = 0; i < files.length; i++) {
       // Leading BOM so Excel opens the UTF-8 file with correct umlauts.
-      await targets[i].writeAsString('\u{FEFF}${files[i].content}');
+      await writeExportFile(targets[i].path, '\u{FEFF}${files[i].content}', Platform.operatingSystem);
     }
     if (!context.mounted) return;
     showSavedSnackBar(context, onNavigate, message: '${files.length} CSV-Tabellen exportiert.');

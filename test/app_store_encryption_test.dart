@@ -303,4 +303,53 @@ void main() {
     final quarantined = tempDir.listSync().where((f) => f.path.contains('.unreadable-'));
     expect(quarantined, isNotEmpty);
   });
+
+  test('a leftover temp file without a data file is recovered, not deleted', () async {
+    // The Windows fallback path: the old file was deleted, the rename never happened.
+    final keychain = <String, String>{};
+    _FakeSecureStorage(keychain).install();
+
+    final first = AppStore(dataDirectory: tempDir);
+    await first.ensureInitialized();
+    await first.addAccount(name: 'Girokonto', tag: 'giro', color: '#00c878');
+    await storeFile().rename('${storeFile().path}.tmp');
+
+    final second = AppStore(dataDirectory: tempDir);
+    await second.ensureInitialized();
+
+    expect(second.getAccounts().map((a) => a.name), ['Girokonto']);
+    expect(File('${storeFile().path}.tmp').existsSync(), isFalse);
+  });
+
+  test('a leftover temp file next to an intact data file is discarded', () async {
+    final keychain = <String, String>{};
+    _FakeSecureStorage(keychain).install();
+
+    final first = AppStore(dataDirectory: tempDir);
+    await first.ensureInitialized();
+    await first.addAccount(name: 'Girokonto', tag: 'giro', color: '#00c878');
+    await File('${storeFile().path}.tmp').writeAsString('{"v": 1, "halb'); // crash while writing the temp file
+
+    final second = AppStore(dataDirectory: tempDir);
+    await second.ensureInitialized();
+
+    expect(second.getAccounts().map((a) => a.name), ['Girokonto']);
+    expect(File('${storeFile().path}.tmp').existsSync(), isFalse);
+  });
+
+  test('a failed quarantine copy aborts the start instead of overwriting the only copy', () async {
+    final keychain = <String, String>{};
+    _FakeSecureStorage(keychain).install();
+    final fixed = DateTime(2026, 9, 16, 12);
+    const unreadable = 'kein JSON, aber die einzige Kopie';
+    await storeFile().writeAsString(unreadable);
+    // A directory at the exact quarantine path makes the copy fail while the data file stays writable.
+    final suffix = fixed.toIso8601String().replaceAll(RegExp('[:.]'), '-');
+    Directory('${storeFile().path}.unreadable-$suffix').createSync();
+
+    final store = AppStore(dataDirectory: tempDir, clock: () => fixed);
+
+    await expectLater(store.ensureInitialized(), throwsA(isA<FileSystemException>()));
+    expect(await storeFile().readAsString(), unreadable);
+  });
 }

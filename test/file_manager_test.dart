@@ -1,4 +1,6 @@
 // Gherkin: gherkin/settings.feature
+import 'dart:io';
+
 import 'package:finanzgecko/utils/file_manager.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,5 +71,33 @@ void main() {
     }
 
     expect(calls, isEmpty);
+  });
+
+  group('writeExportFile', () {
+    late Directory dir;
+
+    setUp(() => dir = Directory.systemTemp.createTempSync('finanzgecko_export_test_'));
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    for (final os in ['linux', 'windows', 'macos']) {
+      test('$os: replaces an older export completely and leaves no temp file behind', () async {
+        final path = '${dir.path}/finanzgecko-backup.json';
+        File(path).writeAsStringSync('ein älteres, deutlich längeres Backup' * 10);
+
+        await writeExportFile(path, '{"schemaVersion": 1}', os);
+
+        expect(File(path).readAsStringSync(), '{"schemaVersion": 1}');
+        expect(dir.listSync().map((e) => e.path), [path]);
+      });
+    }
+
+    test('linux: the export is readable by its owner only', () async {
+      if (Platform.isWindows) return; // no /bin/chmod to verify against
+      final path = '${dir.path}/finanzgecko-backup.json';
+
+      await writeExportFile(path, '{}', 'linux');
+
+      expect(File(path).statSync().mode & 0x1ff, 0x180, reason: '0600');
+    });
   });
 }

@@ -41,6 +41,9 @@ complete specification from which the app can be **regenerated nearly identicall
 | `navigation.feature` | Top navigation, banner jumps, in-app Datei menu, keyboard shortcuts, text selection |
 | `executable/account_color.feature` | (executable) Derive the Konto accent color from the bank |
 | `executable/net_worth_projection.feature` | (executable) Trend/projection/Kennzahlen/anomaly |
+| `executable/update_assets.feature` | (executable) Release asset per platform, SHA256SUMS parsing |
+| `executable/import_validation.feature` | (executable) Which imported entries are skipped |
+| `executable/backup_file_limits.feature` | (executable) Export password minimum, KDF bounds read from a backup |
 
 ## Required on every change
 

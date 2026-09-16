@@ -7,7 +7,7 @@ There's deliberately **no** automated CI step for this (no push/PR workflow, see
 a while. The goal is a **findings report**, not automatic breaking changes — implementing concrete fixes is a
 separate step, agreed with the human afterward.
 
-Three sub-areas, each with a clear scope:
+Four sub-areas, each with a clear scope:
 
 1. **Usability & accessibility of the UI** — both the Flutter desktop app (`lib/ui/views/`, `lib/ui/widgets/`,
    `lib/ui/theme.dart`) and the landing page (`docs/index.html`, `docs/download.html`,
@@ -27,6 +27,16 @@ Three sub-areas, each with a clear scope:
    and the persistence paths ([persistence.md](persistence.md)), missing error handling at system boundaries (file I/O, network).
    Every proposed fix must keep the existing tests (`flutter analyze` + `flutter test`, incl.
    `gherkin_sync_test.dart`) green and must **not** touch any of the architecture decisions listed in Rule 5.
+4. **Security & data safety** — against the rules in [rules.md](rules.md) #9. Checkpoints: every path that reads
+   outside input (backup import incl. KDF parameters, the data file's plaintext envelope fields, HTTP responses in
+   `lib/services/`) validates and bounds values before state changes; no delete/overwrite/new-key step that runs
+   before its safety copy or can swallow the copy's failure (`lib/data/app_store.dart`); no user data in
+   `debugPrint`/`print` outside `kDebugMode`; CSV export guards every text column; the update download keeps its
+   host allow-list, size cap, and checksum-before-write order; entitlements carry nothing unused
+   (`macos/Runner/*.entitlements`); `.github/workflows/release.yml` pins third-party actions to commit SHAs,
+   passes secrets per step, and keeps `permissions` at `contents: read` except where a job pushes; no secrets in
+   the git history. A security fix that changes visible behavior (e.g. a new input rule) is an open point for the
+   human, like any other behavior change.
 
 **Output — no separate report artifact, fix directly instead of just listing:** findings are **not** written into
 a separate report file/artifact, but summarized compactly in the chat. For each finding:

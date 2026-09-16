@@ -1,5 +1,6 @@
 # Source: lib/ui/backup_actions.dart, lib/ui/navigation_shell.dart, lib/data/app_store.dart, lib/data/app_schema.dart,
-#   lib/data/backup_crypto.dart, lib/ui/widgets/backup_passphrase_dialog.dart
+#   lib/data/backup_crypto.dart, lib/ui/widgets/backup_passphrase_dialog.dart, lib/data/import_validation.dart,
+#   lib/utils/file_manager.dart
 # Implementation: lib/ui/backup_actions.dart
 @backup
 Feature: Export and import a backup
@@ -23,6 +24,15 @@ Feature: Export and import a backup
     And I see the confirmation "Backup exportiert."
     But the export does NOT include the exchange-rate cache, internal counters (meta), the window
       geometry, or the Konto accent color (color) — the latter is re-derived from the bank on import
+
+  Scenario: An export never leaves a half-written file behind
+    Given I export a backup to a location where an older backup already exists
+    When the app crashes while writing
+    Then on Linux and Windows the older backup stays intact, because the new file is written next to it and
+      only renamed over it once complete
+    But on macOS the sandbox grants access to exactly the chosen file, so it is written in place, flushed
+      to disk before the export counts as done
+    And on Linux the file is readable by its owner only, even while it is being written
 
   Scenario: Export dialog cancelled
     Given I cancel the save dialog
@@ -53,6 +63,10 @@ Feature: Export and import a backup
       without making old backups unreadable
     And two exports of the same state produce different files (own salt, own nonce)
     But "Mit Passwort schützen" isn't selectable while the two password fields don't match
+    And it isn't selectable either while the password has fewer than 8 characters, which the field names
+      up front ("Mindestens 8 Zeichen.") — the file is meant for clouds and USB sticks, where it can be
+      attacked offline (executable: gherkin/executable/backup_file_limits.feature)
+    And a backup protected earlier with a shorter password still imports unchanged
 
   Scenario: Import detects the format itself
     Given I choose a backup file to import
@@ -85,7 +99,8 @@ Feature: Export and import a backup
   Scenario: Successful import
     Given I chose a valid backup file and confirmed the import
     Then ALL current Konten, Kontostände, Vermögenswerte, and Fixposten are replaced by the file's content
-    And the Basiswährung is adopted if present in the file
+    And the Basiswährung is adopted if present in the file and one the app offers — otherwise the current
+      one stays
     And the auto-increment counters are set so future new records don't collide with imported IDs
     And the view automatically jumps to the Dashboard
     And I see the confirmation "Import abgeschlossen."
@@ -123,6 +138,18 @@ Feature: Export and import a backup
     Given an otherwise valid backup file contains a single faulty entry in a list
     Then only this entry is skipped
     And every other entry is imported
+    And "faulty" includes values the app couldn't handle after the import, not just a wrong type: a month
+      that isn't "YYYY-MM", an unknown currency or Intervall, an infinite or implausibly large amount, a
+      second entry with the same id, and a second Kontostand for the same Konto and Monat — the full rules
+      are executable in gherkin/executable/import_validation.feature
+    But an unknown Kontotyp is kept, since older versions offered "Festgeld" and "Kredit"
+
+  Scenario: A password-protected backup with implausible key-derivation values is rejected up front
+    Given a password-protected backup states fewer than 100,000 or more than 10,000,000 iterations, or no salt
+    When I import it
+    Then it is rejected as an invalid backup before any key is derived, so a crafted file can't freeze the
+      app (executable: gherkin/executable/backup_file_limits.feature)
+    And my current data stays unchanged
 
   Scenario: Import enforces the bank→color rule and rejects unknown banks
     Given a backup/migration file contains Konten

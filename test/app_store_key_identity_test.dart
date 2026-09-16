@@ -146,6 +146,60 @@ void main() {
     });
   });
 
+  group('Schlüssel fehlt im Schlüsselbund', () {
+    test('ein neu erzeugter Schlüssel wird nicht gespeichert, solange eine verschlüsselte Datei existiert', () async {
+      final store = await openStore();
+      await store.setBaseCurrency('CHF');
+      final originalKey = keychain[_keyName]!;
+
+      // A read that spuriously comes back empty must not end with the real key overwritten.
+      replaceMachineKey();
+      await expectLater(openStore(), throwsA(isA<ForeignKeyDataException>()));
+      expect(
+        keychain.containsKey(_keyName),
+        isFalse,
+        reason: 'Vor der Entscheidung des Nutzers wird kein Schlüssel geschrieben',
+      );
+
+      keychain[_keyName] = originalKey;
+      expect((await openStore()).baseCurrency, 'CHF');
+    });
+
+    test('eine Datei ohne keyId gilt bei neuem Schlüssel als fremd, nicht als kaputt', () async {
+      final store = await openStore();
+      await store.setBaseCurrency('CHF');
+      final envelope = jsonDecode(await storeFile().readAsString()) as Map<String, dynamic>..remove('keyId');
+      await storeFile().writeAsString(jsonEncode(envelope));
+      final bytesBefore = await storeFile().readAsBytes();
+
+      replaceMachineKey();
+
+      await expectLater(openStore(), throwsA(isA<ForeignKeyDataException>()));
+      expect(await storeFile().readAsBytes(), bytesBefore);
+      expect(siblingNames().where((n) => n.contains('unreadable')), isEmpty);
+    });
+
+    test('erst die Entscheidung "Ohne Daten starten" speichert den neuen Schlüssel', () async {
+      final store = await openStore();
+      await store.setBaseCurrency('CHF');
+      replaceMachineKey();
+
+      await openStore(ignoreForeignData: true);
+
+      expect(keychain[_keyName], isNotNull);
+      expect(
+        (await openStore()).baseCurrency,
+        'EUR',
+        reason: 'Der neue Schlüssel öffnet die neue Datei beim nächsten Start',
+      );
+    });
+
+    test('bei einer frischen Installation wird der Schlüssel beim ersten Start gespeichert', () async {
+      await openStore();
+      expect(keychain[_keyName], isNotNull);
+    });
+  });
+
   group('Rückwärtskompatibilität', () {
     test('Datei ohne keyId (vor diesem Feature geschrieben) wird normal geladen', () async {
       // First let a key be generated, then hand-write an envelope in the old

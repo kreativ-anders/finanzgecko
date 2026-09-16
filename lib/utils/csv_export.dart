@@ -28,7 +28,7 @@ String buildAccountsCsv(List<Account> accounts) {
   final rows = [...accounts]..sort((a, b) => a.name.compareTo(b.name));
   final buffer = StringBuffer()..writeln(_row(['Konto-ID', 'Konto', 'Bank', 'Kontotyp']));
   for (final a in rows) {
-    buffer.writeln(_row(['${a.id}', _guarded(a.name), _guarded(a.bank), a.tag]));
+    buffer.writeln(_row(['${a.id}', _guarded(a.name), _guarded(a.bank), _guarded(a.tag)]));
   }
   return buffer.toString();
 }
@@ -54,7 +54,7 @@ String buildBalancesCsv(List<Account> accounts, List<Balance> balances) {
         '${b.accountId}',
         // Keeps an orphaned row readable; the ID column still points at the Konto that once was.
         _guarded(acc?.name ?? '(gelöscht)'),
-        b.currencyOriginal,
+        _guarded(b.currencyOriginal),
         _dec(b.amountOriginal, 2),
       ]),
     );
@@ -75,8 +75,8 @@ String buildSubscriptionsCsv(List<Subscription> subscriptions) {
         _guarded(s.name),
         // Redundant with the amount's sign on purpose: it makes the CSV filterable without a formula first.
         s.amountOriginal > 0 ? 'Einnahme' : 'Ausgabe',
-        intervalLabel(s.interval),
-        s.currencyOriginal,
+        _guarded(intervalLabel(s.interval)),
+        _guarded(s.currencyOriginal),
         _dec(s.amountOriginal, 2),
       ]),
     );
@@ -107,9 +107,9 @@ String _csvField(String value) {
   return value;
 }
 
-/// Prefixes a leading `=`, `+`, `-` or `@` with `'` so a spreadsheet cannot read the value as a formula.
-// WARNING: free-text columns only — prefixing the numeric columns would break SUM() on negative amounts.
+/// Prefixes a leading `=`, `+`, `-`, `@`, tab or carriage return with `'` so a spreadsheet cannot read a formula.
+// WARNING: text columns only — prefixing the numeric columns would break SUM() on negative amounts.
 String _guarded(String value) {
-  const triggerChars = '=+-@';
+  const triggerChars = '=+-@\t\r';
   return value.isNotEmpty && triggerChars.contains(value[0]) ? "'$value" : value;
 }

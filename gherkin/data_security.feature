@@ -12,6 +12,17 @@ Feature: Data storage, encryption, and integrity
     And it is stored in the OS credential store (Windows Credential Locker, macOS Schlüsselbund, Linux
       libsecret/kwallet depending on the platform) — never in the data file itself
 
+  Scenario: A missing key never replaces the key an existing data file needs
+    Given the credential store returns no key, but an encrypted data file exists
+    When the app starts
+    Then a new key is generated in memory only and NOT stored yet
+    And the data file is treated as belonging to a different installation — with or without "keyId",
+      since a key generated just now can't have written it — and the explanation screen appears
+    And if the credential store only failed this once, the next start finds the original key and opens the
+      file normally
+    And the new key is stored only when the user chooses "Backup importieren…" or "Ohne Daten starten",
+      and in general never later than the first file encrypted with it
+
   Scenario: The key is reused on every subsequent start
     Given a key has already been generated once
     Then every subsequent start reads the same key from the credential store, none is regenerated
@@ -26,11 +37,19 @@ Feature: Data storage, encryption, and integrity
     Then it is first written to a temporary file, which is then renamed over the old one
     And a crash mid-write must never leave behind a half-written main file
 
-  Scenario: On Linux and macOS, the data file is never deleted beforehand
-    Given a change is saved on a POSIX system
-    Then the rename replaces the existing file directly, without deleting it first
+  Scenario: The data file is never deleted before its replacement is in place
+    Given a change is saved
+    Then the rename replaces the existing file directly, without deleting it first — on every platform
     And there is never a moment where no data file exists at all
-    But on Windows, the old file is deleted first, since the rename would otherwise fail there
+    But if that rename fails on Windows, the old file is deleted and the rename retried as a last resort
+    And a temporary file is never cleaned up while no data file exists, since it is then the only copy
+
+  Scenario: A save interrupted between delete and rename is recovered on the next start
+    Given the app finds a temporary file "<dateiname>.tmp" but no data file
+    When the app starts
+    Then the temporary file becomes the data file and is read normally — it is never deleted
+    Given the app finds a temporary file next to an intact data file
+    Then the temporary file is a leftover from a crash mid-write and is deleted
 
   Scenario: Permissions are set once per file per session
     Given the same file is saved multiple times within one session
@@ -48,6 +67,8 @@ Feature: Data storage, encryption, and integrity
     When the app starts
     Then this file is first backed up as a copy under "<dateiname>.unreadable-<Zeitstempel>"
     And only then does the app start with defaults and write a new file
+    But if this copy can't be written, the app does NOT start with defaults: startup stops with an error
+      message and the file stays untouched — the same holds for the "newer-version" and "foreign" copies
 
   Scenario: Missing file on first start
     Given no file exists yet at the expected path
@@ -81,6 +102,9 @@ Feature: Data storage, encryption, and integrity
       delivery channel, and as a copy under "<dateiname>.foreign-<Zeitstempel>" when it sits at exactly the
       path this build writes to
     And a cancelled file or password dialog changes nothing and returns to the explanation
+    And the screen's own promise matches this: the finanzgecko.app build says the previous file stays as a
+      copy in the data folder, and only the App Store build — whose foreign file sits elsewhere — says it
+      stays untouched in its place
 
   Scenario: The two macOS delivery channels don't share one data file
     Given both macOS builds are sandboxed and therefore see the same container
@@ -105,7 +129,7 @@ Feature: Data storage, encryption, and integrity
     And the envelope version stays at 1, since the check only looks at the four known fields
     And an older app version keeps reading this file unchanged
     Given a file from before this field existed (without "keyId")
-    Then it is loaded as before, with no fingerprint check
+    Then it is loaded as before, with no fingerprint check, as long as this installation's key is found
 
   Scenario: A data file from a newer schema version is preserved, not overwritten
     Given the data file carries a "schemaVersion" greater than the version this build supports (e.g.

@@ -20,6 +20,10 @@ const Map<String, String> kTagColors = {
 
 String tagColorHex(String tag) => kTagColors[tag] ?? '#888888';
 
+/// Shortest password that may protect a backup export; importing older, shorter-protected backups still works.
+// INFO: a functional decision, not a default — the file travels to clouds and USB sticks, see persistence.md.
+const int kBackupPassphraseMinLength = 8;
+
 const List<String> kCurrencies = ['EUR', 'USD', 'CHF', 'GBP', 'JPY', 'SEK', 'NOK', 'DKK'];
 
 const List<String> kMonthLabels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];

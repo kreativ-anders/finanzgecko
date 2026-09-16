@@ -241,9 +241,15 @@ class _ForeignDataAppState extends State<_ForeignDataApp> {
                     Text(_error!, style: TextStyle(color: kDangerText, height: 1.5)),
                   ],
                   const SizedBox(height: 20),
+                  // WARNING: the finanzgecko.app build replaces the file at its own path (after copying it) — never
+                  // promise "untouched" there; see gherkin/data_security.feature.
                   Text(
-                    'Es wird nichts verändert und nichts gelöscht — auch nicht, wenn du ohne Daten startest. Die '
-                    'andere Datei bleibt unangetastet an ihrem Platz, falls du sie später doch noch brauchst.',
+                    kIsMacAppStore
+                        ? 'Es wird nichts verändert und nichts gelöscht — auch nicht, wenn du ohne Daten startest. '
+                              'Die Daten der anderen Version bleiben unangetastet an ihrem Platz, falls du sie später '
+                              'doch noch brauchst.'
+                        : 'Es wird nichts gelöscht — auch nicht, wenn du ohne Daten startest. Die bisherige Datei '
+                              'bleibt als Kopie im Datenordner erhalten, falls du sie später doch noch brauchst.',
                     style: TextStyle(color: kMuted, height: 1.5),
                   ),
                 ],

@@ -24,6 +24,13 @@
   bundle gets built/released. There's deliberately no separate push/PR CI workflow — `flutter analyze`,
   `flutter test`, and `dart format` run locally before commit (see [`CLAUDE.md`](../../CLAUDE.md)), release.yml is the
   only GitHub workflow in the repo.
+  **Supply-chain hardening in `release.yml`** (rules.md #9): every `uses:` is pinned to a full commit SHA with the
+  tag as a trailing comment — to update an action, resolve the new tag with `git ls-remote --tags <repo>` and
+  replace both. The workflow-wide `permissions` are `contents: read`; only `bump-version` and `release` (which
+  push) get `contents: write`. The macOS signing secrets reach only the two steps that use them — the job-level
+  `env` carries just `HAS_SIGNING_CERT` (a true/false derived from the secret), because a step's `if:` can't read
+  step-level `env` and the third-party `flutter-action` runs in the same job. `WINGET_TOKEN` is likewise
+  step-level, and the dispatch inputs reach the bump script through `env:` instead of `${{ }}` inside `run:`.
   **Build jobs' `if:` conditions must start with `!cancelled() &&`** — not cosmetic: `bump-version` is
   deliberately skipped on a tag push and on "bump: none", and GitHub by default skips everything hanging off a
   skipped job via `needs`. This inheritance only turns off once the condition contains a status-check function;

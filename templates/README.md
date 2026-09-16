@@ -18,7 +18,7 @@ Beispiel. Eine KI, die einen Fremdexport konvertiert, sollte ihre Ausgabe
 | Schlüssel | Typ | Pflicht | Bedeutung |
 |---|---|---|---|
 | `schemaVersion` | Ganzzahl | empfohlen | Aktuell `1`. Ein Backup aus einer *neueren* Version als der App wird abgelehnt. Fehlt der Wert, wird die aktuelle Version angenommen. |
-| `baseCurrency` | String | empfohlen | Basiswährung aller Dashboard-Summen. Eine aus `accounts[].currency` ⊆ `["EUR","USD","CHF","GBP","JPY","SEK","NOK","DKK"]`. Kein/ungültiger String → `EUR`. |
+| `baseCurrency` | String | empfohlen | Basiswährung aller Dashboard-Summen. Eine aus `accounts[].currency` ⊆ `["EUR","USD","CHF","GBP","JPY","SEK","NOK","DKK"]`. Fehlt sie oder ist sie keine dieser Währungen, bleibt die bisherige Basiswährung. |
 | `accounts` | Liste | ja | Konten (siehe unten). |
 | `balances` | Liste | ja | Monatliche Kontostände. |
 | `assets` | Liste | optional | Sachwerte ohne Zeitverlauf. |
@@ -27,6 +27,12 @@ Beispiel. Eine KI, die einen Fremdexport konvertiert, sollte ihre Ausgabe
 Unbekannte Zusatzschlüssel werden ignoriert. Eine einzelne fehlerhafte Zeile in
 einer Liste wird übersprungen (nicht der ganze Import abgebrochen) — trotzdem
 sollte die Ausgabe sauber sein, damit keine Daten still verloren gehen.
+
+Als fehlerhaft gilt auch ein Eintrag mit Werten, die die App nicht verarbeiten
+kann: ein `period` außerhalb von `"YYYY-MM"` mit Monat `01`–`12`, eine Währung
+außerhalb der Liste oben, ein unbekanntes `interval`, ein Betrag über 10^15 (bzw.
+unendlich), eine doppelte `id` innerhalb einer Liste und ein zweiter Kontostand
+für dasselbe Konto und denselben Monat (jeweils gewinnt der erste Eintrag).
 
 ## `accounts[]` — Konto
 

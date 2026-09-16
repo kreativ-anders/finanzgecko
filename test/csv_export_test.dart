@@ -79,6 +79,16 @@ void main() {
       final csv = buildAccountsCsv([acc(1, '=cmd|calc', bank: '+1; Bank')]);
       expect(lines(csv)[1], "1;'=cmd|calc;\"'+1; Bank\";Girokonto");
     });
+
+    test('a leading tab or carriage return is neutralized too', () {
+      final csv = buildAccountsCsv([acc(1, '\t=1+1', bank: '\r=1+1')]);
+      expect(lines(csv)[1], "1;'\t=1+1;\"'\r=1+1\";Girokonto");
+    });
+
+    test('a Kontotyp from an imported file gets neutralized as well', () {
+      final csv = buildAccountsCsv([acc(1, 'Giro', tag: '@SUM(A1)')]);
+      expect(lines(csv)[1], "1;Giro;Bank;'@SUM(A1)");
+    });
   });
 
   group('Kontostände', () {

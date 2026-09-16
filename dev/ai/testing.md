@@ -17,14 +17,16 @@ feature file names its `# Source:`). `test/gherkin_sync_test.dart` enforces that
 | `gherkin/assets.feature` | Vermögenswerte CRUD, 6-month reminder, list ordering, Enter submits the form | Unit (`app_store_ops_test`, `assets_view_test`) |
 | `gherkin/settings.feature` | Basiswährung, security, backup export/import, CSV export, help (version/system info/support), reset | Unit (`csv_export_test`) |
 | `gherkin/notifications.feature` | OS notifications for backup/asset reminders, episode-based, opt-in + denied authorization, distinct ids | Unit (`app_state_test`, `app_store_ops_test`) |
-| `gherkin/backup_restore.feature` | Export/import (JSON), schema check, bank→color on import, fault tolerance | Unit (`app_store_ops_test`, `backup_hardening_test`) |
-| `gherkin/data_security.feature` | AES-256-GCM, OS keychain, quarantine, schema parsing, macOS channel switch (one data file per delivery channel) | Unit (`app_schema_test`, `app_store_encryption_test`, `app_store_key_identity_test`) |
+| `gherkin/backup_restore.feature` | Export/import (JSON), crash-safe export, password minimum, schema check, bank→color on import, fault tolerance incl. domain checks | Unit (`app_store_ops_test`, `backup_hardening_test`, `file_manager_test`) |
+| `gherkin/data_security.feature` | AES-256-GCM, OS keychain (new key stored late), quarantine (aborts if the copy fails), atomic writes + `.tmp` recovery, schema parsing, macOS channel switch (one data file per delivery channel) | Unit (`app_schema_test`, `app_store_encryption_test`, `app_store_key_identity_test`) |
 | `gherkin/currency_exchange.feature` | Opt-in for rate fetching (`RateFetchConsent`), exchange rates (frankfurter.dev), cache, offline fallback, manual rate | `test/rate_consent_test.dart` (only the gate + cache path, no network); the HTTP call itself stays UI/integration |
 | `gherkin/window.feature` | Window size/maximized state, default/minimum size, splash | UI/integration only (no unit test) |
 | `gherkin/navigation.feature` | Top navigation (6 views), banner jumps, in-app Datei menu, keyboard shortcuts, text selection | UI/integration only (no unit test) |
 | `gherkin/executable/account_color.feature` | resolveAccountColor rules | **executable** (`test/bdd/account_color_bdd_test.dart`) |
 | `gherkin/executable/net_worth_projection.feature` | Trend/projection/Kennzahlen/anomaly | **executable** (`test/bdd/analysis_bdd_test.dart`) |
 | `gherkin/executable/update_assets.feature` | Release asset per platform, SHA256SUMS parsing, digest comparison | **executable** (`test/bdd/update_assets_bdd_test.dart`) |
+| `gherkin/executable/import_validation.feature` | Which imported entries are skipped (month, currency, Intervall, amounts, duplicate ids), Basiswährung check | **executable** (`test/bdd/import_validation_bdd_test.dart`) |
+| `gherkin/executable/backup_file_limits.feature` | Export password minimum length, bounds on the KDF iterations/salt read from a backup | **executable** (`test/bdd/backup_file_limits_bdd_test.dart`) |
 
 ## Regenerating a feature (1 feature → 1 primary file)
 
@@ -62,8 +64,8 @@ is listed in `# Source:`.
 | `test/analysis_test.dart` | Pure computations (trend, projection, anomaly, Kennzahlen) | `gherkin/dashboard.feature` |
 | `test/app_schema_test.dart` | Schema parsing, fault tolerance, export shape | `gherkin/data_security.feature` |
 | `test/app_state_test.dart` | AppState CRUD & derived values (reminders, totals) | several features |
-| `test/app_store_encryption_test.dart` | Envelope encryption, quarantine of unreadable files | `gherkin/data_security.feature` |
-| `test/app_store_key_identity_test.dart` | Key fingerprint (`keyId`), foreign file left untouched, and the macOS channel switch: own file per channel, adoption of an own-key file, import/empty start via `ignoreForeignData` | `gherkin/data_security.feature` |
+| `test/app_store_encryption_test.dart` | Envelope encryption, quarantine of unreadable files (and aborting when the copy fails), `.tmp` recovery on startup | `gherkin/data_security.feature` |
+| `test/app_store_key_identity_test.dart` | Key fingerprint (`keyId`), foreign file left untouched, a missing key never overwrites the stored one, and the macOS channel switch: own file per channel, adoption of an own-key file, import/empty start via `ignoreForeignData` | `gherkin/data_security.feature` |
 | `test/app_store_ops_test.dart` | Store CRUD, export/import, schema version check, import bank→color rule | `gherkin/backup_restore.feature` |
 | `test/account_color_test.dart` | `resolveAccountColor` (known bank → brand color, empty → Kontotyp, unknown → error) | `gherkin/accounts.feature`, `gherkin/backup_restore.feature` |
 | `test/accounts_view_test.dart` | Enter in the "Neues Konto" form submits it | `gherkin/accounts.feature` |
@@ -81,6 +83,8 @@ is listed in `# Source:`.
 | `test/bdd/account_color_bdd_test.dart` | **Runs** `gherkin/executable/account_color.feature` (via the runner) against `resolveAccountColor` | `gherkin/executable/account_color.feature` |
 | `test/bdd/analysis_bdd_test.dart` | **Runs** `gherkin/executable/net_worth_projection.feature` against `analysis.dart` | `gherkin/executable/net_worth_projection.feature` |
 | `test/bdd/update_assets_bdd_test.dart` | **Runs** `gherkin/executable/update_assets.feature` against `update_assets.dart` | `gherkin/executable/update_assets.feature` |
+| `test/bdd/import_validation_bdd_test.dart` | **Runs** `gherkin/executable/import_validation.feature` against `import_validation.dart` | `gherkin/executable/import_validation.feature` |
+| `test/bdd/backup_file_limits_bdd_test.dart` | **Runs** `gherkin/executable/backup_file_limits.feature` against `backup_crypto.dart` | `gherkin/executable/backup_file_limits.feature` |
 
 **Rule:** when a Gherkin scenario is added that describes new behavior, a corresponding Dart test should ideally
 follow (or at least a TODO comment referencing the scenario), so spec and automated check don't drift apart.

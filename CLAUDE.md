@@ -49,6 +49,10 @@ auto-loaded. Prose belongs there, not in this file.
   and the comment becomes a one-line pointer. A surviving comment is either **tagged**
   (`// WARNING:` / `// TODO:` / `// INFO:` / `// DEBUG:`) or a **single** untagged line — never a paragraph.
   Full rules: `dev/ai/code-style.md`.
+- **Treat every outside input as untrusted** — backup files (incl. their KDF parameters), HTTP responses: validate
+  and bound before any state changes. **Never log user data outside `kDebugMode`.** **Store a new key, delete, or
+  overwrite last** — copy first and stop if the copy fails. A security property needs a test. CI actions pinned to
+  commit SHAs, secrets per step, `contents: read` by default — `dev/ai/rules.md` #9.
 - **Always verify:** `flutter analyze` and `flutter test` after every change (same as the release gate). After
   touching `analysis_options.yaml`, run `dart fix --apply && dart format .` first.
 - `test/gherkin_sync_test.dart` names the broken spec/code/test link in its failure message — read it before hunting.

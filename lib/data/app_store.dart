@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 import '../constants.dart';
@@ -11,6 +12,7 @@ import '../models/balance.dart';
 import '../models/subscription.dart';
 import 'app_schema.dart';
 import 'crypto_platform.dart';
+import 'import_validation.dart';
 import 'sandbox_migration.dart';
 import 'secure_key_store.dart';
 
@@ -76,9 +78,18 @@ class AccountImportRejectedException implements Exception {
 /// Persists the whole app database as one AES-256-GCM encrypted JSON file — see dev/ai/persistence.md.
 class AppStore {
   // WARNING: widget tests need [persistToDisk] false — real file I/O never completes under their fake-async clock.
-  AppStore({Directory? dataDirectory, this.persistToDisk = true, this.ignoreForeignData = false, bool? appStoreChannel})
-    : _dataDirectoryOverride = dataDirectory,
-      appStoreChannel = appStoreChannel ?? kIsMacAppStore;
+  AppStore({
+    Directory? dataDirectory,
+    this.persistToDisk = true,
+    this.ignoreForeignData = false,
+    bool? appStoreChannel,
+    @visibleForTesting DateTime Function()? clock,
+  }) : _dataDirectoryOverride = dataDirectory,
+       appStoreChannel = appStoreChannel ?? kIsMacAppStore,
+       _clock = clock ?? DateTime.now;
+
+  /// Source of the timestamp suffixes on side-files; injectable so a test can predict a quarantine path.
+  final DateTime Function() _clock;
 
   final Directory? _dataDirectoryOverride;
   final bool persistToDisk;
@@ -95,6 +106,9 @@ class AppStore {
   bool _initialized = false;
   final AesGcm _cipher = buildAesGcm256();
   SecretKey? _key;
+
+  /// A freshly generated key that isn't in the credential store yet — stored right before its first use.
+  bool _keyPendingStore = false;
 
   // WARNING: [SandboxMigrationOutcome.failed] must never be presented to the user as an empty app.
   /// Outcome of the one-time pre-sandbox migration attempted during [ensureInitialized].
@@ -161,6 +175,7 @@ class AppStore {
   }
 
   Future<String> _encryptToEnvelope(String plaintext) async {
+    await _storePendingKey();
     final box = await _cipher.encrypt(utf8.encode(plaintext), secretKey: _requireKey);
     return jsonEncode({
       // WARNING: `v` stays 1 — `keyId` is additive, so older builds still read newly written files.
@@ -170,6 +185,13 @@ class AppStore {
       'cipherText': base64Encode(box.cipherText),
       'mac': base64Encode(box.mac.bytes),
     });
+  }
+
+  // WARNING: nothing may be encrypted with a key the credential store doesn't hold — the file would be unopenable.
+  Future<void> _storePendingKey() async {
+    if (!_keyPendingStore) return;
+    await const SecureKeyStore().storeKey(_requireKey);
+    _keyPendingStore = false;
   }
 
   static String _home() => Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '.';
@@ -236,9 +258,14 @@ class AppStore {
   Future<void> ensureInitialized() async {
     if (_initialized) return;
 
-    _key = await const SecureKeyStore().getOrCreateKey();
+    const keyStore = SecureKeyStore();
+    final storedKey = await keyStore.readKey();
+    _key = storedKey ?? keyStore.generateKey();
+    // INFO: a new key is only stored once no existing encrypted file still needs the old one, see persistence.md.
+    _keyPendingStore = storedKey == null;
 
     if (!persistToDisk) {
+      await _storePendingKey();
       _data = AppSchema.defaults();
       _initialized = true;
       return;
@@ -266,18 +293,23 @@ class AppStore {
     _filePath = p.join(dir.path, appStoreChannel ? _appStoreFilename : _storeFilename);
     _ratesFilePath = p.join(dir.path, _ratesFilename);
     final file = File(_filePath!);
+    final tmpFile = File('${file.path}.tmp');
+
+    if (await tmpFile.exists()) {
+      if (await file.exists()) {
+        // A crash while writing the temp file: the data file itself is intact, the leftover is disposable.
+        try {
+          await tmpFile.delete();
+        } catch (_) {}
+      } else {
+        // WARNING: without a data file the temp file is the newest complete copy — deleting it loses everything.
+        await tmpFile.rename(file.path);
+      }
+    }
 
     // INFO: store build only — the other channel's file sits in the same container under the classic name.
     if (appStoreChannel && !await file.exists()) {
       await _adoptOrReportLegacyFile(File(p.join(dir.path, _storeFilename)), file);
-    }
-    final tmpFile = File('${file.path}.tmp');
-
-    // Clean up any leftover temp file from a previous crash.
-    if (await tmpFile.exists()) {
-      try {
-        await tmpFile.delete();
-      } catch (_) {}
     }
 
     final fileExisted = await file.exists();
@@ -289,8 +321,8 @@ class AppStore {
         await _quarantineFile(file, 'unreadable');
         _data = AppSchema.defaults();
         await _persist();
-      } else if (await _hasForeignKeyId(decoded as Map)) {
-        // INFO: without this check a foreign file looks exactly like a corrupt one; see dev/ai/persistence.md.
+      } else if (_keyPendingStore || await _hasForeignKeyId(decoded as Map)) {
+        // INFO: a just-generated key or a mismatched keyId both mean foreign, not corrupt — see persistence.md.
         if (!ignoreForeignData) throw ForeignKeyDataException(_filePath!);
         // The user chose to continue here, and this path is the one we're about to write — keep a copy first.
         await _quarantineFile(file, 'foreign');
@@ -331,6 +363,7 @@ class AppStore {
       await _persist();
     }
 
+    await _storePendingKey();
     await _loadRatesCache();
     // INFO: one-time migration of rate entries that older stores kept inside the encrypted database.
     if (_data!.ratesCache.isNotEmpty) {
@@ -392,13 +425,12 @@ class AppStore {
   }
 
   /// Filesystem-safe timestamp suffix (no `:`/`.`) for every side-file this class writes.
-  static String _timestampSuffix() => DateTime.now().toIso8601String().replaceAll(RegExp('[:.]'), '-');
+  String _timestampSuffix() => _clock().toIso8601String().replaceAll(RegExp('[:.]'), '-');
 
-  /// Best-effort copy of a store file this build won't adopt; [reason] (`unreadable`/`newer-version`) names it.
+  /// Copy of a store file this build won't adopt; [reason] (`unreadable`/`newer-version`/`foreign`) names it.
+  // WARNING: must throw on failure — every caller overwrites the file next, and a silent miss destroys the only copy.
   Future<void> _quarantineFile(File file, String reason) async {
-    try {
-      await file.copy('${file.path}.$reason-${_timestampSuffix()}');
-    } catch (_) {}
+    await file.copy('${file.path}.$reason-${_timestampSuffix()}');
   }
 
   /// Byte-for-byte copy of the encrypted store file, taken before a forward migration rewrites it.
@@ -438,24 +470,26 @@ class AppStore {
     } catch (_) {}
   }
 
-  // WARNING: the pre-rename delete is Windows-only — on POSIX it would open a crash window with no data file.
-  /// Atomically writes [content] to [path] via a sibling `.tmp` file and a rename.
+  /// Atomically writes [content] to [path] via a sibling `.tmp` file and a rename that replaces the old file.
   Future<void> _atomicWrite(String path, String content) async {
     if (!persistToDisk) return;
     final file = File(path);
     final tmpFile = File('$path.tmp');
     try {
       await tmpFile.writeAsString(content, flush: true);
-      if (Platform.isWindows && await file.exists()) {
-        try {
-          await file.delete();
-        } catch (_) {}
+      try {
+        await tmpFile.rename(path);
+      } on FileSystemException {
+        // WARNING: Windows last resort only — deleting first opens a window with no data file; startup recovers it.
+        if (!Platform.isWindows || !await file.exists()) rethrow;
+        await file.delete();
+        await tmpFile.rename(path);
       }
-      await tmpFile.rename(path);
       await _chmod(path, '600');
       await _restrictWindowsAccess(path, isDirectory: false);
     } finally {
-      if (await tmpFile.exists()) {
+      // WARNING: with the data file gone the temp file is the only complete copy — it stays for startup recovery.
+      if (await tmpFile.exists() && await file.exists()) {
         try {
           await tmpFile.delete();
         } catch (_) {}
@@ -983,10 +1017,13 @@ class AppStore {
     final snapshot = exportAllData();
     await _writeSnapshotBackup('import', snapshot);
 
-    final accounts = parseTolerantList(imported['accounts'], Account.fromJson);
-    final balances = parseTolerantList(imported['balances'], Balance.fromJson);
-    final assets = parseTolerantList(imported['assets'], Asset.fromJson);
-    final subscriptions = parseTolerantList(imported['subscriptions'], Subscription.fromJson);
+    // INFO: entries the views can't handle (bad month, unknown currency, …) are skipped like malformed ones.
+    final (:accounts, :balances, :assets, :subscriptions) = dropInvalidImportEntries((
+      accounts: parseTolerantList(imported['accounts'], Account.fromJson),
+      balances: parseTolerantList(imported['balances'], Balance.fromJson),
+      assets: parseTolerantList(imported['assets'], Asset.fromJson),
+      subscriptions: parseTolerantList(imported['subscriptions'], Subscription.fromJson),
+    ));
 
     // INFO: an unknown non-empty bank aborts the import, before `data` is touched, so a bad backup survives it.
     final normalizedAccounts = <Account>[];
@@ -1019,7 +1056,7 @@ class AppStore {
     data.balances = balances;
     data.assets = assets;
     data.subscriptions = subscriptions;
-    if (imported['baseCurrency'] is String) data.baseCurrency = imported['baseCurrency'] as String;
+    data.baseCurrency = importedBaseCurrency(imported['baseCurrency']) ?? data.baseCurrency;
     data.nextAccountId = [data.nextAccountId, maxId(accounts.map((a) => a.id)) + 1].reduce((a, b) => a > b ? a : b);
     data.nextBalanceId = [data.nextBalanceId, maxId(balances.map((b) => b.id)) + 1].reduce((a, b) => a > b ? a : b);
     data.nextAssetId = [data.nextAssetId, maxId(assets.map((a) => a.id)) + 1].reduce((a, b) => a > b ? a : b);

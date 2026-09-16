@@ -44,7 +44,9 @@ finanzgecko/
 │   ├── data/
 │   │   ├── app_store.dart        # Persistence layer: encryption, atomic writes, write queue, export/import
 │   │   ├── app_schema.dart       # In-memory schema of the JSON file (class AppSchema: schemaVersion, lists, meta, window)
-│   │   ├── secure_key_store.dart # AES key in the OS keychain (flutter_secure_storage)
+│   │   ├── import_validation.dart # Pure import checks: skips entries the views couldn't handle (month, currency,
+│   │   │                         #   Intervall, amounts, duplicate ids) — specified as executable
+│   │   ├── secure_key_store.dart # AES key in the OS keychain (flutter_secure_storage); read/generate/store kept apart
 │   │   ├── crypto_platform.dart  # Which AES-GCM implementation is used (OS vs. Dart) and how to tell — see [persistence.md](persistence.md)
 │   │   ├── apple_pbkdf2.dart     # PBKDF2-HMAC-SHA256 via CommonCrypto (dart:ffi); the one algorithm
 │   │   │                         #   cryptography_flutter does not cover natively on macOS/iOS
@@ -62,7 +64,8 @@ finanzgecko/
 │   │   ├── csv_export.dart       # Pure CSV builders, one table per domain (Konten, Kontostände, Fixposten,
 │   │   │                             #   Vermögenswerte) + file names (lossy, no re-import)
 │   │   ├── file_manager.dart     # Reveal a file / open a folder in the OS file manager; on macOS via the
-│   │   │                             #   native `de.finanzgecko.app/finder` channel, because the sandbox refuses file: URLs
+│   │   │                             #   native `de.finanzgecko.app/finder` channel, because the sandbox refuses file: URLs;
+│   │   │                             #   `writeExportFile` writes backup/CSV exports crash-safe
 │   │   ├── formatting.dart       # Money/percent/date formatting, number parsing, period helpers, hex→Color
 │   │   └── update_assets.dart    # Pure update logic: pick the release asset per platform, parse SHA256SUMS,
 │   │                             #   compare digests — network- and filesystem-free, hence specified as executable

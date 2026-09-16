@@ -9,6 +9,7 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 
+import '../constants.dart';
 import 'apple_pbkdf2.dart';
 import 'crypto_platform.dart';
 
@@ -18,6 +19,15 @@ const int _formatVersion = 1;
 
 /// INFO: stored in the file so it can be raised later; kept at 200,000 until Windows and Linux can follow too.
 const int _defaultIterations = 200000;
+
+/// Accepted iteration range on import; the count comes from the file, so it must be bounded before any work.
+// INFO: the floor sits below every count this app has written, the ceiling leaves 50× headroom for a later raise.
+const int kMinBackupKdfIterations = 100000;
+const int kMaxBackupKdfIterations = 10000000;
+
+/// True when [passphrase] may protect a new export — see [kBackupPassphraseMinLength].
+// INFO: counts characters, not UTF-16 units, so an umlaut or emoji isn't counted twice.
+bool isAcceptableNewBackupPassphrase(String passphrase) => passphrase.runes.length >= kBackupPassphraseMinLength;
 
 /// Wrong password, or a file altered afterwards — a failed MAC cannot tell the two apart.
 class WrongBackupPassphraseException implements Exception {
@@ -72,11 +82,20 @@ Future<Map<String, dynamic>> decryptBackup(Map decoded, String passphrase) async
   if (kdf is! Map || kdf['algo'] != 'pbkdf2-hmac-sha256' || kdf['salt'] is! String || kdf['iterations'] is! int) {
     throw const UnsupportedBackupFormatException('unvollständige Schlüsselableitungs-Angaben');
   }
+  final iterations = kdf['iterations'] as int;
+  // WARNING: checked before derivation — a crafted count otherwise freezes the app (natively: on the UI isolate).
+  if (iterations < kMinBackupKdfIterations || iterations > kMaxBackupKdfIterations) {
+    throw const UnsupportedBackupFormatException('Schlüsselableitung außerhalb des zulässigen Bereichs');
+  }
   if (decoded['nonce'] is! String || decoded['cipherText'] is! String || decoded['mac'] is! String) {
     throw const UnsupportedBackupFormatException('unvollständige Datei');
   }
+  final salt = base64Decode(kdf['salt'] as String);
+  if (salt.isEmpty) {
+    throw const UnsupportedBackupFormatException('unvollständige Schlüsselableitungs-Angaben');
+  }
 
-  final key = await _deriveKey(passphrase, base64Decode(kdf['salt'] as String), kdf['iterations'] as int);
+  final key = await _deriveKey(passphrase, salt, iterations);
   final box = SecretBox(
     base64Decode(decoded['cipherText'] as String),
     nonce: base64Decode(decoded['nonce'] as String),

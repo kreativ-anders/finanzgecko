@@ -3,6 +3,32 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// Writes an export the user chose a location for, so a crash never leaves a half-written file in its place.
+// INFO: Linux also narrows it to the owner before any content lands — see dev/ai/persistence.md "Exports".
+Future<void> writeExportFile(String path, String content, String operatingSystem) async {
+  // WARNING: the macOS sandbox grants exactly the chosen file — a sibling temp file there is denied.
+  if (operatingSystem == 'macos') {
+    await File(path).writeAsString(content, flush: true);
+    return;
+  }
+  final tmp = File('$path.tmp');
+  try {
+    await tmp.writeAsString('', flush: true);
+    if (operatingSystem == 'linux') {
+      // INFO: absolute for the same reason as in `AppStore`: `PATH` is attacker-influenced.
+      await Process.run('/bin/chmod', ['600', tmp.path]);
+    }
+    await tmp.writeAsString(content, flush: true);
+    await tmp.rename(path);
+  } finally {
+    if (await tmp.exists()) {
+      try {
+        await tmp.delete();
+      } catch (_) {}
+    }
+  }
+}
+
 /// Native counterpart in `macos/Runner/MainFlutterWindow.swift`.
 const String macFinderChannelName = 'de.finanzgecko.app/finder';
 

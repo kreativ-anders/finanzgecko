@@ -120,6 +120,27 @@ void main() {
       expect(fresh.id, greaterThan(5), reason: 'next id must clear the imported max');
     });
 
+    test('skips entries the views could not handle and ignores an unknown Basiswährung', () async {
+      final store = await bootStore();
+      await store.setBaseCurrency('CHF');
+      final backup = _backup(baseCurrency: 'XYZ', accounts: [_account(1)]);
+      Map<String, dynamic> balance(int id, String period) => {
+        'id': id,
+        'accountId': 1,
+        'period': period,
+        'amountOriginal': 100.0,
+        'currencyOriginal': 'EUR',
+        'rate': 1.0,
+        'amountBase': 100.0,
+      };
+      backup['balances'] = [balance(1, '2025-01'), balance(2, '2025-13')];
+
+      await store.importAllData(backup);
+
+      expect(store.getAllBalances().map((b) => b.period), ['2025-01'], reason: 'full rules: import_validation.feature');
+      expect(store.baseCurrency, 'CHF');
+    });
+
     test('skips malformed entries within an otherwise valid backup', () async {
       final store = await bootStore();
       await store.importAllData(
