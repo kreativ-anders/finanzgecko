@@ -20,7 +20,8 @@ name: Release
 # Installer (FinanzGecko-<Version>-Setup.exe), Linux -> AppImage
 # (FinanzGecko-<Version>-x86_64.AppImage), macOS -> Disk-Image
 # (FinanzGecko-<Version>-mac.dmg mit Applications-Symlink zum Hineinziehen).
-# Die Version wird pro Build-Job aus pubspec.yaml gelesen.
+# Die Version liest der Job `version` einmalig aus pubspec.yaml; die drei
+# Build-Jobs übernehmen sie als `needs.version.outputs.version`.
 #
 # Ablauf für ein Release — zwei gleichwertige Wege:
 #   A) Manuell: Version in pubspec.yaml (version:) hochzählen und committen,
@@ -163,8 +164,37 @@ jobs:
           git push origin "HEAD:${{ github.ref_name }}"
           git push origin "${{ steps.bump.outputs.new_tag }}"
 
-  linux:
+  # Reads the version from pubspec.yaml ONCE instead of repeating the same grep
+  # in each of the three build jobs (one of them as a PowerShell variant with
+  # its own regex). The build jobs take it as `needs.version.outputs.version`.
+  #
+  # Deliberately its own job and NOT part of `gate`: `gate` runs BEFORE
+  # `bump-version` and therefore still sees the old version. This job checks out
+  # the same ref the build jobs do (after a bump: the new tag), so it is
+  # guaranteed to read the very version that gets built.
+  version:
     needs: [gate, bump-version]
+    # `!cancelled()`: see the comment on the `linux` job. The condition is
+    # deliberately word-for-word the one the build jobs use — this job has to run
+    # exactly when they do, otherwise they hang off a skipped `needs`.
+    if: |
+      !cancelled() &&
+      needs.gate.result == 'success' &&
+      (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump-version.outputs.new_tag || github.ref }}
+
+      - id: read
+        run: |
+          echo "version=$(grep '^version:' pubspec.yaml | sed 's/^version: *//; s/+.*//')" >> "$GITHUB_OUTPUT"
+
+  linux:
+    needs: [gate, bump-version, version]
     # `!cancelled()` ist hier NICHT kosmetisch, sondern der eigentliche Trick:
     # `bump-version` wird bei einem Tag-Push und bei "bump: none" bewusst
     # übersprungen, und GitHub überspringt per Default ALLES, was via `needs`
@@ -179,6 +209,7 @@ jobs:
     if: |
       !cancelled() &&
       needs.gate.result == 'success' &&
+      needs.version.result == 'success' &&
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
@@ -200,11 +231,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev libnotify-dev
 
-      - name: Version ermitteln
-        id: version
-        run: |
-          echo "version=$(grep '^version:' pubspec.yaml | sed 's/^version: *//; s/+.*//')" >> "$GITHUB_OUTPUT"
-
       - run: flutter config --enable-linux-desktop
       - run: flutter pub get
       - run: flutter build linux --release
@@ -216,7 +242,7 @@ jobs:
       # heruntergeladene Releases nebeneinander unterscheidbar bleiben.
       - name: AppImage bauen
         env:
-          OUT_FILE: ${{ github.workspace }}/FinanzGecko-${{ steps.version.outputs.version }}-x86_64.AppImage
+          OUT_FILE: ${{ github.workspace }}/FinanzGecko-${{ needs.version.outputs.version }}-x86_64.AppImage
         run: |
           chmod +x packaging/linux/build_appimage.sh
           ./packaging/linux/build_appimage.sh
@@ -224,14 +250,15 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: FinanzGecko-linux-x86_64
-          path: FinanzGecko-${{ steps.version.outputs.version }}-x86_64.AppImage
+          path: FinanzGecko-${{ needs.version.outputs.version }}-x86_64.AppImage
 
   macos:
-    needs: [gate, bump-version]
+    needs: [gate, bump-version, version]
     # `!cancelled()`: siehe Kommentar am `linux`-Job.
     if: |
       !cancelled() &&
       needs.gate.result == 'success' &&
+      needs.version.result == 'success' &&
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: macos-latest
     # Auf Job-Ebene (nicht am Schritt), damit die `if`-Bedingung unten den
@@ -256,11 +283,6 @@ jobs:
           # this deliberately, after `flutter analyze`/`flutter test` and a signed
           # DMG have been checked locally on the new version (dev/ai/platform.md).
           flutter-version: '3.47.0'
-
-      - name: Version ermitteln
-        id: version
-        run: |
-          echo "version=$(grep '^version:' pubspec.yaml | sed 's/^version: *//; s/+.*//')" >> "$GITHUB_OUTPUT"
 
       - run: flutter config --enable-macos-desktop
       - run: flutter pub get
@@ -309,7 +331,7 @@ jobs:
         # baut sonst ein unsigniertes DMG: ein Fork ohne Secrets darf die
         # atomare Release-Kette nicht blockieren.
         env:
-          OUT_FILE: ${{ github.workspace }}/FinanzGecko-${{ steps.version.outputs.version }}-mac.dmg
+          OUT_FILE: ${{ github.workspace }}/FinanzGecko-${{ needs.version.outputs.version }}-mac.dmg
         run: |
           chmod +x packaging/macos/build_dmg.sh
           ./packaging/macos/build_dmg.sh
@@ -325,14 +347,15 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: FinanzGecko-mac
-          path: FinanzGecko-${{ steps.version.outputs.version }}-mac.dmg
+          path: FinanzGecko-${{ needs.version.outputs.version }}-mac.dmg
 
   windows:
-    needs: [gate, bump-version]
+    needs: [gate, bump-version, version]
     # `!cancelled()`: siehe Kommentar am `linux`-Job.
     if: |
       !cancelled() &&
       needs.gate.result == 'success' &&
+      needs.version.result == 'success' &&
       (needs.bump-version.result == 'success' || needs.bump-version.result == 'skipped')
     runs-on: windows-latest
     steps:
@@ -348,13 +371,6 @@ jobs:
           # this deliberately, after `flutter analyze`/`flutter test` and a signed
           # DMG have been checked locally on the new version (dev/ai/platform.md).
           flutter-version: '3.47.0'
-
-      - name: Version ermitteln
-        id: version
-        shell: pwsh
-        run: |
-          $ver = ((Select-String -Path pubspec.yaml -Pattern '^version:').Line -replace '^version:\s*','' -replace '\+.*','')
-          echo "version=$ver" >> $env:GITHUB_OUTPUT
 
       - run: flutter config --enable-windows-desktop
       - run: flutter pub get
@@ -397,12 +413,12 @@ jobs:
         shell: pwsh
         run: |
           $buildDir = "$PWD\build\windows\x64\runner\Release"
-          & "iscc" "/DMyAppVersion=${{ steps.version.outputs.version }}" "/DBuildDir=$buildDir" packaging\windows\finanzgecko.iss
+          & "iscc" "/DMyAppVersion=${{ needs.version.outputs.version }}" "/DBuildDir=$buildDir" packaging\windows\finanzgecko.iss
 
       - uses: actions/upload-artifact@v7
         with:
           name: FinanzGecko-windows-x64
-          path: packaging/windows/FinanzGecko-${{ steps.version.outputs.version }}-Setup.exe
+          path: packaging/windows/FinanzGecko-${{ needs.version.outputs.version }}-Setup.exe
 
   # Veröffentlicht das GitHub-Release erst, wenn ALLE drei Plattform-Builds
   # erfolgreich waren — bewusst ein einziger, atomarer Schritt statt dass
@@ -497,18 +513,27 @@ jobs:
             echo "Check with \`shasum -a 256 <file>\` (macOS/Linux) or \`certutil -hashfile <file> SHA256\` (Windows)."
           } > "$RUNNER_TEMP/release_body.md"
 
+      # `generate_release_notes`: GitHub appends its own notes, generated from
+      # the commits and PRs, below ours. The action *prepends* `body_path` to
+      # them, so the checksums keep the top spot. Without this the release text
+      # was checksums only — what actually changed lived solely in CHANGELOG.md.
       - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
           files: dist/*
           body_path: ${{ runner.temp }}/release_body.md
+          generate_release_notes: true
 
   # Meldet die neue Version an den Windows-Paketmanager winget (`winget install
-  # KreativAnders.FinanzGecko`). Die Action liest das fertige GitHub-Release,
-  # baut die Manifeste daraus und öffnet einen Pull Request gegen
-  # microsoft/winget-pkgs.
+  # KreativAnders.FinanzGecko`). `wingetcreate` liest das fertige GitHub-Release,
+  # aktualisiert das in winget-pkgs veröffentlichte Manifest und öffnet einen
+  # Pull Request gegen microsoft/winget-pkgs.
   #
-  # Läuft BEWUSST nach `release` und nicht parallel: die Action lädt die
+  # `wingetcreate` (microsoft/winget-create) statt einer Action aus fremder Hand:
+  # es ist das Werkzeug des Herstellers von winget selbst, dasselbe, das
+  # Microsoft in Terminal und PowerToys für diesen Schritt einsetzt.
+  #
+  # Läuft BEWUSST nach `release` und nicht parallel: `wingetcreate` lädt die
   # Setup.exe von der Release-Seite, um ihre Prüfsumme zu bilden — vorher gibt
   # es die URL noch nicht.
   #
@@ -521,45 +546,86 @@ jobs:
   # Voraussetzung: Secret WINGET_TOKEN (klassischer PAT mit `public_repo`), und
   # ein Fork von microsoft/winget-pkgs im eigenen Account. Fehlt das Secret,
   # wird der Job übersprungen statt das Release rot zu färben — dieselbe Logik
-  # wie beim unsignierten DMG in build_dmg.sh. `continue-on-error` auf dem
-  # Action-Schritt selbst greift dieselbe Logik nochmal auf: scheitert die
-  # Action (z. B. weil bereits ein offener PR gegen winget-pkgs existiert),
+  # wie beim unsignierten DMG in build_dmg.sh. `continue-on-error` am
+  # `wingetcreate`-Schritt selbst greift dieselbe Logik nochmal auf: scheitert
+  # der Aufruf (z. B. weil bereits ein offener PR gegen winget-pkgs existiert),
   # soll das die restliche Release-Pipeline nicht rot färben.
   winget:
-    needs: [bump-version, release]
+    needs: [bump-version, version, release]
     if: |
       !cancelled() &&
       needs.release.result == 'success' &&
       github.repository == 'kreativ-anders/finanzgecko'
-    runs-on: ubuntu-latest
+    # windows-latest, not ubuntu: `wingetcreate` ships only as a Windows binary
+    # — microsoft/winget-create publishes an .exe and an .msixbundle, no Linux
+    # build and no dotnet tool. The runner is free on a public repo.
+    runs-on: windows-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+      TAG: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
+      # The naked version ("1.11.0"), not the tag ("v1.11.0") and not the
+      # pubspec form with the build number ("1.11.0+18"): PackageVersion has to
+      # match what is published in winget-pkgs, otherwise a second, parallel
+      # version appears in the store. Taken from the `version` job rather than
+      # stripped off the tag — that is the same value the Setup.exe is named
+      # after, so the manifest and the asset URL can never drift apart.
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
+      # Secrets deliberately reach the shell through `env`, never inlined into
+      # the command via `${{ }}` — an inlined secret ends up on the command line.
       - name: Auf WINGET_TOKEN prüfen
         id: check
+        shell: pwsh
         run: |
-          if [ -n "${{ secrets.WINGET_TOKEN }}" ]; then
-            echo "have_token=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "have_token=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::WINGET_TOKEN nicht gesetzt — winget-Manifest wird nicht aktualisiert."
-          fi
+          if ($env:WINGET_TOKEN) {
+            "have_token=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "have_token=false" >> $env:GITHUB_OUTPUT
+            Write-Output "::notice::WINGET_TOKEN nicht gesetzt — winget-Manifest wird nicht aktualisiert."
+          }
 
-      # winget erwartet die nackte Version ("1.8.0"), nicht den Tag ("v1.8.0")
-      # und nicht die pubspec-Form mit Build-Nummer ("1.8.0+18") — die
-      # PackageVersion im Manifest muss exakt so aussehen wie in
-      # packaging/windows/winget/, sonst legt die Action eine zweite,
-      # parallele Version im Store an.
-      - name: Version aus dem Tag ableiten
-        id: v
+      # The date the release was published, not the day the manifest is
+      # submitted: a manifest handed in later would otherwise name a day on
+      # which nothing was released. Same rule as in
+      # packaging/windows/winget/render.sh.
+      - name: Veröffentlichungsdatum des Releases holen
+        id: date
+        if: steps.check.outputs.have_token == 'true'
+        shell: pwsh
         env:
-          TAG: ${{ needs.bump-version.outputs.new_tag || github.ref_name }}
-        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $rel = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/$env:TAG" `
+            -Headers @{ Authorization = "Bearer $env:GH_TOKEN"; "User-Agent" = "finanzgecko-release" }
+          # PowerShell's JSON reader turns an ISO-8601 string into [datetime] in
+          # some versions and leaves it a string in others — handle both rather
+          # than betting on the runner image.
+          $published = $rel.published_at
+          $date = if ($published -is [datetime]) { $published.ToString("yyyy-MM-dd") }
+                  else { ([string]$published).Substring(0, 10) }
+          "date=$date" >> $env:GITHUB_OUTPUT
 
+      # `wingetcreate update` pulls the CURRENTLY PUBLISHED manifest out of
+      # winget-pkgs and swaps only version, installer URL, hash and release
+      # date — the deliberate fields (InstallerType: inno, ElevationRequirement,
+      # Scope, PrivacyUrl, and the two locale files) carry over untouched.
+      # That is why the first submission has to land there by hand; see
+      # packaging/windows/winget/README.md.
+      #
+      # `continue-on-error`: if this fails (e.g. an open PR against winget-pkgs
+      # already exists), it must not redden the rest of the release pipeline.
       - name: winget-Manifest aktualisieren
         if: steps.check.outputs.have_token == 'true'
         continue-on-error: true
-        uses: vedantmgoyal2009/winget-releaser@v2
-        with:
-          identifier: KreativAnders.FinanzGecko
-          version: ${{ steps.v.outputs.version }}
-          installers-regex: '-Setup\.exe$'
-          token: ${{ secrets.WINGET_TOKEN }}
+        shell: pwsh
+        env:
+          RELEASE_DATE: ${{ steps.date.outputs.date }}
+        run: |
+          Invoke-WebRequest -Uri "https://aka.ms/wingetcreate/latest" -OutFile wingetcreate.exe
+          .\wingetcreate.exe update KreativAnders.FinanzGecko `
+            --version $env:VERSION `
+            --urls "https://github.com/${{ github.repository }}/releases/download/$env:TAG/FinanzGecko-$env:VERSION-Setup.exe" `
+            --release-date $env:RELEASE_DATE `
+            --submit `
+            --token $env:WINGET_TOKEN

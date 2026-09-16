@@ -48,11 +48,15 @@
 - Release artifacts are **finished packages rather than raw bundle folders** (which confused test users and broke
   the start when individual files were deleted): Windows → Inno Setup installer `FinanzGecko-<version>-Setup.exe`
   (`packaging/windows/finanzgecko.iss`, built with `iscc` in the `windows` job), Linux → a single executable
-  AppImage `FinanzGecko-<version>-x86_64.AppImage` (`packaging/linux/build_appimage.sh` via `appimagetool`),
-  macOS → a disk image `FinanzGecko-<version>-mac.dmg` (`hdiutil` step in the `macos` job, image =
-  `FinanzGecko.app` + a symlink to `/Applications`). The version is read from `pubspec.yaml` in every build job
-  (not from the git tag), so even untagged ad-hoc test builds (`workflow_dispatch`, `bump: none`) get a versioned
-  file name. `packaging/linux/install.sh` remains as an alternative for the Linux start menu from an unpacked bundle.
+  AppImage `FinanzGecko-<version>-x86_64.AppImage` (`packaging/linux/build_appimage.sh` via `appimagetool`,
+  **pinned to release 1.9.1 and checksum-verified** — not the `continuous` tag, which moves under us; the two
+  differ in checksum while sharing a file size), macOS → a disk image `FinanzGecko-<version>-mac.dmg` (`hdiutil`
+  step in the `macos` job, image = `FinanzGecko.app` + a symlink to `/Applications`). The version is read from
+  `pubspec.yaml` (not from the git tag), so even untagged ad-hoc test builds (`workflow_dispatch`, `bump: none`)
+  get a versioned file name — **once, in a small `version` job**, which the three build jobs consume as
+  `needs.version.outputs.version`. That job checks out the same ref they do, so after a bump it reads the new
+  version; `gate` deliberately can't do this, since it runs *before* `bump-version`. Its `if:` is word-for-word
+  the build jobs' condition, `!cancelled()` included — see the note above on why that matters. `packaging/linux/install.sh` remains as an alternative for the Linux start menu from an unpacked bundle.
 - **Windows: the three VC++ runtime DLLs (`vcruntime140.dll`, `vcruntime140_1.dll`, `msvcp140.dll`) ship next to
   `finanzgecko.exe`**, copied into the build output by the `windows` job in `release.yml` right after `flutter
   build windows --release`, before `iscc` packages `{#BuildDir}\*` (no change needed in `finanzgecko.iss` itself).
@@ -93,13 +97,34 @@
   doesn't answer; codesign reports that as `errSecInternalComponent` and aborts, the same call goes through
   unchanged seconds later (exactly what happened on the first local signing run). Don't remove it.
 - **Checksums:** the `release` job additionally drops a `SHA256SUMS` over the three platform packages as a
-  release asset and writes the same hashes into the release text (`body_path`). That's the one allowed exception
+  release asset and writes the same hashes into the release text (`body_path`). The step also passes
+  `generate_release_notes: true`, so GitHub's own commit/PR-derived notes follow underneath: `action-gh-release`
+  *prepends* `body_path` to them, which is why the checksums keep the top spot. That's the one allowed exception
   to the rule below — not a binary duplicate, but a text file in `sha256sum -c`'s standard format.
   `sha256sum FinanzGecko-*` instead of `sha256sum *`: the shell creates the target file via the redirect *before*
   the command runs, so a `*` would hash the still-empty `SHA256SUMS` against itself. For `docs/download.html` the
   file is uncritical: asset resolution matches via `data-asset-suffix`, and `SHA256SUMS` carries none of those.
   The release text itself is **English** ([code-style.md](code-style.md) "Language") and claims integrity, not authenticity —
   `SHA256SUMS` is unsigned.
+- **winget submission runs through `wingetcreate`** (`microsoft/winget-create`), in the `winget` job after
+  `release` — not in parallel: the tool downloads the Setup.exe from the release page to hash it, and before
+  `release` that URL doesn't exist. `wingetcreate update` pulls the **currently published** manifest out of
+  `winget-pkgs` and swaps only version, installer URL, hash and release date, so the deliberate fields
+  (`InstallerType: inno`, `ElevationRequirement`, `Scope`, `PrivacyUrl`, both locale files — all reasoned out in
+  [`packaging/windows/winget/README.md`](../../packaging/windows/winget/README.md)) survive untouched. That is
+  also why the *first* submission still has to land in `winget-pkgs` by hand.
+  **The job runs on `windows-latest`, not ubuntu** — `wingetcreate` ships only as a Windows binary (an `.exe` and
+  an `.msixbundle`; no Linux build, no dotnet tool). On a public repo that runner is free.
+  The vendor's own tool rather than a third-party action: it is what Microsoft uses for this step in Terminal and
+  PowerToys, and it removes a dependency on an individual maintainer's account from the release path.
+  `PackageVersion` comes from `needs.version.outputs.version`, i.e. the same value the Setup.exe is named after —
+  not stripped off the git tag, so manifest and asset URL cannot drift apart. Missing `WINGET_TOKEN` skips the
+  job, and `continue-on-error` keeps a failed submission (e.g. an open PR against `winget-pkgs` already exists)
+  from reddening the release.
+  **`packaging/windows/winget/render.sh` stays** and is deliberately *not* replaced by `wingetcreate`: it renders
+  the first-submission manifests from the templates in that folder, which encode field decisions `wingetcreate
+  new` would not reproduce — and being a shell script it still runs on macOS/Linux, which a Windows-only binary
+  would not.
 - **No unversioned alias assets:** every release carries exactly **one** binary per platform (the versioned
   name). An earlier approach additionally uploaded a byte-identical unversioned copy
   (`cp`/`Copy-Item` before the respective `upload-artifact` step), so `docs/download.html` could link firmly to

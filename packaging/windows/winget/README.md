@@ -65,9 +65,22 @@ winget install  --manifest <pfad>
 
 ## Danach: automatisch
 
-Der Job `winget` in `.github/workflows/release.yml` aktualisiert das Manifest bei jedem Release selbst. Er
-kopiert das bestehende Manifest aus `winget-pkgs`, tauscht Version, URL und Prüfsumme aus und öffnet den Pull
-Request — deshalb muss die erste Fassung von Hand dort ankommen.
+Der Job `winget` in `.github/workflows/release.yml` aktualisiert das Manifest bei jedem Release selbst — mit
+**`wingetcreate`** (`microsoft/winget-create`), dem Werkzeug des winget-Herstellers. `wingetcreate update` holt
+das bestehende Manifest aus `winget-pkgs`, tauscht Version, URL, Prüfsumme und `ReleaseDate` aus und öffnet den
+Pull Request — deshalb muss die erste Fassung von Hand dort ankommen.
+
+Die oben begründeten Felder (`InstallerType`, `ElevationRequirement`, `Scope`, `PrivacyUrl`, beide Locale-Dateien)
+werden dabei **nicht** neu erzeugt, sondern aus dem veröffentlichten Manifest übernommen. Wer sie ändern will,
+ändert sie in `winget-pkgs` — und zieht die Vorlagen hier im selben Schritt nach, sonst driften die beiden
+auseinander.
+
+Der Job läuft auf `windows-latest`, nicht auf ubuntu: `wingetcreate` gibt es ausschließlich als Windows-Binary.
+
+**`render.sh` bleibt bewusst bestehen und wird nicht durch `wingetcreate` ersetzt.** Es erzeugt die Manifeste der
+*ersten* Einreichung aus den Vorlagen in diesem Ordner. `wingetcreate new` würde die oben begründeten Felder
+nicht von selbst wieder so setzen, und als Shell-Skript läuft `render.sh` auch auf macOS/Linux — das
+Windows-Binary nicht.
 
 Voraussetzung: Secret `WINGET_TOKEN` (klassischer PAT mit `public_repo`) und ein Fork von
 `microsoft/winget-pkgs`. Fehlt das Secret, wird der Job übersprungen statt das Release fehlschlagen zu lassen.

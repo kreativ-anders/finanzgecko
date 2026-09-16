@@ -5,6 +5,10 @@
 # Nur für die ERSTE Einreichung nötig. Danach übernimmt der Job "winget" in
 # .github/workflows/release.yml die Aktualisierung automatisch.
 #
+# TODO: delete this script and the four templates next to it once winget-pkgs PR
+# #417767 is merged — from then on `wingetcreate update` in release.yml carries
+# the published manifest forward and these templates can only drift from it.
+#
 # Aufruf:
 #   ./packaging/windows/winget/render.sh 1.8.0 [ausgabeverzeichnis]
 #

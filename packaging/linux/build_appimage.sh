@@ -61,12 +61,29 @@ EOF
 cp "$REPO_ROOT/icons/icon-512.png" "$APPDIR/de.finanzgecko.app.png"
 
 # appimagetool beschaffen (falls nicht im PATH).
+#
+# Pinned to a release, not to the `continuous` tag: `continuous` points at a
+# freshly built binary at any time, so what a tagged build here produces could
+# change without a commit in this repo — the same reason release.yml pins
+# `flutter-version` instead of relying on `channel: stable` alone. Not a
+# theoretical risk: `continuous` and 1.9.1 have the same file size but
+# different checksums.
+#
+# The checksum is verified so a swapped asset breaks the build instead of
+# silently packaging with a different tool.
+APPIMAGETOOL_VERSION="1.9.1"
+APPIMAGETOOL_SHA256="ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
+
 if command -v appimagetool >/dev/null 2>&1; then
+  # WARNING: an appimagetool from PATH is deliberately NOT pinned — that is the
+  # local developer path. CI has none installed and therefore always takes the
+  # pinned download below.
   APPIMAGETOOL="appimagetool"
 else
   APPIMAGETOOL="$WORK/appimagetool"
   curl -fsSL -o "$APPIMAGETOOL" \
-    "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+    "https://github.com/AppImage/appimagetool/releases/download/${APPIMAGETOOL_VERSION}/appimagetool-x86_64.AppImage"
+  echo "${APPIMAGETOOL_SHA256}  ${APPIMAGETOOL}" | sha256sum -c -
   chmod +x "$APPIMAGETOOL"
 fi
 
