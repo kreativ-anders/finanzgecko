@@ -57,7 +57,7 @@
   (`packaging/windows/finanzgecko.iss`, built with `iscc` in the `windows` job), Linux → a single executable
   AppImage `FinanzGecko-<version>-x86_64.AppImage` (`packaging/linux/build_appimage.sh` via `appimagetool`,
   **pinned to release 1.9.1 and checksum-verified** — not the `continuous` tag, which moves under us; the two
-  differ in checksum while sharing a file size), macOS → a disk image `FinanzGecko-<version>-mac.dmg` (`hdiutil`
+  differ in checksum while sharing a file size), macOS → a disk image `FinanzGecko-<version>-mac.dmg` (`build_dmg.sh`
   step in the `macos` job, image = `FinanzGecko.app` + a symlink to `/Applications`). The version is read from
   `pubspec.yaml` (not from the git tag), so even untagged ad-hoc test builds (`workflow_dispatch`, `bump: none`)
   get a versioned file name — **once, in a small `version` job**, which the three build jobs consume as
@@ -86,7 +86,9 @@
   ticket (`xcrun stapler staple`), a ZIP can't: its ticket would need Gatekeeper to look it up online at Apple on
   first launch. The switch is therefore a prerequisite for the planned signing/notarization (see
   [ROADMAP.md](../../ROADMAP.md)) and was deliberately done *beforehand*, so the file name doesn't change twice.
-  `hdiutil` instead of `create-dmg`: present on every macOS runner, no extra dependency.
+  `hdiutil` instead of `create-dmg`: present on every macOS runner, no extra dependency. `build_dmg.sh` prefers
+  `diskutil image create from` (macOS 27 deprecates `hdiutil create`) and falls back to `hdiutil` where the runner
+  doesn't have it yet — keep the fallback until `macos-latest` ships `diskutil image`.
 - **Signing/notarizing runs through `packaging/macos/build_dmg.sh`** — one script for local *and* CI (like
   `packaging/linux/build_appimage.sh`), so the hand-tested build and the CI build never diverge. It signs
   inside-out (first embedded `.dylib`s, then every framework, the bundle last; deliberately **no** `--deep`,

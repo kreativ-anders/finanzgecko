@@ -191,7 +191,12 @@ ditto "$APP" "$STAGING/FinanzGecko.app"
 ln -s /Applications "$STAGING/Applications"
 
 rm -f "$OUT_FILE"
-hdiutil create -volname FinanzGecko -srcfolder "$STAGING" -ov -format UDZO "$OUT_FILE"
+# INFO: `diskutil image` replaces the deprecated `hdiutil create` from macOS 27 on; older runners lack it.
+if diskutil image create from --help >/dev/null 2>&1; then
+  diskutil image create from --format UDZO --volumeName FinanzGecko "$STAGING" "$OUT_FILE"
+else
+  hdiutil create -volname FinanzGecko -srcfolder "$STAGING" -ov -format UDZO "$OUT_FILE"
+fi
 
 if [ "$CAN_SIGN" = 1 ]; then
   # Ohne --options runtime: Hardened Runtime ist eine Eigenschaft des
