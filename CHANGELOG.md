@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.11.1 - 2026-10-03
+
+- 🔖 Version 1.11.1+26 (12d07ca)
+- 👷 Prefer diskutil image for macOS DMG builds (de393dd)
+- 🔒️ Harden backup/import and release workflow (3021ff3)
+- 🔖 Refactor release and winget packaging (55da44a)
+- 🔍️ Add Seobility verification file (9136295)
+- 🐛 Parse macOS sandbox paths with posix semantics (e840d7a)
+- 📌 Re-render the winget manifest snapshot for 1.11.0 (f45e749)
+- 🐛 Derive winget ReleaseDate from the release, not today (486ae19)
+- ✅ Add import test for invalid backup envelope (4316ee3)
+- 📝 Prune old reset/import snapshot backups (78c6e90)
+- ♿️ Simplify foreign-data warning screen (f82992c)
+- 🦖 Separate macOS App Store data file path (50dfd1d)
+- 📝 Changelog für v1.11.0 (bb64e9e)
+
+
 ## v1.11.0 - 2026-08-31
 
 - 🔖 Version 1.11.0+24 (3304887)
