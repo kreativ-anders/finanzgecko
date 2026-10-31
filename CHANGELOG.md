@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.12.0 - 2026-10-31
+
+- 🔖 Version 1.12.0+27 (add007c)
+- 💄 Make mobile site header sticky with swipeable nav (b34131a)
+- 📝 Document website header scroll behavior (d5daf1c)
+- ✅ Add headless website screenshot generator (1883337)
+- ✨ Add theme toggle to the website (30e61a7)
+- 📌 Refresh dependencies and drop Cupertino icons (a497f1e)
+- ✨ Persist Dashboard view settings in data file (4ecba95)
+- 💄 Keep Konto cards equally tall without a previous month (92c2fb2)
+- 🚸 Add shared AccountLabel for Konto identity (17493a7)
+- 🔒️ Publish security.txt on GitHub Pages (fb39ea8)
+- 📝 Changelog für v1.11.1 (6897ecb)
+
+
 ## v1.11.1 - 2026-10-03
 
 - 🔖 Version 1.11.1+26 (12d07ca)
