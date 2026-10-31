@@ -11,6 +11,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="stylesheet" href="assets/style.css" />
+  <script src="assets/theme.js"></script>
   <meta name="theme-color" content="#0a0f0c" />
   <script defer src="https://api.pirsch.io/pa.js" id="pianjs" data-code="yAO4klcHowxwGN6JLgthKJZXkf3Rc5Gf"></script>
 
@@ -93,7 +94,10 @@
         <h2>Part A — The website finanzgecko.app</h2>
         <p class="lead">Applies to the pages under <span class="kbd">finanzgecko.app</span>. They set no cookies and
           create no user accounts; every integration named below can be verified in the
-          <a href="https://github.com/kreativ-anders/finanzgecko/tree/main/docs" target="_blank" rel="noopener">page source</a>.</p>
+          <a href="https://github.com/kreativ-anders/finanzgecko/tree/main/docs" target="_blank" rel="noopener">page source</a>.
+          The only local storage: if you pick a colour scheme (light/dark) in the page header, your browser remembers
+          that choice in <span class="kbd">localStorage</span>; it is never transmitted and is removed by switching back
+          to “System” or clearing the site data.</p>
 
         <h3 id="a1">A1 · Hosting (GitHub Pages)</h3>
         <p>This website is served as a static page via <strong>GitHub Pages</strong>, a service of GitHub, Inc.

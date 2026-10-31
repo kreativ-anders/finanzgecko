@@ -438,6 +438,41 @@ void main() {
       );
     });
   });
+
+  group('Theme-Schalter der Website', () {
+    // Plain CSS can't share one declaration block between a media query and an attribute selector,
+    // so the light palette exists twice — a token changed in only one copy shows up only for
+    // visitors who did (or didn't) press the toggle.
+    test('beide hellen Token-Blöcke in style.css sind identisch', () {
+      final css = read('docs/assets/style.css');
+      Set<String> block(String selector) {
+        final start = css.indexOf(selector);
+        expect(start, isNot(-1), reason: '"$selector" fehlt in docs/assets/style.css.');
+        final body = css.substring(css.indexOf('{', start) + 1, css.indexOf('}', start));
+        return body.split(';').map((d) => d.trim()).where((d) => d.isNotEmpty).toSet();
+      }
+
+      expect(
+        block(':root:not([data-theme="dark"])'),
+        block(':root[data-theme="light"] {'),
+        reason: 'Die helle Palette für "System" und für die manuelle Wahl "Hell" ist auseinandergelaufen.',
+      );
+    });
+
+    test('jede Seite lädt assets/theme.js', () {
+      final pages = Directory('docs').listSync().whereType<File>().where(
+        (f) => f.path.endsWith('.html') && read(f.path).contains('assets/style.css'),
+      );
+      for (final page in pages) {
+        expect(
+          read(page.path).contains('assets/theme.js"></script>'),
+          isTrue,
+          reason: '${page.path} lädt style.css, aber nicht theme.js — dort fehlt der Theme-Schalter, '
+              'und eine gespeicherte Wahl würde beim Seitenwechsel ignoriert.',
+        );
+      }
+    });
+  });
 }
 
 /// Strips everything that is markup or machinery rather than prose, so the

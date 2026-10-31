@@ -5,7 +5,8 @@
 `docs/` ships seven app screenshots, each in four files: `docs/assets/screenshots/{light,dark}-<slug>.{png,webp}`.
 The pages serve both themes via `<picture>` + `media="(prefers-color-scheme: light)"`; **dark is the default and the
 `<img>` fallback**, matching `style.css`, where `:root` holds the dark tokens and a `prefers-color-scheme: light`
-block overrides them.
+block overrides them. The header toggle (`docs/assets/theme.js`) rewrites those `media` attributes at runtime, so
+keep the exact query string `(prefers-color-scheme: light)` on new `<source>` elements.
 
 Redo them whenever app UI text, labels, or layout change — a stale screenshot contradicting the copy next to it is
 worse than no screenshot. Ask before starting: this needs the user's running app and a few minutes of their machine.

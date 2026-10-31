@@ -142,7 +142,8 @@ finanzgecko/
 │   │                               #   since it's rendered at arbitrarily deep URLs — relative paths would break there.
 │   │                               #   Reports the requested path to Pirsch via `window.pirschNotFound()`
 │   └── assets/                    # style.css (shares color tokens with lib/ui/theme.dart; light/dark via
-│                                   #   prefers-color-scheme, dark stays the default), icons, screenshots
+│                                   #   prefers-color-scheme, dark stays the default, `data-theme` on <html>
+│                                   #   overrides it), theme.js (header theme toggle), icons, screenshots
 │       └── screenshots/           # four files per view: `{light,dark}-<name>.{png,webp}`. The pages serve
 │                                   #   both themes via `<picture>` + `media="(prefers-color-scheme: light)"`;
 │                                   #   dark is the default and `<img>` fallback. Recapture with: tool/capture_screenshots.sh

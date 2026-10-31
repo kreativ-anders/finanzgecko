@@ -38,7 +38,15 @@ The traps, in the order they tend to bite (⚙ = already enforced by the test):
   page is linked from all footers; a site that loads something undisclosed is the one failure mode here with
   legal weight.
 - **New page? Copy the whole `<head>` contract:** the Pirsch snippet (`api.pirsch.io/pa.js`, `id="pianjs"`), a
-  `canonical` on `https://finanzgecko.app/…`, and either an entry in `docs/sitemap.xml` or `noindex`.
+  `canonical` on `https://finanzgecko.app/…`, ⚙ `<script src="assets/theme.js"></script>` right after the
+  stylesheet, and either an entry in `docs/sitemap.xml` or `noindex`.
+- ⚙ **Theme toggle (System → Hell → Dunkel), mirroring the app's `AppThemeMode`.** `docs/assets/theme.js` runs
+  synchronously in `<head>` (no `defer`, otherwise the stored theme flashes in late), sets `data-theme` on `<html>`,
+  injects the button into `header.site .wrap` (no-JS visitors never see a dead button), swaps the light
+  screenshots' `<source media>` (CSS can't reach those) and keeps `theme-color` in sync. "System" removes the
+  `localStorage` key `finanzgecko-theme`. The light palette exists twice in `style.css` — under
+  `prefers-color-scheme` and under `[data-theme="light"]` — and the test fails if the two drift. That storage is
+  disclosed in Teil A / Part A of both privacy pages; keep it that way if the key or its purpose changes.
 - **`docs/404.html` is the one page using root-absolute paths** (`/assets/…`). GitHub Pages serves it at whatever
   depth the bad URL had, so relative paths break it. Don't "fix" them to match the other pages.
 - **`docs/CNAME` pins `finanzgecko.app`.** No absolute URL anywhere in the repo may point at
