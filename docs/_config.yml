@@ -1,0 +1,2 @@
+# GitHub Pages runs Jekyll, which skips dot directories: publish .well-known (security.txt)
+include: [".well-known"]
