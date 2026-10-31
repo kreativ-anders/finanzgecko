@@ -8,6 +8,7 @@ import '../../utils/analysis.dart';
 import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
+import '../widgets/account_label.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/month_picker_field.dart';
 import '../widgets/rate_consent_dialog.dart';
@@ -502,30 +503,14 @@ class _EntryRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text.rich(
-                      TextSpan(
-                        text: account.name,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                        children: [
-                          TextSpan(
-                            text: '  (${account.currency})',
-                            style: TextStyle(color: kMuted, fontWeight: FontWeight.normal),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      prev != null
-                          ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})'
-                          : '',
-                      style: TextStyle(color: kMuted, fontSize: 12),
-                    ),
-                  ],
+                child: AccountLabel(
+                  account: account,
+                  note: prev != null
+                      ? 'zuletzt ${fmtMoney(prev.amountOriginal, prev.currencyOriginal)} (${periodLabel(prev.period)})'
+                      : null,
                 ),
               ),
+              const SizedBox(width: 12),
               SizedBox(
                 width: 160,
                 child: TextField(
@@ -675,10 +660,7 @@ class _OrphanRow extends StatelessWidget {
       children: [
         SizedBox(width: 110, child: Text(periodLabel(balance.period))),
         Expanded(
-          child: Text(
-            acc?.name ?? 'Konto gelöscht',
-            style: acc == null ? TextStyle(color: kMuted) : const TextStyle(fontWeight: FontWeight.w600),
-          ),
+          child: acc != null ? AccountLabel(account: acc) : Text('Konto gelöscht', style: TextStyle(color: kMuted)),
         ),
         SizedBox(
           width: 120,

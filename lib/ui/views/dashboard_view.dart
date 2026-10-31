@@ -8,6 +8,7 @@ import '../../utils/analysis.dart';
 import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
+import '../widgets/account_label.dart';
 import '../widgets/banners.dart';
 import '../widgets/donut_chart.dart';
 import '../widgets/line_chart.dart';
@@ -951,11 +952,7 @@ class _AccountCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(color: colorFromHex(acc.color), shape: BoxShape.circle),
-                      ),
+                      ColorDot(color: colorFromHex(acc.color), size: 10),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(

@@ -1,4 +1,4 @@
-# Source: lib/ui/views/entries_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/balance.dart
+# Source: lib/ui/views/entries_view.dart, lib/ui/widgets/account_label.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/balance.dart
 # Implementation: lib/ui/views/entries_view.dart
 @balances @entries
 Feature: Record monthly Kontostände
@@ -76,6 +76,14 @@ Feature: Record monthly Kontostände
     Given a value has already been recorded for some of the Konten in the chosen month
     When I turn on the "Nur fehlende anzeigen" toggle
     Then the list shows only Konten without an entry for this month
+
+  Scenario: Each row identifies its Konto like the Konten view does
+    Given several Konten exist, some with the same or similar names
+    When I open the "Einträge" view
+    Then each row shows the Konto's color dot, its name and "Bank · Typ · Währung" below it
+    And a Konto without a Bank shows only "Typ · Währung"
+    And the last recorded Kontostand ("zuletzt …") appears as a third line only if one exists
+    And rows in the "Archivierte Konten" section use the same identity line
 
   Scenario: Live running total while typing
     Given I type amounts into several amount fields, without saving

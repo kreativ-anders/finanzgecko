@@ -28,6 +28,14 @@ Blocks **without** a `SectionCard` border of their own get asymmetric padding (t
 plus the next card's own 20px top padding already separate them. A symmetric 16 made the gap to "Verlauf" nearly
 five times the intra-block line gap.
 
+## Konto identity
+
+A Konto is always shown with the same identity block, `AccountLabel` (`lib/ui/widgets/account_label.dart`): color
+dot, name, and "Bank · Typ · Währung" in muted text below (the Bank is dropped when empty). Konten, Einträge and the
+"Archivierte Konten" section of Einträge use it; Einträge adds the "zuletzt …" line as its optional `note`. Names
+alone are ambiguous once two Konten share a name across banks, so no view lists a Konto by name only. The dot is
+`ColorDot`, also used by the Dashboard cards and the Bank picker.
+
 ## Dialogs and permissions
 
 - The **exchange-rate consent dialog** appears only from the two places that actually need a rate (Einträge and

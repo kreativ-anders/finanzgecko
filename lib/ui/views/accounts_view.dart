@@ -8,6 +8,7 @@ import '../../state/app_state.dart';
 import '../../utils/formatting.dart';
 import '../app_view.dart';
 import '../theme.dart';
+import '../widgets/account_label.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/section_card.dart';
 
@@ -87,11 +88,7 @@ class _BankFieldState extends State<_BankField> {
                       final hex = bankColorHex(name) ?? widget.fallbackColorHex;
                       return ListTile(
                         dense: true,
-                        leading: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(color: colorFromHex(hex), shape: BoxShape.circle),
-                        ),
+                        leading: ColorDot(color: colorFromHex(hex)),
                         // WARNING: without noSelect the SelectionArea text cursor beats the ListTile click cursor.
                         title: noSelect(Text(name)),
                         onTap: () => onSelected(name),
@@ -111,11 +108,7 @@ class _BankFieldState extends State<_BankField> {
                 hintText: 'z.B. DKB',
                 suffixIcon: Padding(
                   padding: const EdgeInsets.all(14),
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(color: resolvedColor, shape: BoxShape.circle),
-                  ),
+                  child: ColorDot(color: resolvedColor),
                 ),
               ),
               validator: (v) => isKnownBank(v) ? null : 'Bitte eine Bank aus der Liste auswählen',
@@ -402,24 +395,7 @@ class _AccountRow extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(color: colorFromHex(account.color), shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(account.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text(
-                    '${account.bank.isNotEmpty ? '${account.bank} · ' : ''}${account.tag} · ${account.currency}',
-                    style: TextStyle(color: kMuted, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
+            Expanded(child: AccountLabel(account: account)),
             OutlinedButton(onPressed: onEdit, child: noSelect(const Text('Bearbeiten'))),
             const SizedBox(width: 8),
             OutlinedButton(onPressed: () => _archive(context), child: noSelect(const Text('Archivieren'))),

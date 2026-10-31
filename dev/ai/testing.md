@@ -11,7 +11,7 @@ feature file names its `# Source:`). `test/gherkin_sync_test.dart` enforces that
 | Feature | Short | Status |
 |---|---|---|
 | `gherkin/dashboard.feature` | Gesamtvermögen, Verlauf+Prognose, Verteilung, Zusammensetzung, Kennzahlen, banners, Konto cards, Zeitraum filter | Unit (`analysis_test`, `app_state_test`) |
-| `gherkin/balances_entries.feature` | Month-by-month Kontostand recording/correction, orphaned balances, in-field calculation | Unit (`entries_view_orphan_test`, `entries_view_calculation_test`, `app_state_test`, `formatting_test`) |
+| `gherkin/balances_entries.feature` | Month-by-month Kontostand recording/correction, Konto identity line per row, orphaned balances, in-field calculation | Unit (`entries_view_orphan_test`, `entries_view_calculation_test`, `app_state_test`, `formatting_test`) |
 | `gherkin/accounts.feature` | Create/edit/archive Konten; bank→color; Enter submits the form | Unit (`account_color_test`, `app_store_ops_test`, `accounts_view_test`) |
 | `gherkin/subscriptions.feature` | Fixposten CRUD, monthly equivalent, list ordering, Enter submits the form | Unit (`app_state_test`, `app_store_ops_test`, `subscriptions_view_test`) |
 | `gherkin/assets.feature` | Vermögenswerte CRUD, 6-month reminder, list ordering, Enter submits the form | Unit (`app_store_ops_test`, `assets_view_test`) |
@@ -75,7 +75,7 @@ is listed in `# Source:`.
 | `test/csv_export_test.dart` | CSV export per domain (columns, separator, decimal comma, sorting, quoting, formula guard, file names) | `gherkin/settings.feature` |
 | `test/update_service_test.dart` | Manual update check against a mocked GitHub releases API: newer/same/older version, HTTP errors, network errors, unexpected response shape — never an exception escaping | `gherkin/settings.feature` |
 | `test/tooling_test.dart` | **Regenerates** the demo data (`buildDemoBackup` → `demo/…json`) and the Linux Hicolor icons (`generateLinuxIcons`) on test run and validates them (schema, references, domain values, icon sizes) | Dev tooling (no feature) |
-| `test/entries_view_orphan_test.dart` | Orphaned balances of archived Konten | `gherkin/balances_entries.feature` |
+| `test/entries_view_orphan_test.dart` | Orphaned balances of archived Konten; `AccountLabel` identity line (Bank · Typ · Währung) in every row | `gherkin/balances_entries.feature` |
 | `test/entries_view_calculation_test.dart` | In-field `+`/`-`/`*`/`/` calculation on save, invalid-input toast | `gherkin/balances_entries.feature` |
 | `test/formatting_test.dart` | Number/money formatting, parsing | cross-cutting across all features (non-functional) |
 | `test/docs_consistency_test.dart` | **Checks the prose against the code**: disclosed network hosts, asset suffixes, documented data path, banned signing jargon, once-false claims (incl. "no auto-updater", "plaintext JSON"), macOS without a warning, jargon-free landing copy, Kennzahlen and settings parity between the app and `docs/documentation.html`, and that the App Store export-compliance declaration in `macos/Runner/Info.plist` still has the native crypto paths behind it | Meta (README, `docs/`, `macos/Runner/Info.plist`) |

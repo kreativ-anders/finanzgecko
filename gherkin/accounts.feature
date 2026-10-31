@@ -1,4 +1,4 @@
-# Source: lib/ui/views/accounts_view.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/account.dart
+# Source: lib/ui/views/accounts_view.dart, lib/ui/widgets/account_label.dart, lib/state/app_state.dart, lib/data/app_store.dart, lib/models/account.dart
 # Implementation: lib/ui/views/accounts_view.dart
 @accounts
 Feature: Manage Konten

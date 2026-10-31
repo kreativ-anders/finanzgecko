@@ -79,6 +79,8 @@ finanzgecko/
 │       └── widgets/               # Reusable building blocks (charts, dialogs, banners, form elements)
 │                                  #   rate_consent_dialog.dart: opt-in dialog + `resolveRate()` — the ONE rate
 │                                  #   path for Einträge and Fixposten (consent → fetch/cache → manual rate)
+│                                  #   account_label.dart: `AccountLabel`/`ColorDot` — the one Konto identity
+│                                  #   block for Konten and Einträge (see ui-conventions.md)
 ├── test/                         # Dart unit/widget tests, mirrored to the Gherkin scenarios (see [testing.md](testing.md))
 │   ├── support/gherkin_runner.dart # tiny, dependency-free Gherkin runner (runs @executable features)
 │   └── bdd/                        # BDD test files: call runFeature(...) + register step defs against lib/

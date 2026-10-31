@@ -2,6 +2,7 @@
 import 'package:finanzgecko/data/app_store.dart';
 import 'package:finanzgecko/state/app_state.dart';
 import 'package:finanzgecko/ui/views/entries_view.dart';
+import 'package:finanzgecko/ui/widgets/account_label.dart';
 import 'package:finanzgecko/utils/formatting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -169,5 +170,38 @@ void main() {
 
     final field = tester.widget<TextField>(find.byType(TextField).first);
     expect(field.controller!.text, '12.345,6');
+  });
+  testWidgets('every Einträge row shows color dot, Bank · Typ · Währung, also for archived Konten', (tester) async {
+    useLargeSurface(tester);
+    final appState = await bootAppState();
+    final store = appState.store;
+    final archived = await store.addAccount(
+      name: 'Altes Konto',
+      bank: 'Altbank',
+      tag: 'Girokonto',
+      currency: 'EUR',
+      color: '#00c878',
+    );
+    await store.upsertBalance(
+      accountId: archived.id,
+      period: currentPeriod(),
+      amountOriginal: 500,
+      currencyOriginal: 'EUR',
+      rate: 1,
+      amountBase: 500,
+    );
+    await store.archiveAccount(archived.id);
+    await store.addAccount(name: 'Depot', bank: 'Broker', tag: 'Depot', currency: 'EUR', color: '#123456');
+    await store.addAccount(name: 'Bargeld', tag: 'Bargeld', currency: 'USD', color: '#654321');
+    await appState.init();
+
+    await tester.pumpWidget(wrap(appState));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Broker · Depot · EUR'), findsOneWidget);
+    // No bank: the details line starts with the Typ, without a dangling separator.
+    expect(find.text('Bargeld · USD'), findsOneWidget);
+    expect(find.text('Altbank · Girokonto · EUR'), findsOneWidget);
+    expect(find.byType(ColorDot), findsNWidgets(3));
   });
 }
