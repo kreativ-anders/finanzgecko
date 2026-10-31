@@ -59,23 +59,23 @@ class AppState extends ChangeNotifier {
   List<Subscription> subscriptions = [];
   String baseCurrency = 'EUR';
 
-  // Held here, not in DashboardView's State, so they survive navigating away; deliberately not persisted.
-  HistoryRange? dashboardRangePreset;
-  AccountSortOrder accountSortOrder = AccountSortOrder.standard;
-  bool includeAssetsInTotal = false;
+  // Persisted in the data file so they survive a restart, not just navigating away — see gherkin/dashboard.feature.
+  HistoryRange? get dashboardRangePreset => store.dashboardRangePreset;
+  AccountSortOrder get accountSortOrder => store.accountSortOrder;
+  bool get includeAssetsInTotal => store.includeAssetsInTotal;
 
-  void setDashboardRangePreset(HistoryRange preset) {
-    dashboardRangePreset = preset;
+  Future<void> setDashboardRangePreset(HistoryRange preset) async {
+    await store.setDashboardRangePreset(preset);
     notifyListeners();
   }
 
-  void setAccountSortOrder(AccountSortOrder order) {
-    accountSortOrder = order;
+  Future<void> setAccountSortOrder(AccountSortOrder order) async {
+    await store.setAccountSortOrder(order);
     notifyListeners();
   }
 
-  void setIncludeAssetsInTotal(bool value) {
-    includeAssetsInTotal = value;
+  Future<void> setIncludeAssetsInTotal(bool value) async {
+    await store.setIncludeAssetsInTotal(value);
     notifyListeners();
   }
 

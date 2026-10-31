@@ -1,5 +1,6 @@
 // Gherkin: gherkin/data_security.feature
 import 'package:finanzgecko/data/app_schema.dart';
+import 'package:finanzgecko/utils/analysis.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _account(int id, {String name = 'Konto'}) => {
@@ -54,6 +55,26 @@ void main() {
       })!;
       expect(data.ratesCache['USD_EUR_2025-01-31'], 0.92);
       expect(data.ratesCache.containsKey('bad'), isFalse);
+    });
+
+    test('unknown or mistyped Dashboard settings fall back to their defaults', () {
+      final data = AppSchema.fromDynamic({
+        'meta': {'dashboardRangePreset': 'nextDecade', 'accountSortOrder': 42, 'includeAssetsInTotal': 'yes'},
+      })!;
+      expect(data.dashboardRangePreset, isNull);
+      expect(data.accountSortOrder, AccountSortOrder.standard);
+      expect(data.includeAssetsInTotal, isFalse);
+    });
+
+    test('round-trips Dashboard settings through toJson -> fromDynamic', () {
+      final original = AppSchema.defaults()
+        ..dashboardRangePreset = HistoryRange.ytd
+        ..accountSortOrder = AccountSortOrder.amountDesc
+        ..includeAssetsInTotal = true;
+      final data = AppSchema.fromDynamic(original.toJson())!;
+      expect(data.dashboardRangePreset, HistoryRange.ytd);
+      expect(data.accountSortOrder, AccountSortOrder.amountDesc);
+      expect(data.includeAssetsInTotal, isTrue);
     });
   });
 

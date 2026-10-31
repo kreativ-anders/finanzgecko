@@ -10,6 +10,7 @@ import '../models/account.dart';
 import '../models/asset.dart';
 import '../models/balance.dart';
 import '../models/subscription.dart';
+import '../utils/analysis.dart';
 import 'app_schema.dart';
 import 'crypto_platform.dart';
 import 'import_validation.dart';
@@ -898,6 +899,48 @@ class AppStore {
       await _persist();
     } catch (_) {
       data.themeMode = previous;
+      rethrow;
+    }
+  }
+
+  // ---------- Dashboard view settings ----------
+
+  HistoryRange? get dashboardRangePreset => _requireData.dashboardRangePreset;
+  AccountSortOrder get accountSortOrder => _requireData.accountSortOrder;
+  bool get includeAssetsInTotal => _requireData.includeAssetsInTotal;
+
+  Future<void> setDashboardRangePreset(HistoryRange value) async {
+    final data = _requireData;
+    final previous = data.dashboardRangePreset;
+    data.dashboardRangePreset = value;
+    try {
+      await _persist();
+    } catch (_) {
+      data.dashboardRangePreset = previous;
+      rethrow;
+    }
+  }
+
+  Future<void> setAccountSortOrder(AccountSortOrder value) async {
+    final data = _requireData;
+    final previous = data.accountSortOrder;
+    data.accountSortOrder = value;
+    try {
+      await _persist();
+    } catch (_) {
+      data.accountSortOrder = previous;
+      rethrow;
+    }
+  }
+
+  Future<void> setIncludeAssetsInTotal(bool value) async {
+    final data = _requireData;
+    final previous = data.includeAssetsInTotal;
+    data.includeAssetsInTotal = value;
+    try {
+      await _persist();
+    } catch (_) {
+      data.includeAssetsInTotal = previous;
       rethrow;
     }
   }

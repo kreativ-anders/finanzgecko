@@ -43,6 +43,10 @@ Central facade for the UI. Two categories of methods:
    - `computeSubscriptionTotals()` — income/expenses/net, all Fixposten normalized to a monthly equivalent
    - `previousBalance()` / `latestBalanceForAccount()` / `allPeriodsSorted()` / `balancesInPeriod()`
 
+**Dashboard view settings** (`dashboardRangePreset`, `accountSortOrder`, `includeAssetsInTotal`) are getters on
+`store`, not `AppState` fields: they are persisted in `AppSchema.meta` so they survive a restart. Their setters
+only `notifyListeners()` after the write — no `_reload()`/reminder check, since no domain data changed.
+
 `_checkReminderNotifications()` (called after `init()` and after every mutation via `_reloadAndNotify()`)
 additionally checks the backup and Vermögenswerte reminders and, if warranted, fires a native OS notification via
 `NotificationService` — **episode-based** (once per newly-entered overdue state, not on every check), see [ui-conventions.md](ui-conventions.md)

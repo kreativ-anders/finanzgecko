@@ -270,7 +270,11 @@
 `notificationsEnabled`, `backupOverdueNotified`, `assetOverdueNotifiedIds` (episode-based, see [state-and-models.md](state-and-models.md) and
 `gherkin/notifications.feature`), plus `themeMode` (`AppThemeMode`, default `system`, see [ui-conventions.md](ui-conventions.md)
 "Appearance") and `rateFetchConsent` (`RateFetchConsent`, default `unset`, see [stack.md](stack.md) and
-`gherkin/currency_exchange.feature`) — all additive `meta` fields, no `schemaVersion` bump needed.
+`gherkin/currency_exchange.feature`), plus the Dashboard view settings `dashboardRangePreset` (`HistoryRange?`,
+`null` = default preset for the data), `accountSortOrder` (default `standard`) and `includeAssetsInTotal`
+(default `false`), stored by enum `name`; an unknown name falls back to the default (`gherkin/dashboard.feature`)
+— all additive `meta` fields, no `schemaVersion` bump needed. Being `meta`, the Dashboard settings are not part
+of a backup export, are kept across an import, and are reset by `resetAll()`.
 For `rateFetchConsent` this is explicitly intentional: a missing key (every file written before the feature
 existed) yields `unset`, i.e. **no** assumed consent — existing installations are asked once instead of being
 silently grandfathered in. `notificationsEnabled` follows the same principle for the same reason, and goes one

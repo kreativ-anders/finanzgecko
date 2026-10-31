@@ -6,6 +6,7 @@ import 'package:finanzgecko/data/app_schema.dart';
 import 'package:finanzgecko/data/app_store.dart';
 import 'package:finanzgecko/services/notification_service.dart';
 import 'package:finanzgecko/state/app_state.dart';
+import 'package:finanzgecko/utils/analysis.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -280,6 +281,25 @@ void main() {
       expect(state.baseCurrency, 'EUR');
       await state.setBaseCurrency('USD');
       expect(state.baseCurrency, 'USD');
+    });
+
+    test('Dashboard view settings default on a fresh install', () async {
+      final state = await newState();
+      expect(state.dashboardRangePreset, isNull);
+      expect(state.accountSortOrder, AccountSortOrder.standard);
+      expect(state.includeAssetsInTotal, isFalse);
+    });
+
+    test('Dashboard view settings survive a restart', () async {
+      final state1 = await newState();
+      await state1.setDashboardRangePreset(HistoryRange.lastYear);
+      await state1.setAccountSortOrder(AccountSortOrder.changeAsc);
+      await state1.setIncludeAssetsInTotal(true);
+
+      final state2 = await newState();
+      expect(state2.dashboardRangePreset, HistoryRange.lastYear);
+      expect(state2.accountSortOrder, AccountSortOrder.changeAsc);
+      expect(state2.includeAssetsInTotal, isTrue);
     });
   });
 

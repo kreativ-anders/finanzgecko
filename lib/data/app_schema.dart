@@ -3,6 +3,7 @@ import '../models/account.dart';
 import '../models/asset.dart';
 import '../models/balance.dart';
 import '../models/subscription.dart';
+import '../utils/analysis.dart';
 
 const int currentSchemaVersion = 1;
 
@@ -20,6 +21,14 @@ List<T> parseTolerantList<T>(dynamic raw, T Function(Map<String, dynamic>) fromJ
     }
   }
   return result;
+}
+
+/// Unknown or non-string values yield null, so a file from a newer build falls back to the default.
+T? _enumByName<T extends Enum>(List<T> values, dynamic raw) {
+  for (final v in values) {
+    if (v.name == raw) return v;
+  }
+  return null;
 }
 
 /// Remembered window geometry, restored on next launch (best-effort).
@@ -68,6 +77,11 @@ class AppSchema {
   /// Consent for fetching Wechselkurse; an absent key yields `unset`, so the app asks once instead of assuming.
   RateFetchConsent rateFetchConsent;
 
+  /// Dashboard view settings restored on next launch; `null` range means "the default preset for the data".
+  HistoryRange? dashboardRangePreset;
+  AccountSortOrder accountSortOrder;
+  bool includeAssetsInTotal;
+
   AppSchema({
     required this.schemaVersion,
     required this.baseCurrency,
@@ -87,6 +101,9 @@ class AppSchema {
     List<int>? assetOverdueNotifiedIds,
     this.themeMode = AppThemeMode.system,
     this.rateFetchConsent = RateFetchConsent.unset,
+    this.dashboardRangePreset,
+    this.accountSortOrder = AccountSortOrder.standard,
+    this.includeAssetsInTotal = false,
   }) : assetOverdueNotifiedIds = assetOverdueNotifiedIds ?? [];
 
   factory AppSchema.defaults() => AppSchema(
@@ -149,6 +166,9 @@ class AppSchema {
           : <int>[],
       themeMode: appThemeModeFromJson(meta['themeMode'] as String?),
       rateFetchConsent: rateFetchConsentFromJson(meta['rateFetchConsent'] as String?),
+      dashboardRangePreset: _enumByName(HistoryRange.values, meta['dashboardRangePreset']),
+      accountSortOrder: _enumByName(AccountSortOrder.values, meta['accountSortOrder']) ?? AccountSortOrder.standard,
+      includeAssetsInTotal: meta['includeAssetsInTotal'] is bool ? meta['includeAssetsInTotal'] as bool : false,
     );
   }
 
@@ -170,6 +190,9 @@ class AppSchema {
       'assetOverdueNotifiedIds': assetOverdueNotifiedIds,
       'themeMode': appThemeModeToJson(themeMode),
       'rateFetchConsent': rateFetchConsentToJson(rateFetchConsent),
+      'dashboardRangePreset': dashboardRangePreset?.name,
+      'accountSortOrder': accountSortOrder.name,
+      'includeAssetsInTotal': includeAssetsInTotal,
     },
     'window': window.toJson(),
   };
