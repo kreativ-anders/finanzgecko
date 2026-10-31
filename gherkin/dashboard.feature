@@ -1,4 +1,4 @@
-# Source: lib/ui/views/dashboard_view.dart, lib/state/app_state.dart, lib/utils/analysis.dart, lib/constants.dart
+# Source: lib/ui/views/dashboard_view.dart, lib/state/app_state.dart, lib/utils/analysis.dart, lib/constants.dart, lib/data/app_schema.dart, lib/data/app_store.dart
 # Implementation: lib/ui/views/dashboard_view.dart
 @dashboard
 Feature: Dashboard — net-worth overview
@@ -56,13 +56,15 @@ Feature: Dashboard — net-worth overview
       Given I choose a preset whose last month is the overall most recently recorded month
       Then a projection is drawn through year end (in December: a full year projected forward)
 
-    Scenario: Zeitraum filter, sorting, and "inkl. Sachwerte" persist across view changes
+    Scenario: Zeitraum filter, sorting, and "inkl. Sachwerte" persist across view changes and restarts
       Given I choose a preset other than the default in the Zeitraum filter, change the Konto card sort
         order, and turn on "inkl. Sachwerte"
       When I switch to another view and come back to the Dashboard
       Then the Zeitraum preset, Konto card sort order, and "inkl. Sachwerte" are still as last chosen
-      And these three settings live only in the running `AppState` (not in `AppSchema`/on disk) and reset
-        to their defaults the next time the app starts
+      When I quit and restart the app
+      Then all three are still as last chosen, because they are saved in the encrypted data file
+      And a saved Zeitraum preset that the data no longer offers falls back to the default preset
+      And these settings are not part of a backup export and are reset by "App zurücksetzen…"
 
   Rule: Gesamtvermögen header
 
@@ -218,6 +220,11 @@ Feature: Dashboard — net-worth overview
       Given a Konto has no recorded Kontostand yet
       Then its card shows "—" instead of an amount and no Verlauf
 
+    Scenario: Konto cards are equally tall regardless of their history
+      Given one Konto has a previous month and another Konto has only one or no recorded Kontostand
+      Then both cards have the same height — the space of the month-over-month line stays reserved even
+        when there is no previous month to compare against
+
     Scenario: Clicking a Konto card leads directly to recording
       Given the mouse pointer is over a Konto card
       Then the whole card is recognizable as a click target (hover effect) and a tooltip reads
@@ -237,6 +244,5 @@ Feature: Dashboard — net-worth overview
       And "Standard" (the Konten's creation order) is preselected
       And Konten without a Kontostand resp. without a previous month sort to the end under amount- resp.
         change-based sorting, instead of jumping to the front
-      And the selection persists for the rest of the session (see "Zeitraum filter, sorting, and
-        'inkl. Sachwerte' persist across view changes"), but isn't saved to disk and resets on the next
-        app restart
+      And the selection is saved and restored on the next app start (see "Zeitraum filter, sorting, and
+        'inkl. Sachwerte' persist across view changes and restarts")

@@ -976,25 +976,32 @@ class _AccountCard extends StatelessWidget {
                     latest != null ? fmtMoney(latest.amountBase, app.baseCurrency) : '—',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  if (latest != null)
-                    Builder(
-                      builder: (context) {
-                        final prev = app.previousBalance(acc.id, latest.period);
-                        if (prev == null) return const SizedBox.shrink();
-                        final delta = latest.amountBase - prev.amountBase;
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 2),
+                  Builder(
+                    builder: (context) {
+                      final prev = latest == null ? null : app.previousBalance(acc.id, latest.period);
+                      final delta = prev == null ? 0.0 : latest!.amountBase - prev.amountBase;
+                      // INFO: the line keeps its height without a previous month so all cards in a row stay equally tall.
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Visibility(
+                          visible: prev != null,
+                          maintainSize: true,
+                          maintainAnimation: true,
+                          maintainState: true,
                           child: Text(
-                            '${fmtSignedMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
+                            prev == null
+                                ? ' '
+                                : '${fmtSignedMoney(delta, app.baseCurrency)} ggü. ${periodLabel(prev.period)}',
                             style: TextStyle(
                               color: delta >= 0 ? kPrimaryText : kDangerText,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 8),
                   AppLineChart(points: points, color: colorFromHex(acc.color), height: 70),
                 ],
