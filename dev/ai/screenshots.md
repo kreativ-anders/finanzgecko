@@ -1,6 +1,7 @@
 # FinanzGecko — Regenerating the website screenshots
 
 > Part of the AI reference set in `dev/ai/`. Map of all files: [CLAUDE.md](../../CLAUDE.md).
+> Claude Code skill wrapping this recipe: `.claude/skills/website-screenshots/SKILL.md` (`/website-screenshots`).
 
 `docs/` ships seven app screenshots, each in four files: `docs/assets/screenshots/{light,dark}-<slug>.{png,webp}`.
 The pages serve both themes via `<picture>` + `media="(prefers-color-scheme: light)"`; **dark is the default and the
@@ -13,8 +14,14 @@ worse than no screenshot. Ask before starting: this needs the user's running app
 
 1. **Demo data only.** The shots must show `demo/finanzgecko-demo.json` (74.191,40 €, E-Bike / MacBook Pro / VW Golf),
    imported via "Backup importieren…" — **never the user's real finances.** Confirm before capturing.
-2. **Capture per theme.** `tool/capture_screenshots.sh dark`, then `light` (Einstellungen → Erscheinungsbild).
-   The user runs it; it grabs the window at native Retina resolution → `build/screenshots/<theme>/`. Only fall back to
+2. **Headless first.** `flutter test tool/screenshots/website_screenshots_test.dart` renders a view from the demo data
+   in memory — both themes, SF font, 2× scale, cropped below the card → `build/screenshots/<theme>/`. No app window, no
+   import, the user's data file is never touched, and nobody has to click. It covers `…-kontostaende-monatlich-erfassen`
+   so far; add a `testWidgets` per slug when another view changes and prefer this over the manual path below.
+   macOS only (loads `/System/Library/Fonts/SFNS.ttf`), so it lives in `tool/`, not `test/` (CI runs on Linux).
+   **Manual fallback, per theme:** `tool/capture_screenshots.sh dark`, then `light` (Einstellungen → Erscheinungsbild);
+   `tool/capture_screenshots.sh dark <slug>` captures only that slug without prompting.
+   The user runs it on a build of the current `main` (not the installed release); it grabs the window at native Retina resolution → `build/screenshots/<theme>/`. Only fall back to
    computer-use screenshots if they prefer — those come back ~45% linear and JPEG-compressed, so say so first.
    Put the app fullscreen, move the cursor off the window before each shot (hover states), and restore theme +
    window state afterwards.

@@ -89,6 +89,8 @@ finanzgecko/
 ├── tool/generate_demo_data.dart   # buildDemoBackup() → demo/finanzgecko-demo.json (anchored to "today"); also invoked by flutter test
 ├── tool/capture_screenshots.sh    # macOS helper: takes the 7 website screenshots per theme at native Retina resolution
 │                                  #   (`screencapture -l <windowid>`, app window only) → build/screenshots/<theme>/
+├── tool/screenshots/website_screenshots_test.dart # headless website screenshots from the demo data (macOS, SF font,
+│                                  #   both themes) → build/screenshots/<theme>/; run explicitly, not part of `flutter test`
 ├── tool/generate_corporate_design_pdf.sh # CORPORATE_DESIGN.md → CORPORATE_DESIGN.pdf (pandoc → HTML → headless Chrome
 │                                  #   print; not LaTeX, which chokes on 🦎/→). Output is an artifact (.gitignore), not committed.
 │                                  #   Stylesheet in tool/corporate_design_pdf.css.

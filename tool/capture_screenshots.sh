@@ -3,6 +3,7 @@
 #
 #   tool/capture_screenshots.sh dark
 #   tool/capture_screenshots.sh light
+#   tool/capture_screenshots.sh dark <slug>...   # captures these slugs at once, no prompt
 #
 # Run once per theme (Einstellungen → Erscheinungsbild → Hell/Dunkel). The script
 # prompts for each view; navigate the app, then press Enter to capture. Output lands
@@ -25,22 +26,28 @@ OUT="$REPO/build/screenshots/$THEME"
 mkdir -p "$OUT"
 
 find_window_id() {
-  /usr/bin/python3 - <<'PY'
-import sys
-from Quartz import (
-    CGWindowListCopyWindowInfo,
-    kCGWindowListOptionOnScreenOnly,
-    kCGNullWindowID,
-)
+  # INFO: Swift, not python3 + Quartz — macOS 27's system Python no longer ships PyObjC.
+  swift - <<'SWIFT'
+import CoreGraphics
+import Foundation
 
-for w in CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, kCGNullWindowID) or []:
-    # Layer 0 = normal window; skips the shadow/menu helper windows Flutter creates.
-    if w.get("kCGWindowOwnerName") == "FinanzGecko" and w.get("kCGWindowLayer") == 0:
-        print(w["kCGWindowNumber"])
-        sys.exit(0)
-
-sys.exit("FinanzGecko window not found — is the app running and unminimised?")
-PY
+let windows = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
+// Layer 0 skips Flutter's helper windows; the largest one is the main window (the menu-bar strips are 30 px high).
+let main = windows
+  .filter { $0["kCGWindowOwnerName"] as? String == "FinanzGecko" && $0["kCGWindowLayer"] as? Int == 0 }
+  .max { a, b in
+    func area(_ w: [String: Any]) -> Double {
+      let r = w["kCGWindowBounds"] as? [String: Double] ?? [:]
+      return (r["Width"] ?? 0) * (r["Height"] ?? 0)
+    }
+    return area(a) < area(b)
+  }
+guard let id = main?["kCGWindowNumber"] as? Int else {
+  FileHandle.standardError.write("FinanzGecko window not found — is the app running and unminimised?\n".data(using: .utf8)!)
+  exit(1)
+}
+print(id)
+SWIFT
 }
 
 # name|what to put on screen before pressing Enter
@@ -58,13 +65,20 @@ echo "Theme: $THEME  →  $OUT"
 echo "Stelle sicher, dass die Demodaten geladen sind und das Fenster die gewohnte Breite hat."
 echo
 
+ONLY=("${@:2}")
+
 for entry in "${SHOTS[@]}"; do
   name="${entry%%|*}"
   hint="${entry#*|}"
 
-  printf '  %s\n    %s\n    [Enter] zum Aufnehmen, [s] zum Überspringen: ' "$name" "$hint"
-  read -r answer </dev/tty
-  [[ "$answer" == "s" ]] && { echo "    übersprungen"; continue; }
+  if (( ${#ONLY[@]} )); then
+    [[ " ${ONLY[*]} " == *" $name "* ]] || continue
+    printf '  %s\n' "$name"
+  else
+    printf '  %s\n    %s\n    [Enter] zum Aufnehmen, [s] zum Überspringen: ' "$name" "$hint"
+    read -r answer </dev/tty
+    [[ "$answer" == "s" ]] && { echo "    übersprungen"; continue; }
+  fi
 
   id="$(find_window_id)"
   # -o: kein Fensterschatten, -x: kein Kamera-Sound, -t png: verlustfrei
