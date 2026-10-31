@@ -1026,19 +1026,40 @@ ul.feature-list li {
     padding-bottom: 16px;
   }
 
-  /* INFO: The nav wraps to 2–4 lines here, too tall to pin — same reason .doc-nav goes static above. */
+  /* Two rows — logo, brand, toggle on top, nav as one swipeable line below — so the bar stays flat enough to pin. */
   html {
-    --header-h: 0px;
+    --header-h: 95px;
   }
 
-  header.site {
-    position: static;
-  }
-
-  header.site nav {
+  header.site .wrap {
     flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 10px 16px;
+    row-gap: 6px;
+    padding-top: 12px;
+    padding-bottom: 6px;
+  }
+
+  header.site .theme-toggle {
+    margin-left: auto;
+  }
+
+  /* INFO: Bleeds into the .wrap gutter so a link cut off at the screen edge signals that the row scrolls. */
+  header.site nav {
+    order: 1;
+    flex-basis: calc(100% + 48px);
+    margin: 0 -24px;
+    padding: 0 24px;
+    gap: 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  header.site nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  header.site nav a {
+    flex-shrink: 0;
+    padding: 8px 0;
   }
 
   .footer-content {
