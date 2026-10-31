@@ -630,6 +630,9 @@ jobs:
       #
       # `continue-on-error`: if this fails (e.g. an open PR against winget-pkgs
       # already exists), it must not redden the rest of the release pipeline.
+      #
+      # `|x64|machine` on the URL: Inno's setup stub is a 32-bit PE, so
+      # wingetcreate detects X86 and finds no match for the x64 installer node.
       - name: winget-Manifest aktualisieren
         if: steps.check.outputs.have_token == 'true'
         continue-on-error: true
@@ -641,7 +644,7 @@ jobs:
           Invoke-WebRequest -Uri "https://aka.ms/wingetcreate/latest" -OutFile wingetcreate.exe
           .\wingetcreate.exe update KreativAnders.FinanzGecko `
             --version $env:VERSION `
-            --urls "https://github.com/${{ github.repository }}/releases/download/$env:TAG/FinanzGecko-$env:VERSION-Setup.exe" `
+            --urls "https://github.com/${{ github.repository }}/releases/download/$env:TAG/FinanzGecko-$env:VERSION-Setup.exe|x64|machine" `
             --release-date $env:RELEASE_DATE `
             --submit `
             --token $env:WINGET_TOKEN

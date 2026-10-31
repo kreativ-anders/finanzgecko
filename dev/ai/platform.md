@@ -122,6 +122,8 @@
   (`InstallerType: inno`, `ElevationRequirement`, `Scope`, `PrivacyUrl`, both locale files — all reasoned out in
   [`packaging/windows/winget/README.md`](../../packaging/windows/winget/README.md)) survive untouched. That is
   also why the *first* submission still has to land in `winget-pkgs` by hand.
+  The URL is passed as `<url>|x64|machine`: Inno's setup stub is a 32-bit PE, so `wingetcreate` would otherwise
+  detect `X86` and fail with "Multiple matches found" against the x64 installer node (seen in the v1.12.0 run).
   **The job runs on `windows-latest`, not ubuntu** — `wingetcreate` ships only as a Windows binary (an `.exe` and
   an `.msixbundle`; no Linux build, no dotnet tool). On a public repo that runner is free.
   The vendor's own tool rather than a third-party action: it is what Microsoft uses for this step in Terminal and
