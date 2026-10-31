@@ -33,6 +33,11 @@ The traps, in the order they tend to bite (⚙ = already enforced by the test):
   padding, a heading size, or a fixed-column grid needs a matching entry there. Desktop paddings are deliberately
   *not* uniform (the hero breathes more than the trust strip); the breakpoint compresses that scale, it doesn't
   flatten it — so use explicit per-section values, not one shared token.
+- **`header.site` is sticky above 700px only.** Its height lives in `--header-h` on `html` (73px), which feeds
+  `scroll-padding-top` (anchor jumps land below the bar) and `.doc-nav`'s sticky `top`. Change the header's
+  padding, logo size or font and `--header-h` must follow, or headings scroll under the bar. Below 700px the nav
+  wraps to 2–4 lines (up to ~225px), so the breakpoint sets the header `static` and `--header-h: 0px`; don't make
+  it sticky there without first redesigning the mobile nav into one line.
 - ⚙ **Every new third-party call or embed must be added to Teil A of `docs/datenschutz.html` and Part A of
   `docs/privacy.html`** (currently: Pirsch, GitHub Pages, the GitHub API on index + download, Stripe). The German
   page is linked from all footers; a site that loads something undisclosed is the one failure mode here with
